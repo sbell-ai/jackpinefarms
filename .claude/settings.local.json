@@ -2,7 +2,10 @@
   "permissions": {
     "allow": [
       "Bash(npm run:*)",
-      "Bash(find /home/runner/workspace -type f \\\\\\(-name .env* -o -name *.env* \\\\\\))"
+      "Bash(find /home/runner/workspace -type f \\\\\\(-name .env* -o -name *.env* \\\\\\))",
+      "Bash(pnpm run:*)",
+      "Bash(pnpm -r --if-present run build)",
+      "Bash(pnpm build:*)"
     ]
   }
 }

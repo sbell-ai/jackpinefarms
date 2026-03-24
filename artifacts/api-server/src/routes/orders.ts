@@ -31,6 +31,7 @@ export async function getOrderWithItems(orderId: number) {
       pricingType: orderItemsTable.pricingType,
       unitPriceInCents: orderItemsTable.unitPriceInCents,
       unitLabel: orderItemsTable.unitLabel,
+      variantLabel: orderItemsTable.variantLabel,
       isGiblets: orderItemsTable.isGiblets,
       lineTotalInCents: orderItemsTable.lineTotalInCents,
     })

@@ -1,6 +1,6 @@
 import { useAdminListOrders, getAdminListOrdersQueryKey } from "@workspace/api-client-react";
 import { Link } from "wouter";
-import { ShoppingBag, Layers, CalendarDays, Users, ArrowRight } from "lucide-react";
+import { ShoppingBag, Layers, CalendarDays, Users, ArrowRight, AlertCircle } from "lucide-react";
 
 const STATUS_GROUPS = [
   { label: "Pending Payment", statuses: ["pending_payment"], color: "text-yellow-700 bg-yellow-50 border-yellow-200" },
@@ -21,14 +21,41 @@ const QUICK_LINKS = [
 
 export default function AdminDashboard() {
   const { data, isLoading } = useAdminListOrders(
-    {},
-    { query: { queryKey: getAdminListOrdersQueryKey({}) } }
+    { limit: 1000 },
+    { query: { queryKey: getAdminListOrdersQueryKey({ limit: 1000 }) } }
   );
 
-  const orders = data ?? [];
+  const orders: any[] = data ?? [];
 
   const countByStatus = (statuses: string[]) =>
     orders.filter((o) => statuses.includes(o.status)).length;
+
+  const needsPickupAssignment = orders.filter(
+    (o) =>
+      (o.status === "deposit_paid" || o.status === "cash_pending") &&
+      !o.pickupEventId
+  );
+
+  const needsWeights = orders.filter(
+    (o) => o.status === "pickup_assigned" && !o.finalWeightLbs
+  );
+
+  const actionItems = [
+    {
+      label: "Needs Pickup Assignment",
+      count: needsPickupAssignment.length,
+      description: "Paid orders not yet assigned to a pickup event",
+      href: "/admin/pickup-events",
+      urgency: needsPickupAssignment.length > 0 ? "high" : "none",
+    },
+    {
+      label: "Needs Weights Entered",
+      count: needsWeights.length,
+      description: "Pickup-assigned orders awaiting final weight entry",
+      href: "/admin/pickup-events",
+      urgency: needsWeights.length > 0 ? "medium" : "none",
+    },
+  ];
 
   return (
     <div className="space-y-8">
@@ -36,6 +63,39 @@ export default function AdminDashboard() {
         <h1 className="text-2xl font-bold text-foreground">Dashboard</h1>
         <p className="text-muted-foreground mt-1">Welcome back to FarmOps.</p>
       </div>
+
+      {/* Action Items */}
+      {!isLoading && actionItems.some((a) => a.count > 0) && (
+        <section>
+          <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground mb-3 flex items-center gap-2">
+            <AlertCircle className="w-4 h-4 text-amber-500" />
+            Action Required
+          </h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {actionItems.filter((a) => a.count > 0).map((item) => (
+              <Link key={item.label} href={item.href}>
+                <div
+                  className={`rounded-lg border p-4 cursor-pointer hover:shadow-sm transition-all ${
+                    item.urgency === "high"
+                      ? "border-amber-300 bg-amber-50 hover:border-amber-400"
+                      : "border-blue-200 bg-blue-50 hover:border-blue-300"
+                  }`}
+                >
+                  <div className={`text-3xl font-bold ${item.urgency === "high" ? "text-amber-700" : "text-blue-700"}`}>
+                    {item.count}
+                  </div>
+                  <div className={`text-xs font-semibold mt-1 ${item.urgency === "high" ? "text-amber-800" : "text-blue-800"}`}>
+                    {item.label}
+                  </div>
+                  <div className={`text-xs mt-0.5 ${item.urgency === "high" ? "text-amber-600" : "text-blue-600"}`}>
+                    {item.description}
+                  </div>
+                </div>
+              </Link>
+            ))}
+          </div>
+        </section>
+      )}
 
       {/* Order Status Summary */}
       <section>

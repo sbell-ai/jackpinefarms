@@ -116,13 +116,14 @@ router.post("/admin/orders/:id/refund-giblets", requireAdmin, async (req, res): 
   }
 
   const items = await db.select().from(orderItemsTable).where(eq(orderItemsTable.orderId, id));
-  const hasGiblets = items.some((item) => item.isGiblets);
-  if (!hasGiblets) {
+  const gibletItems = items.filter((item) => item.isGiblets);
+  if (gibletItems.length === 0) {
     res.status(400).json({ error: "This order does not include giblets" });
     return;
   }
 
-  await db.update(ordersTable).set({ refundedGiblets: true }).where(eq(ordersTable.id, id));
+  const gibletRefundCents = gibletItems.reduce((sum, item) => sum + item.unitPriceInCents * item.quantity, 0);
+  const gibletRefundDollars = (gibletRefundCents / 100).toFixed(2);
 
   const stripeKey = process.env.STRIPE_SECRET_KEY;
   const paymentIntentId = order.stripePaymentIntentId;
@@ -133,32 +134,35 @@ router.post("/admin/orders/:id/refund-giblets", requireAdmin, async (req, res): 
       const stripe = new Stripe(stripeKey, { apiVersion: "2025-02-24.acacia" });
       const refund = await stripe.refunds.create({
         payment_intent: paymentIntentId,
-        amount: 200,
+        amount: gibletRefundCents,
         reason: "requested_by_customer",
       });
-      await db.update(ordersTable).set({ stripeRefundId: refund.id }).where(eq(ordersTable.id, id));
+      await db.update(ordersTable)
+        .set({ refundedGiblets: true, stripeRefundId: refund.id })
+        .where(eq(ordersTable.id, id));
       await db.insert(orderEventsTable).values({
         orderId: id,
         eventType: "refund",
-        body: `Giblets refund of $2.00 processed via Stripe (refund id: ${refund.id})`,
+        body: `Giblets refund of $${gibletRefundDollars} processed via Stripe (refund id: ${refund.id})`,
       });
-      res.json({ message: "Giblets refunded via Stripe ($2.00)" });
+      res.json({ message: `Giblets refunded via Stripe ($${gibletRefundDollars})` });
     } catch (err: any) {
       await db.insert(orderEventsTable).values({
         orderId: id,
         eventType: "refund",
-        body: `Giblets refund of $2.00 attempted via Stripe but failed: ${err.message}`,
+        body: `Giblets refund of $${gibletRefundDollars} attempted via Stripe but failed: ${err.message}. Retry this refund when the issue is resolved.`,
       });
       res.status(500).json({ error: `Stripe refund failed: ${err.message}` });
     }
   } else {
+    await db.update(ordersTable).set({ refundedGiblets: true }).where(eq(ordersTable.id, id));
     await db.insert(orderEventsTable).values({
       orderId: id,
       eventType: "refund",
-      body: "[REFUND STUB] Giblets refund of $2.00 marked. Configure Stripe to process real refunds.",
+      body: `[REFUND STUB] Giblets refund of $${gibletRefundDollars} marked. Configure STRIPE_SECRET_KEY to process real refunds.`,
     });
-    console.log(`[REFUND STUB] Order ${id} — giblets refund of $2.00 for ${order.customerEmail}`);
-    res.json({ message: "Giblets refund recorded (stub — configure Stripe to process real refunds)" });
+    console.log(`[REFUND STUB] Order ${id} — giblets refund of $${gibletRefundDollars} for ${order.customerEmail}`);
+    res.json({ message: `Giblets refund recorded (configure Stripe to process real refunds)` });
   }
 });
 

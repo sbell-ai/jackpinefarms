@@ -841,7 +841,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/PickupEvent"
+                $ref: "#/components/schemas/PickupEventDetail"
         "401":
           description: Unauthorized
           content:
@@ -927,6 +927,49 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
 
+  /admin/pickup-events/{id}/assign-item:
+    post:
+      operationId: adminAssignItemToPickupEvent
+      tags: [admin, pickup-events]
+      summary: Assign a single order item to a pickup event (admin)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AssignItemBody"
+      responses:
+        "200":
+          description: Item assigned
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
   /admin/pickup-events/{id}/send-invoices:
     post:
       operationId: adminSendPickupInvoices
@@ -950,7 +993,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/SuccessResponse"
+                $ref: "#/components/schemas/SendInvoicesResponse"
         "400":
           description: Validation error
           content:
@@ -1647,6 +1690,8 @@ components:
           type: integer
         unitLabel:
           type: ["string", "null"]
+        variantLabel:
+          type: ["string", "null"]
         isGiblets:
           type: boolean
         lineTotalInCents:
@@ -1659,6 +1704,7 @@ components:
         - pricingType
         - unitPriceInCents
         - unitLabel
+        - variantLabel
         - isGiblets
         - lineTotalInCents
 
@@ -1680,6 +1726,12 @@ components:
         createdAt:
           type: string
           format: date-time
+        refundedGiblets:
+          type: boolean
+        batchId:
+          type: ["integer", "null"]
+        pickupEventId:
+          type: ["integer", "null"]
       required:
         - id
         - customerName
@@ -1688,6 +1740,9 @@ components:
         - paymentMethod
         - totalInCents
         - createdAt
+        - refundedGiblets
+        - batchId
+        - pickupEventId
 
     OrderDetail:
       type: object
@@ -1716,6 +1771,8 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/OrderItem"
+        finalWeightLbs:
+          type: ["number", "null"]
         createdAt:
           type: string
           format: date-time
@@ -1734,6 +1791,7 @@ components:
         - totalInCents
         - notes
         - items
+        - finalWeightLbs
         - createdAt
         - updatedAt
     ClaimOrderBody:
@@ -1925,11 +1983,105 @@ components:
                 type: integer
               weightLbs:
                 type: number
+              variant:
+                type: string
+                enum: [whole, half, quarter]
             required:
               - orderId
               - weightLbs
       required:
         - weights
+
+    SendInvoicesResponse:
+      type: object
+      properties:
+        message:
+          type: string
+        results:
+          type: array
+          items:
+            type: object
+            properties:
+              orderId:
+                type: integer
+              status:
+                type: string
+                enum: [invoiced, stub, error, deposit_covers_balance]
+              remainingCents:
+                type: integer
+              invoiceId:
+                type: string
+            required:
+              - orderId
+              - status
+              - remainingCents
+      required:
+        - message
+        - results
+
+    AssignItemBody:
+      type: object
+      properties:
+        orderItemId:
+          type: integer
+      required:
+        - orderItemId
+
+    PickupEventOrderSummary:
+      type: object
+      properties:
+        id:
+          type: integer
+        customerName:
+          type: string
+        customerEmail:
+          type: string
+        status:
+          $ref: "#/components/schemas/OrderStatus"
+        paymentMethod:
+          $ref: "#/components/schemas/PaymentMethod"
+        totalInCents:
+          type: integer
+        finalWeightLbs:
+          type: ["number", "null"]
+        stripeInvoiceId:
+          type: ["string", "null"]
+        batchId:
+          type: ["integer", "null"]
+        createdAt:
+          type: string
+          format: date-time
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/OrderItem"
+      required:
+        - id
+        - customerName
+        - customerEmail
+        - status
+        - paymentMethod
+        - totalInCents
+        - batchId
+        - createdAt
+        - items
+
+    PickupEventDetail:
+      allOf:
+        - $ref: "#/components/schemas/PickupEvent"
+        - type: object
+          properties:
+            orders:
+              type: array
+              items:
+                $ref: "#/components/schemas/PickupEventOrderSummary"
+            unassignedOrders:
+              type: array
+              items:
+                $ref: "#/components/schemas/PickupEventOrderSummary"
+          required:
+            - orders
+            - unassignedOrders
 
     UpdateOrderStatusBody:
       type: object
