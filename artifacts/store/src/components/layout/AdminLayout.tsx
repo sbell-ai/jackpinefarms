@@ -1,7 +1,7 @@
 import { ReactNode, useEffect } from "react";
 import { Link, useLocation } from "wouter";
 import { useAdminMe, useAdminLogout, getAdminMeQueryKey } from "@workspace/api-client-react";
-import { Store, Package, LogOut, Loader2, Home } from "lucide-react";
+import { Store, Package, LogOut, Loader2, Home, ShoppingBag } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export function AdminLayout({ children }: { children: ReactNode }) {
@@ -39,6 +39,7 @@ export function AdminLayout({ children }: { children: ReactNode }) {
 
   const navItems = [
     { href: "/admin/products", label: "Products", icon: Package },
+    { href: "/admin/orders", label: "Orders", icon: ShoppingBag },
   ];
 
   return (

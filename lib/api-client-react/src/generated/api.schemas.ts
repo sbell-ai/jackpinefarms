@@ -47,6 +47,22 @@ export const PricingType = {
   deposit: "deposit",
 } as const;
 
+export type OrderStatus = (typeof OrderStatus)[keyof typeof OrderStatus];
+
+export const OrderStatus = {
+  pending_payment: "pending_payment",
+  deposit_paid: "deposit_paid",
+  cash_pending: "cash_pending",
+  cancelled: "cancelled",
+} as const;
+
+export type PaymentMethod = (typeof PaymentMethod)[keyof typeof PaymentMethod];
+
+export const PaymentMethod = {
+  stripe: "stripe",
+  cash: "cash",
+} as const;
+
 export interface Product {
   id: number;
   name: string;
@@ -113,9 +129,129 @@ export interface AdminLoginBody {
   password: string;
 }
 
+export interface RegisterBody {
+  email: string;
+  /** @minLength 8 */
+  password: string;
+  name: string;
+  /** @nullable */
+  phone?: string | null;
+}
+
+export interface LoginBody {
+  email: string;
+  password: string;
+}
+
+export interface UpdateProfileBody {
+  name?: string;
+  /** @nullable */
+  phone?: string | null;
+}
+
+export interface CustomerSession {
+  id: number;
+  email: string;
+  name: string;
+  /** @nullable */
+  phone: string | null;
+}
+
+export interface CartItem {
+  productId: number;
+  productName: string;
+  productType: ProductType;
+  pricingType: PricingType;
+  quantity: number;
+  /** @nullable */
+  unitLabel: string | null;
+  unitPriceInCents: number;
+  /** For meat products — add giblets add-on ($2/bird) */
+  addGiblets: boolean;
+  lineTotalInCents: number;
+}
+
+export interface Cart {
+  items: CartItem[];
+  subtotalInCents: number;
+  itemCount: number;
+}
+
+export interface AddCartItemBody {
+  productId: number;
+  /** @minimum 1 */
+  quantity: number;
+  addGiblets?: boolean;
+}
+
+export interface CheckoutContactBody {
+  name: string;
+  email: string;
+  phone: string;
+  /** @nullable */
+  notes?: string | null;
+}
+
+export interface StripeCheckoutResponse {
+  checkoutUrl: string;
+  sessionId: string;
+}
+
+export interface OrderItem {
+  id: number;
+  /** @nullable */
+  productId: number | null;
+  productName: string;
+  quantity: number;
+  pricingType: PricingType;
+  unitPriceInCents: number;
+  /** @nullable */
+  unitLabel: string | null;
+  isGiblets: boolean;
+  lineTotalInCents: number;
+}
+
+export interface OrderSummary {
+  id: number;
+  customerName: string;
+  customerEmail: string;
+  status: OrderStatus;
+  paymentMethod: PaymentMethod;
+  totalInCents: number;
+  createdAt: string;
+}
+
+export interface OrderDetail {
+  id: number;
+  /** @nullable */
+  customerId: number | null;
+  customerName: string;
+  customerEmail: string;
+  customerPhone: string;
+  status: OrderStatus;
+  paymentMethod: PaymentMethod;
+  /** @nullable */
+  stripeCheckoutSessionId: string | null;
+  totalInCents: number;
+  /** @nullable */
+  notes: string | null;
+  items: OrderItem[];
+  createdAt: string;
+  updatedAt: string;
+}
+
 export type ListProductsParams = {
   /**
    * When true (admin only), include disabled products
    */
   includeDisabled?: boolean;
+};
+
+export type AdminListOrdersParams = {
+  /**
+   * Filter by status
+   */
+  status?: OrderStatus;
+  limit?: number;
+  offset?: number;
 };

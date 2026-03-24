@@ -1,0 +1,265 @@
+import { useState, useEffect } from "react";
+import { useLocation } from "wouter";
+import { 
+  useGetCart, getGetCartQueryKey, 
+  useAuthMe, getAuthMeQueryKey,
+  useCreateStripeCheckout,
+  useCreateCashOrder
+} from "@workspace/api-client-react";
+import { useQueryClient } from "@tanstack/react-query";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import * as z from "zod";
+import { formatMoney } from "@/lib/utils";
+import { Loader2, CreditCard, Banknote, AlertTriangle, Lock as LockIcon } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+
+const checkoutSchema = z.object({
+  name: z.string().min(2, "Name is required"),
+  email: z.string().email("Valid email is required"),
+  phone: z.string().min(10, "Phone is required for pickup coordination"),
+  notes: z.string().optional(),
+});
+
+type CheckoutForm = z.infer<typeof checkoutSchema>;
+
+export default function Checkout() {
+  const [, setLocation] = useLocation();
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  
+  const { data: cart, isLoading: isCartLoading } = useGetCart({
+    query: { queryKey: getGetCartQueryKey() }
+  });
+  
+  const { data: session } = useAuthMe({
+    query: { queryKey: getAuthMeQueryKey(), retry: false }
+  });
+
+  const [paymentMethod, setPaymentMethod] = useState<'stripe' | 'cash'>('cash');
+
+  const stripeMutation = useCreateStripeCheckout();
+  const cashMutation = useCreateCashOrder();
+
+  const { register, handleSubmit, formState: { errors }, reset } = useForm<CheckoutForm>({
+    resolver: zodResolver(checkoutSchema)
+  });
+
+  // Prefill form if logged in
+  useEffect(() => {
+    if (session?.id && session.email) {
+      reset({
+        name: session.name || "",
+        email: session.email || "",
+        phone: session.phone || "",
+      });
+    }
+  }, [session, reset]);
+
+  // Redirect if empty
+  useEffect(() => {
+    if (!isCartLoading && (!cart || cart.items.length === 0)) {
+      setLocation("/cart");
+    }
+  }, [cart, isCartLoading, setLocation]);
+
+  const hasDeposits = cart?.items.some((i: any) => i.pricingType === "deposit");
+
+  const onSubmit = async (data: CheckoutForm) => {
+    try {
+      if (paymentMethod === 'stripe') {
+        const res = await stripeMutation.mutateAsync({ data });
+        // Redirect to Stripe Checkout URL
+        window.location.href = res.checkoutUrl;
+      } else {
+        const res = await cashMutation.mutateAsync({ data });
+        queryClient.invalidateQueries({ queryKey: getGetCartQueryKey() });
+        setLocation(`/order-confirmation?id=${res.id}`);
+      }
+    } catch (error: any) {
+      toast({
+        title: "Checkout failed",
+        description: error.message || "An unexpected error occurred",
+        variant: "destructive"
+      });
+    }
+  };
+
+  if (isCartLoading || !cart) {
+    return <div className="flex-1 flex justify-center items-center"><Loader2 className="w-10 h-10 animate-spin text-primary" /></div>;
+  }
+
+  const isPending = stripeMutation.isPending || cashMutation.isPending;
+
+  return (
+    <div className="flex-1 bg-muted/30">
+      <div className="h-48 md:h-64 w-full relative overflow-hidden bg-primary">
+        <img 
+          src={`${import.meta.env.BASE_URL}images/checkout-hero.png`} 
+          alt="Farm Checkout" 
+          className="w-full h-full object-cover opacity-60 mix-blend-overlay"
+        />
+        <div className="absolute inset-0 flex items-center justify-center">
+          <h1 className="text-4xl md:text-5xl font-serif font-bold text-white shadow-sm">Checkout</h1>
+        </div>
+      </div>
+
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-12 -mt-12 relative z-10">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+          
+          {/* Main Form Area */}
+          <div className="lg:col-span-7 xl:col-span-8 space-y-8">
+            {hasDeposits && (
+              <div className="bg-accent/10 border-2 border-accent/20 rounded-2xl p-6 flex gap-4 items-start shadow-sm">
+                <AlertTriangle className="w-6 h-6 text-accent shrink-0 mt-1" />
+                <div>
+                  <h3 className="text-lg font-bold text-accent mb-1">Non-Refundable Preorder Deposits</h3>
+                  <p className="text-foreground/80 leading-relaxed">
+                    Your cart contains preorder deposits for meat products. These deposits secure your order and are <strong>non-refundable</strong>. The final price will be calculated by exact weight, and you will receive an invoice for the balance the day before pickup.
+                  </p>
+                </div>
+              </div>
+            )}
+
+            <form id="checkout-form" onSubmit={handleSubmit(onSubmit)} className="space-y-8">
+              {/* Contact Info */}
+              <div className="bg-card border border-border rounded-3xl p-6 md:p-8 shadow-sm">
+                <h2 className="text-2xl font-serif font-bold text-foreground mb-6 pb-4 border-b border-border">Contact Information</h2>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-2">
+                    <label className="text-sm font-bold text-foreground">Full Name</label>
+                    <input {...register("name")} className="w-full px-4 py-3 rounded-xl bg-background border border-border focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all" />
+                    {errors.name && <p className="text-destructive text-xs font-medium">{errors.name.message}</p>}
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="text-sm font-bold text-foreground">Email Address</label>
+                    <input type="email" {...register("email")} className="w-full px-4 py-3 rounded-xl bg-background border border-border focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all" />
+                    {errors.email && <p className="text-destructive text-xs font-medium">{errors.email.message}</p>}
+                  </div>
+
+                  <div className="space-y-2 md:col-span-2">
+                    <label className="text-sm font-bold text-foreground">Phone Number</label>
+                    <input type="tel" {...register("phone")} placeholder="(555) 123-4567" className="w-full px-4 py-3 rounded-xl bg-background border border-border focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all" />
+                    <p className="text-xs text-muted-foreground">Required to coordinate local pickup</p>
+                    {errors.phone && <p className="text-destructive text-xs font-medium">{errors.phone.message}</p>}
+                  </div>
+
+                  <div className="space-y-2 md:col-span-2">
+                    <label className="text-sm font-bold text-foreground">Order Notes (Optional)</label>
+                    <textarea {...register("notes")} rows={3} placeholder="Any special instructions for pickup..." className="w-full px-4 py-3 rounded-xl bg-background border border-border focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all resize-y" />
+                  </div>
+                </div>
+              </div>
+
+              {/* Payment Method */}
+              <div className="bg-card border border-border rounded-3xl p-6 md:p-8 shadow-sm">
+                <h2 className="text-2xl font-serif font-bold text-foreground mb-6 pb-4 border-b border-border">Payment Method</h2>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <label className={`
+                    relative flex flex-col p-5 rounded-2xl cursor-pointer border-2 transition-all
+                    ${paymentMethod === 'stripe' ? 'border-primary bg-primary/5' : 'border-border bg-background hover:border-primary/30'}
+                  `}>
+                    <input 
+                      type="radio" 
+                      name="payment" 
+                      value="stripe" 
+                      checked={paymentMethod === 'stripe'}
+                      onChange={() => setPaymentMethod('stripe')}
+                      className="sr-only"
+                    />
+                    <div className="flex justify-between items-center mb-2">
+                      <span className="font-bold text-foreground flex items-center gap-2">
+                        <CreditCard className="w-5 h-5 text-primary" />
+                        Credit Card
+                      </span>
+                      <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${paymentMethod === 'stripe' ? 'border-primary' : 'border-muted-foreground'}`}>
+                        {paymentMethod === 'stripe' && <div className="w-2.5 h-2.5 rounded-full bg-primary" />}
+                      </div>
+                    </div>
+                    <p className="text-sm text-muted-foreground">Pay securely via Stripe</p>
+                  </label>
+
+                  <label className={`
+                    relative flex flex-col p-5 rounded-2xl cursor-pointer border-2 transition-all
+                    ${paymentMethod === 'cash' ? 'border-primary bg-primary/5' : 'border-border bg-background hover:border-primary/30'}
+                  `}>
+                    <input 
+                      type="radio" 
+                      name="payment" 
+                      value="cash" 
+                      checked={paymentMethod === 'cash'}
+                      onChange={() => setPaymentMethod('cash')}
+                      className="sr-only"
+                    />
+                    <div className="flex justify-between items-center mb-2">
+                      <span className="font-bold text-foreground flex items-center gap-2">
+                        <Banknote className="w-5 h-5 text-primary" />
+                        Cash at Pickup
+                      </span>
+                      <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${paymentMethod === 'cash' ? 'border-primary' : 'border-muted-foreground'}`}>
+                        {paymentMethod === 'cash' && <div className="w-2.5 h-2.5 rounded-full bg-primary" />}
+                      </div>
+                    </div>
+                    <p className="text-sm text-muted-foreground">Pay when you collect your order</p>
+                  </label>
+                </div>
+              </div>
+            </form>
+          </div>
+
+          {/* Sidebar Summary */}
+          <div className="lg:col-span-5 xl:col-span-4">
+            <div className="bg-card border border-border rounded-3xl p-6 shadow-md sticky top-28">
+              <h3 className="font-serif text-xl font-bold text-foreground mb-4">Order Summary</h3>
+              
+              <div className="space-y-4 mb-6 max-h-[40vh] overflow-y-auto pr-2">
+                {(cart.items as any[]).map(item => (
+                  <div key={item.productId} className="flex justify-between items-start text-sm">
+                    <div className="pr-4">
+                      <span className="font-bold text-foreground block">{item.quantity}x {item.productName}</span>
+                      {item.pricingType === "deposit" && (
+                        <span className="text-xs text-accent">Deposit</span>
+                      )}
+                      {item.addGiblets && (
+                        <span className="text-xs text-muted-foreground block">+ Giblets</span>
+                      )}
+                    </div>
+                    <span className="font-bold">{formatMoney(item.lineTotalInCents)}</span>
+                  </div>
+                ))}
+              </div>
+
+              <div className="pt-4 border-t border-border mb-6">
+                <div className="flex justify-between items-baseline">
+                  <span className="font-bold text-lg">Total Due Now</span>
+                  <span className="font-bold text-2xl text-primary">{formatMoney(cart.subtotalInCents)}</span>
+                </div>
+              </div>
+
+              <button 
+                type="submit" 
+                form="checkout-form"
+                disabled={isPending}
+                className="w-full py-4 rounded-xl bg-primary text-white font-bold text-lg hover:bg-primary/90 transition-all shadow-md flex items-center justify-center gap-2 disabled:opacity-50"
+              >
+                {isPending ? (
+                  <Loader2 className="w-6 h-6 animate-spin" />
+                ) : (
+                  paymentMethod === 'stripe' ? "Pay with Card" : "Place Order"
+                )}
+              </button>
+              
+              <p className="text-xs text-center text-muted-foreground mt-4 flex items-center justify-center gap-1">
+                <LockIcon className="w-3 h-3" /> Secure checkout
+              </p>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  );
+}

@@ -16,10 +16,20 @@ import Faq from "./pages/Faq";
 import Contact from "./pages/Contact";
 import NotFound from "@/pages/not-found";
 
+// New Customer & Commerce Pages
+import CustomerLogin from "./pages/auth/Login";
+import CustomerRegister from "./pages/auth/Register";
+import Cart from "./pages/Cart";
+import Checkout from "./pages/Checkout";
+import OrderConfirmation from "./pages/OrderConfirmation";
+import AccountProfile from "./pages/account/Profile";
+import OrderDetail from "./pages/account/OrderDetail";
+
 // Admin Pages
 import AdminLogin from "./pages/admin/Login";
 import AdminProducts from "./pages/admin/ProductList";
 import AdminProductForm from "./pages/admin/ProductForm";
+import AdminOrders from "./pages/admin/Orders";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -46,11 +56,38 @@ function Router() {
       <Route path="/admin/products">
         <AdminLayout><AdminProducts /></AdminLayout>
       </Route>
+      <Route path="/admin/orders">
+        <AdminLayout><AdminOrders /></AdminLayout>
+      </Route>
       <Route path="/admin">
         <AdminLayout><AdminProducts /></AdminLayout>
       </Route>
 
-      {/* Public Storefront Routes */}
+      {/* Public Storefront Routes with Layout */}
+      <Route path="/auth/login">
+        <PublicLayout><CustomerLogin /></PublicLayout>
+      </Route>
+      <Route path="/auth/register">
+        <PublicLayout><CustomerRegister /></PublicLayout>
+      </Route>
+      
+      <Route path="/cart">
+        <PublicLayout><Cart /></PublicLayout>
+      </Route>
+      <Route path="/checkout">
+        <PublicLayout><Checkout /></PublicLayout>
+      </Route>
+      <Route path="/order-confirmation">
+        <PublicLayout><OrderConfirmation /></PublicLayout>
+      </Route>
+      
+      <Route path="/account/orders/:id">
+        <PublicLayout><OrderDetail /></PublicLayout>
+      </Route>
+      <Route path="/account">
+        <PublicLayout><AccountProfile /></PublicLayout>
+      </Route>
+
       <Route path="/shop/:id">
         <PublicLayout><ProductDetail /></PublicLayout>
       </Route>

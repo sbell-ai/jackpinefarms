@@ -1,13 +1,22 @@
 import { ReactNode, useState, useEffect } from "react";
 import { Link, useLocation } from "wouter";
-import { Menu, X, ShoppingCart, Leaf } from "lucide-react";
+import { Menu, X, ShoppingCart, Leaf, User } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
+import { useGetCart, getGetCartQueryKey, useAuthMe, getAuthMeQueryKey } from "@workspace/api-client-react";
 
 export function PublicLayout({ children }: { children: ReactNode }) {
   const [isScrolled, setIsScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [location] = useLocation();
+
+  const { data: cart } = useGetCart({
+    query: { queryKey: getGetCartQueryKey() }
+  });
+
+  const { data: session } = useAuthMe({
+    query: { queryKey: getAuthMeQueryKey(), retry: false }
+  });
 
   useEffect(() => {
     const handleScroll = () => {
@@ -17,7 +26,6 @@ export function PublicLayout({ children }: { children: ReactNode }) {
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
-  // Close mobile menu on route change
   useEffect(() => {
     setMobileMenuOpen(false);
   }, [location]);
@@ -52,13 +60,13 @@ export function PublicLayout({ children }: { children: ReactNode }) {
                   className="w-full h-full object-cover"
                 />
               </div>
-              <span className="font-serif text-xl font-bold text-primary tracking-tight">
+              <span className="font-serif text-xl font-bold text-primary tracking-tight hidden sm:block">
                 Jack Pine Farm
               </span>
             </Link>
 
             {/* Desktop Nav */}
-            <nav className="hidden md:flex items-center gap-8">
+            <nav className="hidden lg:flex items-center gap-8">
               {navLinks.map((link) => (
                 <Link
                   key={link.href}
@@ -75,19 +83,42 @@ export function PublicLayout({ children }: { children: ReactNode }) {
 
             {/* Actions */}
             <div className="hidden md:flex items-center gap-4">
-              <Link href="/admin/login" className="text-xs font-medium text-muted-foreground hover:text-primary transition-colors">
-                Admin
+              {session?.id ? (
+                <Link href="/account" className="flex items-center gap-2 text-sm font-medium text-foreground/80 hover:text-primary transition-colors">
+                  <User className="w-4 h-4" />
+                  My Account
+                </Link>
+              ) : (
+                <Link href="/auth/login" className="text-sm font-medium text-foreground/80 hover:text-primary transition-colors">
+                  Log In
+                </Link>
+              )}
+              
+              <div className="w-px h-6 bg-border mx-2" />
+              
+              <Link 
+                href="/cart"
+                className="relative flex items-center justify-center w-10 h-10 rounded-full bg-card border border-border shadow-sm text-primary hover:bg-primary hover:text-white transition-all duration-200 group"
+              >
+                <ShoppingCart className="w-5 h-5 group-hover:scale-110 transition-transform" />
+                {cart && cart.itemCount > 0 && (
+                  <span className="absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-accent text-[10px] font-bold text-white shadow-sm ring-2 ring-background">
+                    {cart.itemCount}
+                  </span>
+                )}
               </Link>
-              <button className="flex items-center justify-center w-10 h-10 rounded-full bg-card border border-border shadow-sm text-primary hover:bg-primary hover:text-white transition-all duration-200">
-                <ShoppingCart className="w-5 h-5" />
-              </button>
             </div>
 
             {/* Mobile menu button */}
-            <div className="flex items-center gap-4 md:hidden">
-              <button className="text-primary">
+            <div className="flex items-center gap-4 lg:hidden">
+              <Link href="/cart" className="relative text-primary p-2">
                 <ShoppingCart className="w-6 h-6" />
-              </button>
+                {cart && cart.itemCount > 0 && (
+                  <span className="absolute top-1 right-1 flex h-4 w-4 items-center justify-center rounded-full bg-accent text-[10px] font-bold text-white shadow-sm ring-2 ring-background">
+                    {cart.itemCount}
+                  </span>
+                )}
+              </Link>
               <button
                 onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
                 className="text-foreground p-2 -mr-2"
@@ -106,7 +137,7 @@ export function PublicLayout({ children }: { children: ReactNode }) {
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -20 }}
-            className="fixed inset-0 z-40 bg-background pt-24 px-6 md:hidden"
+            className="fixed inset-0 z-40 bg-background pt-24 px-6 lg:hidden overflow-y-auto"
           >
             <nav className="flex flex-col gap-6 text-center">
               {navLinks.map((link) => (
@@ -122,9 +153,16 @@ export function PublicLayout({ children }: { children: ReactNode }) {
                 </Link>
               ))}
               <div className="w-12 h-px bg-border mx-auto my-4" />
-              <Link href="/admin/login" className="text-lg font-medium text-muted-foreground">
-                Admin Login
-              </Link>
+              
+              {session?.id ? (
+                <Link href="/account" className="text-xl font-medium text-foreground">
+                  My Account
+                </Link>
+              ) : (
+                <Link href="/auth/login" className="text-xl font-medium text-foreground">
+                  Log In
+                </Link>
+              )}
             </nav>
           </motion.div>
         )}
@@ -181,9 +219,11 @@ export function PublicLayout({ children }: { children: ReactNode }) {
             </div>
           </div>
           
-          <div className="pt-8 border-t border-primary-foreground/10 text-center md:text-left text-sm text-primary-foreground/60 flex flex-col md:flex-row justify-between items-center">
+          <div className="pt-8 border-t border-primary-foreground/10 text-center md:text-left text-sm text-primary-foreground/60 flex flex-col md:flex-row justify-between items-center gap-4">
             <p>© {new Date().getFullYear()} Jack Pine Farm. All rights reserved.</p>
-            <p className="mt-2 md:mt-0">Powered by FarmOps</p>
+            <div className="flex items-center gap-4">
+              <Link href="/admin/login" className="hover:text-white transition-colors">FarmOps Admin</Link>
+            </div>
           </div>
         </div>
       </footer>

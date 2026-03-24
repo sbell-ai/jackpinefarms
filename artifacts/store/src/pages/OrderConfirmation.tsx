@@ -1,0 +1,59 @@
+import { useLocation } from "wouter";
+import { Link } from "wouter";
+import { CheckCircle2, Package, MapPin, Calendar } from "lucide-react";
+
+export default function OrderConfirmation() {
+  const [location] = useLocation();
+  const searchParams = new URLSearchParams(window.location.search);
+  const orderId = searchParams.get("id");
+
+  return (
+    <div className="flex-1 bg-muted/20 flex items-center justify-center py-16 px-4">
+      <div className="max-w-2xl w-full bg-card border border-border rounded-3xl p-8 md:p-12 shadow-xl text-center">
+        <div className="w-20 h-20 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-6">
+          <CheckCircle2 className="w-10 h-10 text-primary" />
+        </div>
+        
+        <h1 className="text-4xl font-serif font-bold text-foreground mb-4">Order Confirmed!</h1>
+        <p className="text-lg text-muted-foreground mb-8">
+          Thank you for supporting Jack Pine Farm. Your order has been successfully placed.
+        </p>
+
+        {orderId && (
+          <div className="inline-block bg-muted px-6 py-3 rounded-xl font-mono text-lg font-bold text-foreground mb-10 border border-border">
+            Order #{orderId.padStart(6, '0')}
+          </div>
+        )}
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10 text-left">
+          <div className="p-5 rounded-2xl bg-background border border-border">
+            <Package className="w-6 h-6 text-primary mb-3" />
+            <h3 className="font-bold text-sm uppercase tracking-wider mb-1">Status</h3>
+            <p className="text-muted-foreground">Order received. We will email you a final confirmation.</p>
+          </div>
+          
+          <div className="p-5 rounded-2xl bg-background border border-border">
+            <MapPin className="w-6 h-6 text-primary mb-3" />
+            <h3 className="font-bold text-sm uppercase tracking-wider mb-1">Pickup Location</h3>
+            <p className="text-muted-foreground">Jack Pine Farm<br/>(Address in email)</p>
+          </div>
+
+          <div className="p-5 rounded-2xl bg-background border border-border">
+            <Calendar className="w-6 h-6 text-primary mb-3" />
+            <h3 className="font-bold text-sm uppercase tracking-wider mb-1">Next Steps</h3>
+            <p className="text-muted-foreground">Watch your email for pickup scheduling and any final invoices.</p>
+          </div>
+        </div>
+
+        <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+          <Link href="/account" className="w-full sm:w-auto px-8 py-3.5 rounded-xl bg-primary text-white font-bold hover:bg-primary/90 transition-all shadow-md">
+            View Order Status
+          </Link>
+          <Link href="/shop" className="w-full sm:w-auto px-8 py-3.5 rounded-xl bg-background border-2 border-border text-foreground font-bold hover:border-primary/50 transition-all">
+            Continue Shopping
+          </Link>
+        </div>
+      </div>
+    </div>
+  );
+}

@@ -38,7 +38,16 @@ app.use(
 );
 
 app.use(cookieParser());
-app.use(express.json());
+
+app.use(
+  express.json({
+    verify: (req: any, _res, buf) => {
+      if ((req as any).url?.includes("/webhooks/stripe")) {
+        (req as any).rawBody = buf;
+      }
+    },
+  }),
+);
 app.use(express.urlencoded({ extended: true }));
 
 app.use(

@@ -1,34 +1,67 @@
 import { useState } from "react";
-import { useRoute } from "wouter";
-import { useGetProduct, useSubscribeNotifyMe } from "@workspace/api-client-react";
+import { useRoute, useLocation, Link } from "wouter";
+import { 
+  useGetProduct, getGetProductQueryKey,
+  useSubscribeNotifyMe,
+  useAddCartItem,
+  getGetCartQueryKey
+} from "@workspace/api-client-react";
+import { useQueryClient } from "@tanstack/react-query";
 import { formatMoney } from "@/lib/utils";
-import { Loader2, ArrowLeft, CheckCircle2, AlertCircle } from "lucide-react";
-import { Link } from "wouter";
+import { Loader2, ArrowLeft, CheckCircle2, AlertCircle, ShoppingBag, Plus, Minus } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 
 export default function ProductDetail() {
   const [, params] = useRoute("/shop/:id");
   const id = parseInt(params?.id || "0", 10);
+  const [, setLocation] = useLocation();
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
   
-  const { data: product, isLoading, isError } = useGetProduct(id);
+  const { data: product, isLoading, isError } = useGetProduct(id, {
+    query: { queryKey: getGetProductQueryKey(id) }
+  });
+  
   const [notifyEmail, setNotifyEmail] = useState("");
   const [notifySuccess, setNotifySuccess] = useState(false);
   
+  // Cart state
+  const [quantity, setQuantity] = useState(1);
+  const [addGiblets, setAddGiblets] = useState(false);
+  
   const notifyMutation = useSubscribeNotifyMe();
+  const addToCartMutation = useAddCartItem({
+    mutation: {
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: getGetCartQueryKey() });
+        toast({
+          title: "Added to cart",
+          description: `${product?.name} has been added to your cart.`,
+        });
+        setLocation("/cart");
+      }
+    }
+  });
 
   const handleNotifySubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!notifyEmail) return;
-    
     try {
-      await notifyMutation.mutateAsync({
-        id,
-        data: { email: notifyEmail }
-      });
+      await notifyMutation.mutateAsync({ id, data: { email: notifyEmail } });
       setNotifySuccess(true);
       setNotifyEmail("");
-    } catch (err) {
-      // Error handled by mutation
-    }
+    } catch (err) {}
+  };
+
+  const handleAddToCart = () => {
+    if (!product) return;
+    addToCartMutation.mutate({
+      data: {
+        productId: product.id,
+        quantity: product.pricingType === 'deposit' ? 1 : quantity, // Meat is 1 deposit per item added
+        addGiblets: addGiblets
+      }
+    });
   };
 
   if (isLoading) {
@@ -47,6 +80,8 @@ export default function ProductDetail() {
       </div>
     );
   }
+
+  const isMeat = product.productType.startsWith('meat_');
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 md:py-20 w-full">
@@ -107,18 +142,64 @@ export default function ProductDetail() {
             </div>
           )}
 
-          {/* Call to Action Area */}
+          {/* Options & Call to Action Area */}
           <div className="mt-auto border-t border-border pt-8">
-            {product.availability === 'taking_orders' && (
-              <button disabled className="w-full py-4 rounded-xl bg-primary/50 text-white font-bold text-lg cursor-not-allowed border border-primary/20">
-                Add to Cart (Coming Soon)
-              </button>
-            )}
+            {(product.availability === 'taking_orders' || product.availability === 'preorder') && (
+              <div className="space-y-6">
+                
+                {/* Quantity for non-deposit items */}
+                {product.pricingType === 'unit' && (
+                  <div className="flex items-center gap-4">
+                    <span className="font-medium text-foreground">Quantity:</span>
+                    <div className="flex items-center bg-background border border-border rounded-xl p-1">
+                      <button 
+                        onClick={() => setQuantity(Math.max(1, quantity - 1))}
+                        className="w-10 h-10 flex items-center justify-center rounded-lg hover:bg-muted text-foreground transition-colors"
+                      >
+                        <Minus className="w-4 h-4" />
+                      </button>
+                      <span className="w-12 text-center font-bold text-lg">{quantity}</span>
+                      <button 
+                        onClick={() => setQuantity(quantity + 1)}
+                        className="w-10 h-10 flex items-center justify-center rounded-lg hover:bg-muted text-foreground transition-colors"
+                      >
+                        <Plus className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+                )}
 
-            {product.availability === 'preorder' && (
-              <button disabled className="w-full py-4 rounded-xl bg-accent/50 text-white font-bold text-lg cursor-not-allowed border border-accent/20">
-                Place Deposit (Coming Soon)
-              </button>
+                {/* Giblets Add-on for meat */}
+                {isMeat && (
+                  <label className="flex items-start gap-3 p-4 border border-border rounded-xl cursor-pointer hover:bg-muted/50 transition-colors">
+                    <input 
+                      type="checkbox" 
+                      className="mt-1 w-5 h-5 rounded border-border text-primary focus:ring-primary"
+                      checked={addGiblets}
+                      onChange={(e) => setAddGiblets(e.target.checked)}
+                    />
+                    <div>
+                      <div className="font-bold text-foreground">Add Giblets (+$2.00)</div>
+                      <p className="text-sm text-muted-foreground">Includes heart, liver, and neck. Highly recommended for rich gravy and stock.</p>
+                    </div>
+                  </label>
+                )}
+
+                <button 
+                  onClick={handleAddToCart}
+                  disabled={addToCartMutation.isPending}
+                  className="w-full py-4 rounded-xl bg-primary text-white font-bold text-lg hover:bg-primary/90 hover:shadow-lg transition-all duration-300 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed group"
+                >
+                  {addToCartMutation.isPending ? (
+                    <Loader2 className="w-6 h-6 animate-spin" />
+                  ) : (
+                    <>
+                      <ShoppingBag className="w-5 h-5 group-hover:-translate-y-0.5 transition-transform" />
+                      {product.pricingType === 'deposit' ? "Place Deposit" : "Add to Cart"}
+                    </>
+                  )}
+                </button>
+              </div>
             )}
 
             {product.availability === 'sold_out' && (
@@ -150,17 +231,14 @@ export default function ProductDetail() {
                     </button>
                   </form>
                 )}
-                {notifyMutation.isError && (
-                  <p className="text-destructive text-sm mt-3">Something went wrong. Please try again.</p>
-                )}
               </div>
             )}
           </div>
           
-          <div className="mt-8 flex gap-6 text-sm text-muted-foreground border-t border-border pt-6">
-            <span>✓ Local pickup only</span>
-            <span>✓ Pasture raised</span>
-            <span>✓ Non-GMO feed</span>
+          <div className="mt-8 flex flex-wrap gap-4 text-sm font-medium text-muted-foreground border-t border-border pt-6">
+            <span className="flex items-center gap-1.5 bg-muted px-3 py-1 rounded-full"><CheckCircle2 className="w-4 h-4 text-primary" /> Local pickup only</span>
+            <span className="flex items-center gap-1.5 bg-muted px-3 py-1 rounded-full"><CheckCircle2 className="w-4 h-4 text-primary" /> Pasture raised</span>
+            <span className="flex items-center gap-1.5 bg-muted px-3 py-1 rounded-full"><CheckCircle2 className="w-4 h-4 text-primary" /> Non-GMO feed</span>
           </div>
         </div>
       </div>

@@ -211,3 +211,340 @@ export const AdminLogoutResponse = zod.object({
 export const AdminMeResponse = zod.object({
   authenticated: zod.boolean(),
 });
+
+/**
+ * @summary List all orders (admin)
+ */
+export const adminListOrdersQueryLimitDefault = 50;
+export const adminListOrdersQueryOffsetDefault = 0;
+
+export const AdminListOrdersQueryParams = zod.object({
+  status: zod
+    .enum(["pending_payment", "deposit_paid", "cash_pending", "cancelled"])
+    .optional()
+    .describe("Filter by status"),
+  limit: zod.coerce.number().default(adminListOrdersQueryLimitDefault),
+  offset: zod.coerce.number().default(adminListOrdersQueryOffsetDefault),
+});
+
+export const AdminListOrdersResponseItem = zod.object({
+  id: zod.number(),
+  customerName: zod.string(),
+  customerEmail: zod.string(),
+  status: zod.enum([
+    "pending_payment",
+    "deposit_paid",
+    "cash_pending",
+    "cancelled",
+  ]),
+  paymentMethod: zod.enum(["stripe", "cash"]),
+  totalInCents: zod.number(),
+  createdAt: zod.date(),
+});
+export const AdminListOrdersResponse = zod.array(AdminListOrdersResponseItem);
+
+/**
+ * @summary Get order details (admin)
+ */
+export const AdminGetOrderParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const AdminGetOrderResponse = zod.object({
+  id: zod.number(),
+  customerId: zod.number().nullable(),
+  customerName: zod.string(),
+  customerEmail: zod.string(),
+  customerPhone: zod.string(),
+  status: zod.enum([
+    "pending_payment",
+    "deposit_paid",
+    "cash_pending",
+    "cancelled",
+  ]),
+  paymentMethod: zod.enum(["stripe", "cash"]),
+  stripeCheckoutSessionId: zod.string().nullable(),
+  totalInCents: zod.number(),
+  notes: zod.string().nullable(),
+  items: zod.array(
+    zod.object({
+      id: zod.number(),
+      productId: zod.number().nullable(),
+      productName: zod.string(),
+      quantity: zod.number(),
+      pricingType: zod.enum(["unit", "deposit"]),
+      unitPriceInCents: zod.number(),
+      unitLabel: zod.string().nullable(),
+      isGiblets: zod.boolean(),
+      lineTotalInCents: zod.number(),
+    }),
+  ),
+  createdAt: zod.date(),
+  updatedAt: zod.date(),
+});
+
+/**
+ * @summary Register a new customer account
+ */
+export const authRegisterBodyPasswordMin = 8;
+
+export const AuthRegisterBody = zod.object({
+  email: zod.string().email(),
+  password: zod.string().min(authRegisterBodyPasswordMin),
+  name: zod.string(),
+  phone: zod.string().nullish(),
+});
+
+/**
+ * @summary Log in to customer account
+ */
+export const AuthLoginBody = zod.object({
+  email: zod.string().email(),
+  password: zod.string(),
+});
+
+export const AuthLoginResponse = zod.object({
+  id: zod.number(),
+  email: zod.string(),
+  name: zod.string(),
+  phone: zod.string().nullable(),
+});
+
+/**
+ * @summary Log out of customer account
+ */
+export const AuthLogoutResponse = zod.object({
+  message: zod.string(),
+});
+
+/**
+ * @summary Get current customer session
+ */
+export const AuthMeResponse = zod.object({
+  id: zod.number(),
+  email: zod.string(),
+  name: zod.string(),
+  phone: zod.string().nullable(),
+});
+
+/**
+ * @summary Update customer profile
+ */
+export const AuthUpdateProfileBody = zod.object({
+  name: zod.string().optional(),
+  phone: zod.string().nullish(),
+});
+
+export const AuthUpdateProfileResponse = zod.object({
+  id: zod.number(),
+  email: zod.string(),
+  name: zod.string(),
+  phone: zod.string().nullable(),
+});
+
+/**
+ * @summary Get current cart
+ */
+export const GetCartResponse = zod.object({
+  items: zod.array(
+    zod.object({
+      productId: zod.number(),
+      productName: zod.string(),
+      productType: zod.enum([
+        "eggs_chicken",
+        "eggs_duck",
+        "meat_chicken",
+        "meat_turkey",
+      ]),
+      pricingType: zod.enum(["unit", "deposit"]),
+      quantity: zod.number(),
+      unitLabel: zod.string().nullable(),
+      unitPriceInCents: zod.number(),
+      addGiblets: zod
+        .boolean()
+        .describe("For meat products — add giblets add-on ($2\/bird)"),
+      lineTotalInCents: zod.number(),
+    }),
+  ),
+  subtotalInCents: zod.number(),
+  itemCount: zod.number(),
+});
+
+/**
+ * @summary Add or update item in cart
+ */
+
+export const AddCartItemBody = zod.object({
+  productId: zod.number(),
+  quantity: zod.number().min(1),
+  addGiblets: zod.boolean().optional(),
+});
+
+export const AddCartItemResponse = zod.object({
+  items: zod.array(
+    zod.object({
+      productId: zod.number(),
+      productName: zod.string(),
+      productType: zod.enum([
+        "eggs_chicken",
+        "eggs_duck",
+        "meat_chicken",
+        "meat_turkey",
+      ]),
+      pricingType: zod.enum(["unit", "deposit"]),
+      quantity: zod.number(),
+      unitLabel: zod.string().nullable(),
+      unitPriceInCents: zod.number(),
+      addGiblets: zod
+        .boolean()
+        .describe("For meat products — add giblets add-on ($2\/bird)"),
+      lineTotalInCents: zod.number(),
+    }),
+  ),
+  subtotalInCents: zod.number(),
+  itemCount: zod.number(),
+});
+
+/**
+ * @summary Remove item from cart
+ */
+export const RemoveCartItemParams = zod.object({
+  productId: zod.coerce.number(),
+});
+
+export const RemoveCartItemResponse = zod.object({
+  items: zod.array(
+    zod.object({
+      productId: zod.number(),
+      productName: zod.string(),
+      productType: zod.enum([
+        "eggs_chicken",
+        "eggs_duck",
+        "meat_chicken",
+        "meat_turkey",
+      ]),
+      pricingType: zod.enum(["unit", "deposit"]),
+      quantity: zod.number(),
+      unitLabel: zod.string().nullable(),
+      unitPriceInCents: zod.number(),
+      addGiblets: zod
+        .boolean()
+        .describe("For meat products — add giblets add-on ($2\/bird)"),
+      lineTotalInCents: zod.number(),
+    }),
+  ),
+  subtotalInCents: zod.number(),
+  itemCount: zod.number(),
+});
+
+/**
+ * @summary Clear all items from cart
+ */
+export const ClearCartResponse = zod.object({
+  items: zod.array(
+    zod.object({
+      productId: zod.number(),
+      productName: zod.string(),
+      productType: zod.enum([
+        "eggs_chicken",
+        "eggs_duck",
+        "meat_chicken",
+        "meat_turkey",
+      ]),
+      pricingType: zod.enum(["unit", "deposit"]),
+      quantity: zod.number(),
+      unitLabel: zod.string().nullable(),
+      unitPriceInCents: zod.number(),
+      addGiblets: zod
+        .boolean()
+        .describe("For meat products — add giblets add-on ($2\/bird)"),
+      lineTotalInCents: zod.number(),
+    }),
+  ),
+  subtotalInCents: zod.number(),
+  itemCount: zod.number(),
+});
+
+/**
+ * @summary Create a Stripe Checkout Session
+ */
+export const CreateStripeCheckoutBody = zod.object({
+  name: zod.string(),
+  email: zod.string().email(),
+  phone: zod.string(),
+  notes: zod.string().nullish(),
+});
+
+export const CreateStripeCheckoutResponse = zod.object({
+  checkoutUrl: zod.string(),
+  sessionId: zod.string(),
+});
+
+/**
+ * @summary Create a cash-at-pickup order (no Stripe)
+ */
+export const CreateCashOrderBody = zod.object({
+  name: zod.string(),
+  email: zod.string().email(),
+  phone: zod.string(),
+  notes: zod.string().nullish(),
+});
+
+/**
+ * @summary List current customer's orders
+ */
+export const ListMyOrdersResponseItem = zod.object({
+  id: zod.number(),
+  customerName: zod.string(),
+  customerEmail: zod.string(),
+  status: zod.enum([
+    "pending_payment",
+    "deposit_paid",
+    "cash_pending",
+    "cancelled",
+  ]),
+  paymentMethod: zod.enum(["stripe", "cash"]),
+  totalInCents: zod.number(),
+  createdAt: zod.date(),
+});
+export const ListMyOrdersResponse = zod.array(ListMyOrdersResponseItem);
+
+/**
+ * @summary Get current customer's order detail
+ */
+export const GetMyOrderParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const GetMyOrderResponse = zod.object({
+  id: zod.number(),
+  customerId: zod.number().nullable(),
+  customerName: zod.string(),
+  customerEmail: zod.string(),
+  customerPhone: zod.string(),
+  status: zod.enum([
+    "pending_payment",
+    "deposit_paid",
+    "cash_pending",
+    "cancelled",
+  ]),
+  paymentMethod: zod.enum(["stripe", "cash"]),
+  stripeCheckoutSessionId: zod.string().nullable(),
+  totalInCents: zod.number(),
+  notes: zod.string().nullable(),
+  items: zod.array(
+    zod.object({
+      id: zod.number(),
+      productId: zod.number().nullable(),
+      productName: zod.string(),
+      quantity: zod.number(),
+      pricingType: zod.enum(["unit", "deposit"]),
+      unitPriceInCents: zod.number(),
+      unitLabel: zod.string().nullable(),
+      isGiblets: zod.boolean(),
+      lineTotalInCents: zod.number(),
+    }),
+  ),
+  createdAt: zod.date(),
+  updatedAt: zod.date(),
+});
