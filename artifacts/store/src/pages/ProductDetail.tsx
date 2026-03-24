@@ -212,7 +212,7 @@ export default function ProductDetail() {
                     />
                     <div>
                       <div className="font-bold text-foreground">Add Giblets (+$2.00)</div>
-                      <p className="text-sm text-muted-foreground">Includes heart, liver, and neck. Highly recommended for rich gravy and stock.</p>
+                      <p className="text-sm text-muted-foreground">Includes heart, liver, and neck. Highly recommended for rich gravy and stock. <span className="text-green-600 dark:text-green-400 font-medium">Refundable if your order is cancelled.</span></p>
                     </div>
                   </label>
                 )}

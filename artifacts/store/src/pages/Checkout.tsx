@@ -253,7 +253,7 @@ export default function Checkout() {
                           onChange={() => handleToggleGiblets(item.productId, item.quantity, !!item.addGiblets)}
                         />
                         <span className="text-xs text-muted-foreground group-hover:text-foreground transition-colors">
-                          Add Giblets (+$2.00)
+                          Add Giblets (+$2.00) <span className="text-green-600 dark:text-green-400">refundable</span>
                         </span>
                       </label>
                     )}

@@ -168,7 +168,7 @@ export default function Cart() {
                         onChange={(e) => handleUpdateQuantity(item.productId, item.quantity, e.target.checked)}
                         disabled={updatePending}
                       />
-                      <span className="text-sm font-medium">Add Giblets (+{formatMoney(200)})</span>
+                      <span className="text-sm font-medium">Add Giblets (+{formatMoney(200)}) <span className="text-xs font-normal text-green-600 dark:text-green-400">refundable</span></span>
                     </label>
                   </div>
                 )}
