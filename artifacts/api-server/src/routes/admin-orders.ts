@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { desc, count } from "drizzle-orm";
+import { desc, count, eq, and, SQL } from "drizzle-orm";
 import { db, ordersTable } from "@workspace/db";
 import { requireAdmin } from "../middlewares/require-admin.js";
 import { AdminListOrdersQueryParams, AdminGetOrderParams } from "@workspace/api-zod";
@@ -16,10 +16,17 @@ router.get("/admin/orders", requireAdmin, async (req, res): Promise<void> => {
 
   const limit = parsed.data.limit ?? 50;
   const offset = parsed.data.offset ?? 0;
+  const statusFilter = parsed.data.status;
+
+  const conditions: SQL[] = [];
+  if (statusFilter) {
+    conditions.push(eq(ordersTable.status, statusFilter));
+  }
 
   const orders = await db
     .select()
     .from(ordersTable)
+    .where(conditions.length > 0 ? and(...conditions) : undefined)
     .orderBy(desc(ordersTable.createdAt))
     .limit(limit)
     .offset(offset);

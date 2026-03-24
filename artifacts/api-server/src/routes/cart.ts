@@ -6,7 +6,7 @@ import { AddCartItemBody, RemoveCartItemParams } from "@workspace/api-zod";
 
 const router: IRouter = Router();
 
-async function persistCartForCustomer(
+export async function persistCartForCustomer(
   customerId: number | undefined,
   cart: Array<{ productId: number; quantity: number; addGiblets: boolean }>
 ) {

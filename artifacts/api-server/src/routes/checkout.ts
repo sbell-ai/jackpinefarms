@@ -238,7 +238,7 @@ router.post("/checkout/cash", async (req, res): Promise<void> => {
     ? `\n  Track your order by creating an account: ${baseUrl}/auth/register?email=${emailParams}`
     : `\n  Order detail: ${baseUrl}/account/orders/${order.id}`;
   console.log(
-    `[EMAIL STUB] Order confirmation for ${customerEmail}:\n  Order #${String(order.id).padStart(6, "0")}\n  Total: $${(orderData.totalInCents / 100).toFixed(2)}\n  Payment: Cash at Pickup${accountClaimLine}`
+    `[EMAIL STUB] Order confirmation for ${customerEmail}:\n  Order #${String(order.id).padStart(6, "0")}\n  Total: $${(orderData.totalInCents / 100).toFixed(2)}\n  Payment: Cash at Pickup${accountClaimLine}\n  To unsubscribe from order notifications, reply STOP to this email.`
   );
 
   res.status(201).json({ ...order, items });

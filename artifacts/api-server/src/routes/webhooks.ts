@@ -90,7 +90,7 @@ router.post("/webhooks/stripe", async (req, res): Promise<void> => {
       const accountClaimLine = isGuest
         ? `\n  Track your order by creating an account: ${baseUrl}/auth/register?email=${emailParams}`
         : `\n  Order detail: ${baseUrl}/account/orders/${order.id}`;
-      console.log(`[EMAIL STUB] Stripe payment confirmed for ${pending.customerEmail}:\n  Order #${String(order.id).padStart(6, "0")} (deposit paid)${accountClaimLine}`);
+      console.log(`[EMAIL STUB] Stripe payment confirmed for ${pending.customerEmail}:\n  Order #${String(order.id).padStart(6, "0")} (deposit paid)${accountClaimLine}\n  To unsubscribe from order notifications, reply STOP to this email.`);
       console.log(`Order ${order.id} created from Stripe session ${stripeSessionId}`);
     } else {
       console.warn(`No pending checkout found for Stripe session ${stripeSessionId}`);

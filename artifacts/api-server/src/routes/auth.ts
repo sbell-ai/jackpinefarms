@@ -3,6 +3,7 @@ import { Router, type IRouter } from "express";
 import bcrypt from "bcryptjs";
 import { eq } from "drizzle-orm";
 import { db, customersTable, customerCartsTable } from "@workspace/db";
+import { persistCartForCustomer } from "./cart.js";
 import {
   AuthRegisterBody,
   AuthLoginBody,
@@ -133,6 +134,8 @@ router.post("/auth/login", authLimiter, async (req, res): Promise<void> => {
   await new Promise<void>((resolve, reject) =>
     req.session.save((err) => (err ? reject(err) : resolve()))
   );
+
+  await persistCartForCustomer(customer.id, req.session.cart ?? []);
 
   res.json(toCustomerSession(customer));
 });
