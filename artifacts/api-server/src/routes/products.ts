@@ -16,6 +16,7 @@ import {
 } from "@workspace/api-zod";
 import { requireAdmin } from "../middlewares/require-admin";
 import { generateUnsubscribeToken } from "./notify-me.js";
+import { sendEmail } from "../lib/email.js";
 
 const router: IRouter = Router();
 
@@ -34,17 +35,36 @@ async function triggerNotifyMeEmails(productId: number, productName: string): Pr
 
   if (subscribers.length === 0) return;
 
+  const shopUrl = `${BASE_URL}/shop`;
+  let sentCount = 0;
+
   for (const sub of subscribers) {
     const unsubscribeUrl = `${BASE_URL}/unsubscribe?token=${sub.unsubscribeToken}`;
-    console.log(
-      `[EMAIL STUB] Restock notification for ${sub.email}:\n` +
-      `  Product: ${productName} is now taking orders!\n` +
-      `  Link: ${BASE_URL}/shop\n` +
-      `  Unsubscribe: ${unsubscribeUrl}`
-    );
+    const result = await sendEmail({
+      to: sub.email,
+      subject: `${productName} is now available — Jack Pine Farm`,
+      text: [
+        `Good news! ${productName} is now taking orders at Jack Pine Farm.`,
+        ``,
+        `Order here: ${shopUrl}`,
+        ``,
+        `—`,
+        `Jack Pine Farm`,
+        `To unsubscribe from these notifications: ${unsubscribeUrl}`,
+      ].join("\n"),
+      html: [
+        `<p>Good news! <strong>${productName}</strong> is now taking orders at Jack Pine Farm.</p>`,
+        `<p><a href="${shopUrl}">Place your order →</a></p>`,
+        `<hr />`,
+        `<p style="font-size:12px;color:#888">`,
+        `<a href="${unsubscribeUrl}">Unsubscribe</a> from restock notifications for ${productName}.`,
+        `</p>`,
+      ].join("\n"),
+    });
+    if (result.sent) sentCount++;
   }
 
-  console.log(`[NOTIFY-ME] Sent ${subscribers.length} restock notification(s) for "${productName}"`);
+  console.log(`[NOTIFY-ME] Processed ${subscribers.length} restock notification(s) for "${productName}" (${sentCount} delivered, provider: ${sentCount > 0 ? "live" : "stub"})`);
 }
 
 router.get("/products", async (req, res): Promise<void> => {

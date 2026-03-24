@@ -30,6 +30,15 @@ const STATUS_COLORS: Record<string, string> = {
   no_show: "bg-red-100 text-red-800",
 };
 
+const EVENT_ICONS: Record<string, string> = {
+  status_change: "🔄",
+  refund: "💸",
+  note: "📝",
+  invoice_sent: "📧",
+  pickup_assigned: "📅",
+  weights_entered: "⚖️",
+};
+
 export default function AdminCustomerDetail() {
   const { id } = useParams();
   const customerId = Number(id);
@@ -58,6 +67,7 @@ export default function AdminCustomerDetail() {
   }
 
   const orders: any[] = (customer as any).orders ?? [];
+  const eventTimeline: any[] = (customer as any).eventTimeline ?? [];
 
   return (
     <div className="space-y-6">
@@ -100,6 +110,11 @@ export default function AdminCustomerDetail() {
             <span className="text-foreground font-medium">{orders.length}</span>
             <span className="text-muted-foreground">order{orders.length !== 1 ? "s" : ""}</span>
           </div>
+          {orders.filter((o: any) => o.refundedGiblets).length > 0 && (
+            <div className="text-sm text-muted-foreground">
+              💸 {orders.filter((o: any) => o.refundedGiblets).length} giblets refund{orders.filter((o: any) => o.refundedGiblets).length !== 1 ? "s" : ""}
+            </div>
+          )}
           <div className="text-sm text-muted-foreground">
             Joined {format(new Date(customer.createdAt), "MMM d, yyyy")}
           </div>
@@ -122,7 +137,8 @@ export default function AdminCustomerDetail() {
                 <th className="text-left px-4 py-2 font-medium text-muted-foreground">Order</th>
                 <th className="text-left px-4 py-2 font-medium text-muted-foreground">Date</th>
                 <th className="text-left px-4 py-2 font-medium text-muted-foreground">Payment</th>
-                <th className="text-left px-4 py-2 font-medium text-muted-foreground">Total</th>
+                <th className="text-left px-4 py-2 font-medium text-muted-foreground">Deposit</th>
+                <th className="text-left px-4 py-2 font-medium text-muted-foreground">Weight</th>
                 <th className="text-left px-4 py-2 font-medium text-muted-foreground">Status</th>
               </tr>
             </thead>
@@ -133,6 +149,9 @@ export default function AdminCustomerDetail() {
                     <Link href={`/admin/orders/${order.id}`} className="hover:text-primary transition-colors">
                       #{String(order.id).padStart(4, "0")}
                     </Link>
+                    {order.refundedGiblets && (
+                      <span className="ml-1 text-yellow-600" title="Giblets refunded">💸</span>
+                    )}
                   </td>
                   <td className="px-4 py-2 text-muted-foreground">
                     {format(new Date(order.createdAt), "MMM d, yyyy")}
@@ -143,6 +162,9 @@ export default function AdminCustomerDetail() {
                   <td className="px-4 py-2 font-medium text-foreground">
                     ${((order.totalInCents ?? 0) / 100).toFixed(2)}
                   </td>
+                  <td className="px-4 py-2 text-muted-foreground">
+                    {order.finalWeightLbs ? `${order.finalWeightLbs} lbs` : "—"}
+                  </td>
                   <td className="px-4 py-2">
                     <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${STATUS_COLORS[order.status] ?? "bg-gray-100 text-gray-800"}`}>
                       {STATUS_LABELS[order.status] ?? order.status}
@@ -152,6 +174,47 @@ export default function AdminCustomerDetail() {
               ))}
             </tbody>
           </table>
+        )}
+      </div>
+
+      {/* Activity Timeline */}
+      <div className="rounded-lg border border-border bg-card">
+        <div className="px-4 py-3 border-b border-border">
+          <div className="text-sm font-semibold text-foreground">
+            Activity Timeline ({eventTimeline.length} events across all orders)
+          </div>
+        </div>
+        {eventTimeline.length === 0 ? (
+          <div className="px-4 py-6 text-sm text-muted-foreground text-center">
+            No activity yet.
+          </div>
+        ) : (
+          <div className="divide-y divide-border max-h-96 overflow-y-auto">
+            {eventTimeline.map((ev: any) => (
+              <div key={ev.id} className="px-4 py-3 flex gap-3 items-start">
+                <span className="text-base leading-none mt-0.5 shrink-0">
+                  {EVENT_ICONS[ev.eventType] ?? "📌"}
+                </span>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <Link
+                      href={`/admin/orders/${ev.orderId}`}
+                      className="text-xs font-mono text-muted-foreground hover:text-primary transition-colors"
+                    >
+                      #{String(ev.orderId).padStart(4, "0")}
+                    </Link>
+                    <span className="text-xs text-muted-foreground capitalize bg-muted px-1.5 py-0.5 rounded">
+                      {ev.eventType.replace(/_/g, " ")}
+                    </span>
+                  </div>
+                  <div className="text-sm text-foreground mt-0.5">{ev.body}</div>
+                  <div className="text-xs text-muted-foreground mt-0.5">
+                    {format(new Date(ev.createdAt), "MMM d, yyyy h:mm a")}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
         )}
       </div>
     </div>

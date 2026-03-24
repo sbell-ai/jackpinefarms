@@ -1,7 +1,7 @@
 import "../types/session.d.ts";
 import { Router, type IRouter } from "express";
 import { eq, desc, count, inArray } from "drizzle-orm";
-import { db, customersTable, ordersTable } from "@workspace/db";
+import { db, customersTable, ordersTable, orderEventsTable } from "@workspace/db";
 import { requireAdmin } from "../middlewares/require-admin.js";
 import * as z from "zod";
 
@@ -69,11 +69,32 @@ router.get("/admin/customers/:id", requireAdmin, async (req, res): Promise<void>
       status: ordersTable.status,
       paymentMethod: ordersTable.paymentMethod,
       totalInCents: ordersTable.totalInCents,
+      finalWeightLbs: ordersTable.finalWeightLbs,
+      refundedGiblets: ordersTable.refundedGiblets,
+      stripeInvoiceId: ordersTable.stripeInvoiceId,
       createdAt: ordersTable.createdAt,
     })
     .from(ordersTable)
     .where(eq(ordersTable.customerId, id))
     .orderBy(desc(ordersTable.createdAt));
+
+  const orderIds = orders.map((o) => o.id);
+
+  let eventTimeline: Array<{
+    id: number;
+    orderId: number;
+    eventType: string;
+    body: string;
+    createdAt: Date;
+  }> = [];
+
+  if (orderIds.length > 0) {
+    eventTimeline = await db
+      .select()
+      .from(orderEventsTable)
+      .where(inArray(orderEventsTable.orderId, orderIds))
+      .orderBy(desc(orderEventsTable.createdAt));
+  }
 
   res.json({
     id: customer.id,
@@ -83,6 +104,7 @@ router.get("/admin/customers/:id", requireAdmin, async (req, res): Promise<void>
     emailVerified: customer.emailVerified,
     orderCount: orders.length,
     orders,
+    eventTimeline,
     createdAt: customer.createdAt,
   });
 });

@@ -1,7 +1,7 @@
 import "../types/session.d.ts";
 import { Router, type IRouter } from "express";
-import { eq, count, inArray } from "drizzle-orm";
-import { db, pickupEventsTable, ordersTable, orderEventsTable } from "@workspace/db";
+import { eq, count, inArray, isNull, and, not } from "drizzle-orm";
+import { db, pickupEventsTable, ordersTable, orderEventsTable, orderItemsTable, preorderBatchesTable } from "@workspace/db";
 import { requireAdmin } from "../middlewares/require-admin.js";
 import * as z from "zod";
 
@@ -27,6 +27,7 @@ const AssignOrderBody = z.object({
 const WeightEntry = z.object({
   orderId: z.number().int().positive(),
   weightLbs: z.number().positive(),
+  variant: z.enum(["whole", "half", "quarter"]).optional().default("whole"),
 });
 
 const SendInvoicesBody = z.object({
@@ -48,6 +49,57 @@ async function getEventWithCount(eventId: number) {
     .where(eq(ordersTable.pickupEventId, eventId));
 
   return { ...event, assignedOrderCount: Number(assignedOrderCount) };
+}
+
+async function createStripeInvoice(params: {
+  orderId: number;
+  email: string;
+  customerName: string;
+  remainingCents: number;
+  weightLbs: number;
+  pricePerLbCents: number;
+  depositPaidCents: number;
+  eventName: string;
+}): Promise<string | null> {
+  const stripeKey = process.env.STRIPE_SECRET_KEY;
+  if (!stripeKey) return null;
+
+  const { createRequire } = await import("node:module");
+  const require = createRequire(import.meta.url);
+  const Stripe = require("stripe");
+  const stripe = new Stripe(stripeKey, { apiVersion: "2025-02-24.acacia" });
+
+  const searchResult = await stripe.customers.list({ email: params.email, limit: 1 });
+  const stripeCustomer = searchResult.data[0] ?? await stripe.customers.create({
+    email: params.email,
+    name: params.customerName,
+  });
+
+  const description = [
+    `Jack Pine Farm — Order #${String(params.orderId).padStart(4, "0")} final balance`,
+    `${params.weightLbs} lbs × $${(params.pricePerLbCents / 100).toFixed(2)}/lb = $${((params.weightLbs * params.pricePerLbCents) / 100).toFixed(2)}`,
+    `Minus deposit paid: $${(params.depositPaidCents / 100).toFixed(2)}`,
+    `Pickup: ${params.eventName}`,
+  ].join(" | ");
+
+  await stripe.invoiceItems.create({
+    customer: stripeCustomer.id,
+    amount: params.remainingCents,
+    currency: "cad",
+    description,
+  });
+
+  const invoice = await stripe.invoices.create({
+    customer: stripeCustomer.id,
+    collection_method: "send_invoice",
+    days_until_due: 7,
+    auto_advance: true,
+  });
+
+  const finalizedInvoice = await stripe.invoices.finalizeInvoice(invoice.id);
+  await stripe.invoices.sendInvoice(finalizedInvoice.id);
+
+  return finalizedInvoice.id;
 }
 
 router.get("/admin/pickup-events", requireAdmin, async (req, res): Promise<void> => {
@@ -88,12 +140,73 @@ router.get("/admin/pickup-events/:id", requireAdmin, async (req, res): Promise<v
       totalInCents: ordersTable.totalInCents,
       finalWeightLbs: ordersTable.finalWeightLbs,
       stripeInvoiceId: ordersTable.stripeInvoiceId,
+      batchId: ordersTable.batchId,
       createdAt: ordersTable.createdAt,
     })
     .from(ordersTable)
     .where(eq(ordersTable.pickupEventId, id));
 
-  res.json({ ...event, orders: assignedOrders });
+  const assignedOrderIds = assignedOrders.map((o) => o.id);
+
+  const allAssignedItems = assignedOrderIds.length > 0
+    ? await db
+        .select()
+        .from(orderItemsTable)
+        .where(inArray(orderItemsTable.orderId, assignedOrderIds))
+    : [];
+
+  const itemsByOrder = new Map<number, typeof allAssignedItems>();
+  for (const item of allAssignedItems) {
+    const list = itemsByOrder.get(item.orderId) ?? [];
+    list.push(item);
+    itemsByOrder.set(item.orderId, list);
+  }
+
+  const ordersWithItems = assignedOrders.map((o) => ({
+    ...o,
+    items: itemsByOrder.get(o.id) ?? [],
+  }));
+
+  const unassignedOrders = await db
+    .select({
+      id: ordersTable.id,
+      customerName: ordersTable.customerName,
+      customerEmail: ordersTable.customerEmail,
+      status: ordersTable.status,
+      paymentMethod: ordersTable.paymentMethod,
+      totalInCents: ordersTable.totalInCents,
+      batchId: ordersTable.batchId,
+      createdAt: ordersTable.createdAt,
+    })
+    .from(ordersTable)
+    .where(
+      and(
+        isNull(ordersTable.pickupEventId),
+        not(inArray(ordersTable.status, ["cancelled", "no_show", "fulfilled"]))
+      )
+    );
+
+  const unassignedIds = unassignedOrders.map((o) => o.id);
+  const unassignedItems = unassignedIds.length > 0
+    ? await db
+        .select()
+        .from(orderItemsTable)
+        .where(inArray(orderItemsTable.orderId, unassignedIds))
+    : [];
+
+  const unassignedItemsByOrder = new Map<number, typeof unassignedItems>();
+  for (const item of unassignedItems) {
+    const list = unassignedItemsByOrder.get(item.orderId) ?? [];
+    list.push(item);
+    unassignedItemsByOrder.set(item.orderId, list);
+  }
+
+  const unassignedWithItems = unassignedOrders.map((o) => ({
+    ...o,
+    items: unassignedItemsByOrder.get(o.id) ?? [],
+  }));
+
+  res.json({ ...event, orders: ordersWithItems, unassignedOrders: unassignedWithItems });
 });
 
 router.post("/admin/pickup-events", requireAdmin, async (req, res): Promise<void> => {
@@ -168,9 +281,39 @@ router.post("/admin/pickup-events/:id/send-invoices", requireAdmin, async (req, 
   const [event] = await db.select().from(pickupEventsTable).where(eq(pickupEventsTable.id, eventId)).limit(1);
   if (!event) { res.status(404).json({ error: "Pickup event not found" }); return; }
 
-  for (const { orderId, weightLbs } of weights) {
+  const results: Array<{ orderId: number; status: string; invoiceId?: string; remainingCents?: number }> = [];
+
+  for (const { orderId, weightLbs, variant } of weights) {
     const [order] = await db.select().from(ordersTable).where(eq(ordersTable.id, orderId)).limit(1);
-    if (!order) continue;
+    if (!order) {
+      results.push({ orderId, status: "order_not_found" });
+      continue;
+    }
+
+    let pricePerLbCents = 0;
+    let batchName = "unknown batch";
+
+    if (order.batchId) {
+      const [batch] = await db
+        .select()
+        .from(preorderBatchesTable)
+        .where(eq(preorderBatchesTable.id, order.batchId))
+        .limit(1);
+
+      if (batch) {
+        batchName = batch.name;
+        if (variant === "whole") pricePerLbCents = batch.pricePerLbCentsWhole;
+        else if (variant === "half") pricePerLbCents = batch.pricePerLbCentsHalf;
+        else pricePerLbCents = batch.pricePerLbCentsQuarter;
+      }
+    }
+
+    const finalTotalCents = pricePerLbCents > 0
+      ? Math.round(weightLbs * pricePerLbCents)
+      : 0;
+
+    const depositPaidCents = order.totalInCents ?? 0;
+    const remainingCents = Math.max(0, finalTotalCents - depositPaidCents);
 
     await db
       .update(ordersTable)
@@ -180,24 +323,67 @@ router.post("/admin/pickup-events/:id/send-invoices", requireAdmin, async (req, 
     await db.insert(orderEventsTable).values({
       orderId,
       eventType: "weights_entered",
-      body: `Final weight recorded: ${weightLbs} lbs`,
+      body: `Final weight recorded: ${weightLbs} lbs (${variant} bird, batch: ${batchName})`,
     });
 
-    await db.insert(orderEventsTable).values({
-      orderId,
-      eventType: "invoice_sent",
-      body: `[EMAIL STUB] Final balance invoice sent to ${order.customerEmail} for ${weightLbs} lbs. Configure Stripe billing + email provider to send real invoices.`,
-    });
+    if (remainingCents > 0 && pricePerLbCents > 0) {
+      try {
+        const invoiceId = await createStripeInvoice({
+          orderId,
+          email: order.customerEmail,
+          customerName: order.customerName,
+          remainingCents,
+          weightLbs,
+          pricePerLbCents,
+          depositPaidCents,
+          eventName: event.name,
+        });
 
-    console.log(
-      `[INVOICE STUB] Order ${orderId} — ${order.customerEmail}\n` +
-      `  Weight: ${weightLbs} lbs\n` +
-      `  Pickup: ${event.name} on ${event.scheduledAt.toLocaleDateString()}\n` +
-      `  (Configure STRIPE_SECRET_KEY + email provider to send real invoices)`
-    );
+        if (invoiceId) {
+          await db.update(ordersTable).set({ stripeInvoiceId: invoiceId }).where(eq(ordersTable.id, orderId));
+          await db.insert(orderEventsTable).values({
+            orderId,
+            eventType: "invoice_sent",
+            body: `Stripe invoice ${invoiceId} sent to ${order.customerEmail}. Remaining balance: $${(remainingCents / 100).toFixed(2)} (${weightLbs} lbs × $${(pricePerLbCents / 100).toFixed(2)}/lb − $${(depositPaidCents / 100).toFixed(2)} deposit)`,
+          });
+          results.push({ orderId, status: "invoiced", invoiceId, remainingCents });
+        } else {
+          await db.insert(orderEventsTable).values({
+            orderId,
+            eventType: "invoice_sent",
+            body: `[STUB] Invoice pending for ${order.customerEmail}. Remaining: $${(remainingCents / 100).toFixed(2)} (${weightLbs} lbs × $${(pricePerLbCents / 100).toFixed(2)}/lb − $${(depositPaidCents / 100).toFixed(2)} deposit). Configure STRIPE_SECRET_KEY to send real invoices.`,
+          });
+          console.log(
+            `[INVOICE STUB] Order ${orderId} — ${order.customerEmail}\n` +
+            `  Weight: ${weightLbs} lbs (${variant}, ${batchName})\n` +
+            `  Final: $${(finalTotalCents / 100).toFixed(2)} | Deposit paid: $${(depositPaidCents / 100).toFixed(2)} | Remaining: $${(remainingCents / 100).toFixed(2)}\n` +
+            `  Pickup: ${event.name} on ${event.scheduledAt.toLocaleDateString()}`
+          );
+          results.push({ orderId, status: "stub", remainingCents });
+        }
+      } catch (err: any) {
+        await db.insert(orderEventsTable).values({
+          orderId,
+          eventType: "invoice_sent",
+          body: `Stripe invoice failed for ${order.customerEmail}: ${err.message}. Remaining: $${(remainingCents / 100).toFixed(2)}`,
+        });
+        results.push({ orderId, status: "error", remainingCents });
+        console.error(`[INVOICE ERROR] Order ${orderId}:`, err.message);
+      }
+    } else {
+      await db.insert(orderEventsTable).values({
+        orderId,
+        eventType: "invoice_sent",
+        body: `No additional charge: deposit covers full amount. Weight: ${weightLbs} lbs.${pricePerLbCents === 0 ? " (No batch price configured — assign order to a batch first)" : ""}`,
+      });
+      results.push({ orderId, status: "deposit_covers_balance", remainingCents: 0 });
+    }
   }
 
-  res.json({ message: `Weights recorded and invoice stubs sent for ${weights.length} orders` });
+  res.json({
+    message: `Processed ${weights.length} order(s)`,
+    results,
+  });
 });
 
 export default router;
