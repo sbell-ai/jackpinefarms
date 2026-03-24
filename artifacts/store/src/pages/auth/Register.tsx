@@ -14,11 +14,13 @@ export default function Register() {
   const [password, setPassword] = useState("");
   const [phone, setPhone] = useState("");
   
+  const redirectTo = new URLSearchParams(window.location.search).get("redirect") ?? "/account";
+
   const registerMutation = useAuthRegister({
     mutation: {
       onSuccess: () => {
         queryClient.invalidateQueries({ queryKey: getAuthMeQueryKey() });
-        setLocation("/account");
+        setLocation(redirectTo);
       }
     }
   });

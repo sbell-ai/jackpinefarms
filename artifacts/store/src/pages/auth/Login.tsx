@@ -11,12 +11,13 @@ export default function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   
+  const redirectTo = new URLSearchParams(window.location.search).get("redirect") ?? "/account";
+
   const loginMutation = useAuthLogin({
     mutation: {
       onSuccess: () => {
         queryClient.invalidateQueries({ queryKey: getAuthMeQueryKey() });
-        // Redirect to previous page or account
-        setLocation("/account");
+        setLocation(redirectTo);
       }
     }
   });

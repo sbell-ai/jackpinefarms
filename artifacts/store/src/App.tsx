@@ -22,6 +22,7 @@ import CustomerRegister from "./pages/auth/Register";
 import ForgotPassword from "./pages/auth/ForgotPassword";
 import ResetPassword from "./pages/auth/ResetPassword";
 import VerifyEmail from "./pages/auth/VerifyEmail";
+import ClaimOrder from "./pages/auth/ClaimOrder";
 import Cart from "./pages/Cart";
 import Checkout from "./pages/Checkout";
 import OrderConfirmation from "./pages/OrderConfirmation";
@@ -81,6 +82,9 @@ function Router() {
       </Route>
       <Route path="/auth/verify-email">
         <VerifyEmail />
+      </Route>
+      <Route path="/auth/claim-order">
+        <ClaimOrder />
       </Route>
       
       <Route path="/cart">

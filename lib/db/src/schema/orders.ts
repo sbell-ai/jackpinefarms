@@ -36,6 +36,8 @@ export const ordersTable = pgTable("orders", {
   stripePaymentIntentId: text("stripe_payment_intent_id"),
   totalInCents: integer("total_in_cents").notNull(),
   notes: text("notes"),
+  claimToken: text("claim_token"),
+  claimTokenExpiresAt: timestamp("claim_token_expires_at", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true })
     .notNull()

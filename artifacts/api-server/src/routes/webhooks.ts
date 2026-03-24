@@ -1,7 +1,7 @@
 import { Router, type IRouter } from "express";
 import { eq } from "drizzle-orm";
 import { db, ordersTable, stripePendingCheckoutsTable, customerCartsTable } from "@workspace/db";
-import { createOrderFromData } from "./checkout.js";
+import { createOrderFromData, generateClaimToken } from "./checkout.js";
 
 const router: IRouter = Router();
 
@@ -67,6 +67,10 @@ router.post("/webhooks/stripe", async (req, res): Promise<void> => {
         lineTotalInCents: number;
       }>;
 
+      const isGuest = !pending.customerId;
+      const claimToken = isGuest ? generateClaimToken() : null;
+      const claimTokenExpiresAt = claimToken ? new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) : null;
+
       const order = await createOrderFromData({
         customerId: pending.customerId ?? null,
         customerName: pending.customerName,
@@ -79,6 +83,8 @@ router.post("/webhooks/stripe", async (req, res): Promise<void> => {
         stripeCheckoutSessionId: stripeSessionId,
         stripePaymentIntentId: checkoutSession.payment_intent ?? null,
         lineItems,
+        claimToken,
+        claimTokenExpiresAt,
       });
 
       await db
@@ -92,10 +98,9 @@ router.post("/webhooks/stripe", async (req, res): Promise<void> => {
       }
 
       const baseUrl = process.env.STORE_BASE_URL ?? `https://${process.env.REPLIT_DEV_DOMAIN}/store`;
-      const isGuest = !pending.customerId;
       const emailParams = encodeURIComponent(pending.customerEmail);
-      const accountClaimLine = isGuest
-        ? `\n  Track your order by creating an account: ${baseUrl}/auth/register?email=${emailParams}`
+      const accountClaimLine = claimToken
+        ? `\n  Claim this order into your account: ${baseUrl}/auth/claim-order?token=${claimToken}`
         : `\n  Order detail: ${baseUrl}/account/orders/${order.id}`;
       const unsubscribeUrl = `${baseUrl}/unsubscribe?email=${emailParams}`;
       console.log(`[EMAIL STUB] Stripe payment confirmed for ${pending.customerEmail}:\n  Order #${String(order.id).padStart(6, "0")} (deposit paid)${accountClaimLine}\n  Unsubscribe: ${unsubscribeUrl}`);

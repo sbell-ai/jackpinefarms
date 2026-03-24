@@ -1,6 +1,7 @@
 import "../types/session.d.ts";
 import { Router, type IRouter } from "express";
 import { inArray, eq } from "drizzle-orm";
+import crypto from "node:crypto";
 import {
   db,
   productsTable,
@@ -70,6 +71,10 @@ async function buildOrderItems(
   return { lineItems, totalInCents };
 }
 
+export function generateClaimToken() {
+  return crypto.randomBytes(32).toString("hex");
+}
+
 export async function createOrderFromData(data: {
   customerId: number | null;
   customerName: string;
@@ -82,6 +87,8 @@ export async function createOrderFromData(data: {
   stripeCheckoutSessionId?: string | null;
   stripePaymentIntentId?: string | null;
   lineItems: CartLineItem[];
+  claimToken?: string | null;
+  claimTokenExpiresAt?: Date | null;
 }) {
   const [order] = await db
     .insert(ordersTable)
@@ -96,6 +103,8 @@ export async function createOrderFromData(data: {
       totalInCents: data.totalInCents,
       stripeCheckoutSessionId: data.stripeCheckoutSessionId ?? null,
       stripePaymentIntentId: data.stripePaymentIntentId ?? null,
+      claimToken: data.claimToken ?? null,
+      claimTokenExpiresAt: data.claimTokenExpiresAt ?? null,
     })
     .returning();
 
@@ -203,6 +212,10 @@ router.post("/checkout/cash", async (req, res): Promise<void> => {
 
   const { name: customerName, email: customerEmail, phone: customerPhone, notes } = parsed.data;
 
+  const isGuest = !session.customerId;
+  const claimToken = isGuest ? generateClaimToken() : null;
+  const claimTokenExpiresAt = claimToken ? new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) : null; // 30 days
+
   const order = await createOrderFromData({
     customerId: session.customerId ?? null,
     customerName,
@@ -213,6 +226,8 @@ router.post("/checkout/cash", async (req, res): Promise<void> => {
     status: "cash_pending",
     totalInCents: orderData.totalInCents,
     lineItems: orderData.lineItems,
+    claimToken,
+    claimTokenExpiresAt,
   });
 
   session.cart = [];
@@ -232,10 +247,9 @@ router.post("/checkout/cash", async (req, res): Promise<void> => {
     .where(eq(orderItemsTable.orderId, order.id));
 
   const baseUrl = process.env.STORE_BASE_URL ?? `https://${process.env.REPLIT_DEV_DOMAIN}/store`;
-  const isGuest = !session.customerId;
   const emailParams = encodeURIComponent(customerEmail);
-  const accountClaimLine = isGuest
-    ? `\n  Track your order by creating an account: ${baseUrl}/auth/register?email=${emailParams}`
+  const accountClaimLine = claimToken
+    ? `\n  Claim this order into your account: ${baseUrl}/auth/claim-order?token=${claimToken}`
     : `\n  Order detail: ${baseUrl}/account/orders/${order.id}`;
   const unsubscribeUrl = `${baseUrl}/unsubscribe?email=${emailParams}`;
   console.log(
@@ -243,6 +257,50 @@ router.post("/checkout/cash", async (req, res): Promise<void> => {
   );
 
   res.status(201).json({ ...order, items });
+});
+
+router.post("/orders/claim", async (req, res): Promise<void> => {
+  const session = (req as any).session;
+  if (!session.customerId) {
+    res.status(401).json({ error: "You must be logged in to claim an order" });
+    return;
+  }
+
+  const { token } = req.body;
+  if (!token || typeof token !== "string") {
+    res.status(400).json({ error: "Claim token is required" });
+    return;
+  }
+
+  const now = new Date();
+  const [order] = await db
+    .select()
+    .from(ordersTable)
+    .where(eq(ordersTable.claimToken, token))
+    .limit(1);
+
+  if (!order) {
+    res.status(404).json({ error: "Invalid or expired claim token" });
+    return;
+  }
+
+  if (order.claimTokenExpiresAt && order.claimTokenExpiresAt < now) {
+    res.status(410).json({ error: "This claim link has expired" });
+    return;
+  }
+
+  if (order.customerId) {
+    // Already claimed — idempotent response
+    res.json({ orderId: order.id, message: "Order already linked to an account" });
+    return;
+  }
+
+  await db
+    .update(ordersTable)
+    .set({ customerId: session.customerId, claimToken: null, claimTokenExpiresAt: null })
+    .where(eq(ordersTable.id, order.id));
+
+  res.json({ orderId: order.id, message: "Order successfully linked to your account" });
 });
 
 export default router;
