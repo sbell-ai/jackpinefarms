@@ -52,6 +52,23 @@ router.post("/webhooks/stripe", async (req, res): Promise<void> => {
 
       console.log(`Order ${orderId} marked as deposit_paid via Stripe webhook`);
     }
+  } else if (
+    event.type === "checkout.session.expired" ||
+    event.type === "checkout.session.async_payment_failed"
+  ) {
+    const checkoutSession = event.data.object;
+    const orderId = checkoutSession.metadata?.orderId;
+
+    if (orderId) {
+      await db
+        .update(ordersTable)
+        .set({ status: "cancelled" })
+        .where(eq(ordersTable.id, Number(orderId)));
+
+      console.log(
+        `Order ${orderId} cancelled due to ${event.type}`
+      );
+    }
   }
 
   res.json({ received: true });

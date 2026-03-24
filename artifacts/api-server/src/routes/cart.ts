@@ -132,7 +132,18 @@ router.delete("/cart", async (req, res): Promise<void> => {
     session.save((err: Error | null) => (err ? reject(err) : resolve()))
   );
 
-  res.json({ items: [], total: 0, itemCount: 0 });
+  res.json({ items: [], subtotalInCents: 0, itemCount: 0 });
+});
+
+router.post("/cart/clear", async (req, res): Promise<void> => {
+  const session = (req as any).session;
+  session.cart = [];
+
+  await new Promise<void>((resolve, reject) =>
+    session.save((err: Error | null) => (err ? reject(err) : resolve()))
+  );
+
+  res.json({ items: [], subtotalInCents: 0, itemCount: 0 });
 });
 
 export default router;

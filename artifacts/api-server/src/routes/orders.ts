@@ -40,7 +40,7 @@ export async function getOrderWithItems(orderId: number) {
   return { ...order, items };
 }
 
-router.get("/orders/mine", async (req, res): Promise<void> => {
+router.get("/orders", async (req, res): Promise<void> => {
   if (!requireCustomer(req, res)) return;
 
   const orders = await db
@@ -62,7 +62,7 @@ router.get("/orders/mine", async (req, res): Promise<void> => {
   );
 });
 
-router.get("/orders/mine/:id", async (req, res): Promise<void> => {
+router.get("/orders/:id", async (req, res): Promise<void> => {
   if (!requireCustomer(req, res)) return;
 
   const id = Number(req.params.id);
