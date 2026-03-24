@@ -8,7 +8,7 @@ const STATUS_GROUPS = [
   { label: "Cash Pending", statuses: ["cash_pending"], color: "text-blue-700 bg-blue-50 border-blue-200" },
   { label: "Pickup Assigned", statuses: ["pickup_assigned"], color: "text-purple-700 bg-purple-50 border-purple-200" },
   { label: "Invoice Sent", statuses: ["invoice_sent", "weights_entered"], color: "text-indigo-700 bg-indigo-50 border-indigo-200" },
-  { label: "Fulfilled", statuses: ["fulfilled"], color: "text-teal-700 bg-teal-50 border-teal-200" },
+  { label: "Paid / Fulfilled", statuses: ["fulfilled"], color: "text-teal-700 bg-teal-50 border-teal-200" },
   { label: "Cancelled / No Show", statuses: ["cancelled", "no_show"], color: "text-red-700 bg-red-50 border-red-200" },
 ];
 

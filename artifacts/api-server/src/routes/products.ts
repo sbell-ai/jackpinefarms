@@ -35,7 +35,7 @@ async function triggerNotifyMeEmails(productId: number, productName: string): Pr
 
   if (subscribers.length === 0) return;
 
-  const shopUrl = `${BASE_URL}/shop`;
+  const shopUrl = `${BASE_URL}/shop?product=${productId}`;
   let sentCount = 0;
 
   for (const sub of subscribers) {

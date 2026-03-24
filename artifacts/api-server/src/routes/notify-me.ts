@@ -88,9 +88,9 @@ router.post("/resubscribe", async (req, res): Promise<void> => {
   await db
     .update(notifyMeTable)
     .set({ globalUnsubscribe: false })
-    .where(eq(notifyMeTable.unsubscribeToken, token));
+    .where(eq(notifyMeTable.email, sub.email));
 
-  res.json({ message: "You have been re-subscribed to notifications" });
+  res.json({ message: "You have been re-subscribed to all notifications" });
 });
 
 export default router;
