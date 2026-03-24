@@ -143,13 +143,19 @@ export default function ProductDetail() {
           {/* Deposit Info Box */}
           {product.pricingType === 'deposit' && (
             <div className="bg-accent/5 border border-accent/20 rounded-2xl p-6 mb-8">
-              <h4 className="font-bold text-accent mb-2 flex items-center gap-2">
+              <h4 className="font-bold text-accent mb-3 flex items-center gap-2">
                 <AlertCircle className="w-5 h-5" />
-                Preorder Deposit
+                Preorder Deposit — How It Works
               </h4>
-              <p className="text-sm text-foreground/80 mb-3">
-                This is a non-refundable deposit to reserve your order. The final price will be calculated by weight and invoiced before pickup.
+              <p className="text-sm font-semibold text-destructive mb-3">
+                ⚠ This deposit is non-refundable.
               </p>
+              <ol className="text-sm text-foreground/80 space-y-2 list-none mb-4">
+                <li className="flex gap-2"><span className="font-bold text-accent shrink-0">1.</span> Pay the deposit now to reserve your spot in the next processing batch.</li>
+                <li className="flex gap-2"><span className="font-bold text-accent shrink-0">2.</span> We raise and process your order. Final price is calculated by actual weight.</li>
+                <li className="flex gap-2"><span className="font-bold text-accent shrink-0">3.</span> You receive an invoice for the remaining balance before your scheduled pickup date.</li>
+                <li className="flex gap-2"><span className="font-bold text-accent shrink-0">4.</span> Pay the balance and pick up locally — no shipping.</li>
+              </ol>
               {product.depositDescription && (
                 <p className="text-sm text-foreground/80 bg-white/50 p-3 rounded-lg border border-accent/10">
                   {product.depositDescription}

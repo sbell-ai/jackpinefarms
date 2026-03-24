@@ -42,6 +42,13 @@ router.post("/webhooks/stripe", async (req, res): Promise<void> => {
     const checkoutSession = event.data.object;
     const stripeSessionId: string = checkoutSession.id;
 
+    // Only fulfil if payment was actually collected
+    if (checkoutSession.payment_status !== "paid") {
+      console.warn(`[Webhook] Session ${stripeSessionId} completed but payment_status is ${checkoutSession.payment_status} — skipping fulfilment`);
+      res.json({ received: true });
+      return;
+    }
+
     const [pending] = await db
       .select()
       .from(stripePendingCheckoutsTable)
@@ -90,7 +97,8 @@ router.post("/webhooks/stripe", async (req, res): Promise<void> => {
       const accountClaimLine = isGuest
         ? `\n  Track your order by creating an account: ${baseUrl}/auth/register?email=${emailParams}`
         : `\n  Order detail: ${baseUrl}/account/orders/${order.id}`;
-      console.log(`[EMAIL STUB] Stripe payment confirmed for ${pending.customerEmail}:\n  Order #${String(order.id).padStart(6, "0")} (deposit paid)${accountClaimLine}\n  To unsubscribe from order notifications, reply STOP to this email.`);
+      const unsubscribeUrl = `${baseUrl}/unsubscribe?email=${emailParams}`;
+      console.log(`[EMAIL STUB] Stripe payment confirmed for ${pending.customerEmail}:\n  Order #${String(order.id).padStart(6, "0")} (deposit paid)${accountClaimLine}\n  Unsubscribe: ${unsubscribeUrl}`);
       console.log(`Order ${order.id} created from Stripe session ${stripeSessionId}`);
     } else {
       console.warn(`No pending checkout found for Stripe session ${stripeSessionId}`);
