@@ -11,6 +11,7 @@ import { Loader2, Trash2, ArrowRight, ShoppingBag, Plus, Minus } from "lucide-re
 type CartItem = {
   productId: number;
   productName: string;
+  productType: string;
   pricingType: "unit" | "deposit";
   unitPriceInCents: number;
   quantity: number;
@@ -19,6 +20,12 @@ type CartItem = {
   unitLabel: string | null;
   imageUrl?: string | null;
 };
+
+function eggStepFor(productType: string): number {
+  if (productType === "eggs_chicken") return 12;
+  if (productType === "eggs_duck") return 6;
+  return 1;
+}
 
 export default function Cart() {
   const [, setLocation] = useLocation();
@@ -121,21 +128,32 @@ export default function Cart() {
                     <span className="text-sm font-medium text-foreground">Quantity:</span>
                     <div className="flex items-center bg-background border border-border rounded-lg p-0.5">
                       <button 
-                        onClick={() => handleUpdateQuantity(item.productId, item.quantity - 1, item.addGiblets)}
-                        disabled={updatePending || item.quantity <= 1}
+                        onClick={() => {
+                          const step = eggStepFor(item.productType);
+                          handleUpdateQuantity(item.productId, Math.max(step, item.quantity - step), item.addGiblets);
+                        }}
+                        disabled={updatePending || item.quantity <= eggStepFor(item.productType)}
                         className="w-8 h-8 flex items-center justify-center rounded hover:bg-muted text-foreground transition-colors disabled:opacity-50"
                       >
                         <Minus className="w-3 h-3" />
                       </button>
                       <span className="w-10 text-center font-bold text-sm">{item.quantity}</span>
                       <button 
-                        onClick={() => handleUpdateQuantity(item.productId, item.quantity + 1, item.addGiblets)}
+                        onClick={() => {
+                          const step = eggStepFor(item.productType);
+                          handleUpdateQuantity(item.productId, item.quantity + step, item.addGiblets);
+                        }}
                         disabled={updatePending}
                         className="w-8 h-8 flex items-center justify-center rounded hover:bg-muted text-foreground transition-colors disabled:opacity-50"
                       >
                         <Plus className="w-3 h-3" />
                       </button>
                     </div>
+                    {eggStepFor(item.productType) > 1 && (
+                      <span className="text-xs text-muted-foreground">
+                        {item.productType === "eggs_chicken" ? "sold by the dozen" : "sold by the half-dozen"}
+                      </span>
+                    )}
                   </div>
                 )}
 
