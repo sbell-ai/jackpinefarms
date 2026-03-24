@@ -1,6 +1,7 @@
 import { Router, type IRouter } from "express";
 import { eq } from "drizzle-orm";
-import { db, ordersTable } from "@workspace/db";
+import { db, ordersTable, stripePendingCheckoutsTable } from "@workspace/db";
+import { createOrderFromData } from "./checkout.js";
 
 const router: IRouter = Router();
 
@@ -39,36 +40,61 @@ router.post("/webhooks/stripe", async (req, res): Promise<void> => {
 
   if (event.type === "checkout.session.completed") {
     const checkoutSession = event.data.object;
-    const orderId = checkoutSession.metadata?.orderId;
+    const stripeSessionId: string = checkoutSession.id;
 
-    if (orderId) {
+    const [pending] = await db
+      .select()
+      .from(stripePendingCheckoutsTable)
+      .where(eq(stripePendingCheckoutsTable.stripeSessionId, stripeSessionId))
+      .limit(1);
+
+    if (pending) {
+      const lineItems = pending.cartSnapshot as Array<{
+        productId: number;
+        productName: string;
+        quantity: number;
+        pricingType: string;
+        unitPriceInCents: number;
+        unitLabel: string | null;
+        isGiblets: boolean;
+        lineTotalInCents: number;
+      }>;
+
+      const order = await createOrderFromData({
+        customerId: pending.customerId ?? null,
+        customerName: pending.customerName,
+        customerEmail: pending.customerEmail,
+        customerPhone: pending.customerPhone,
+        notes: pending.notes,
+        paymentMethod: "stripe",
+        status: "deposit_paid",
+        totalInCents: pending.totalInCents,
+        stripeCheckoutSessionId: stripeSessionId,
+        stripePaymentIntentId: checkoutSession.payment_intent ?? null,
+        lineItems,
+      });
+
       await db
-        .update(ordersTable)
-        .set({
-          status: "deposit_paid",
-          stripePaymentIntentId: checkoutSession.payment_intent ?? null,
-        })
-        .where(eq(ordersTable.id, Number(orderId)));
+        .delete(stripePendingCheckoutsTable)
+        .where(eq(stripePendingCheckoutsTable.stripeSessionId, stripeSessionId));
 
-      console.log(`Order ${orderId} marked as deposit_paid via Stripe webhook`);
+      console.log(`[EMAIL STUB] Stripe payment confirmed for ${pending.customerEmail}:\n  Order #${String(order.id).padStart(6, "0")} (deposit paid)`);
+      console.log(`Order ${order.id} created from Stripe session ${stripeSessionId}`);
+    } else {
+      console.warn(`No pending checkout found for Stripe session ${stripeSessionId}`);
     }
   } else if (
     event.type === "checkout.session.expired" ||
     event.type === "checkout.session.async_payment_failed"
   ) {
     const checkoutSession = event.data.object;
-    const orderId = checkoutSession.metadata?.orderId;
+    const stripeSessionId: string = checkoutSession.id;
 
-    if (orderId) {
-      await db
-        .update(ordersTable)
-        .set({ status: "cancelled" })
-        .where(eq(ordersTable.id, Number(orderId)));
+    await db
+      .delete(stripePendingCheckoutsTable)
+      .where(eq(stripePendingCheckoutsTable.stripeSessionId, stripeSessionId));
 
-      console.log(
-        `Order ${orderId} cancelled due to ${event.type}`
-      );
-    }
+    console.log(`Pending checkout ${stripeSessionId} removed due to ${event.type}`);
   }
 
   res.json({ received: true });

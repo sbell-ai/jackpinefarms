@@ -19,6 +19,8 @@ import NotFound from "@/pages/not-found";
 // New Customer & Commerce Pages
 import CustomerLogin from "./pages/auth/Login";
 import CustomerRegister from "./pages/auth/Register";
+import ForgotPassword from "./pages/auth/ForgotPassword";
+import ResetPassword from "./pages/auth/ResetPassword";
 import Cart from "./pages/Cart";
 import Checkout from "./pages/Checkout";
 import OrderConfirmation from "./pages/OrderConfirmation";
@@ -69,6 +71,12 @@ function Router() {
       </Route>
       <Route path="/auth/register">
         <PublicLayout><CustomerRegister /></PublicLayout>
+      </Route>
+      <Route path="/auth/forgot-password">
+        <PublicLayout><ForgotPassword /></PublicLayout>
+      </Route>
+      <Route path="/auth/reset-password">
+        <PublicLayout><ResetPassword /></PublicLayout>
       </Route>
       
       <Route path="/cart">

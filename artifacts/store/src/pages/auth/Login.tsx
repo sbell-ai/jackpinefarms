@@ -96,7 +96,12 @@ export default function Login() {
             </button>
           </form>
 
-          <div className="mt-8 pt-6 border-t border-border text-center">
+          <div className="mt-8 pt-6 border-t border-border text-center space-y-3">
+            <p className="text-muted-foreground text-sm">
+              <Link href="/auth/forgot-password" className="text-primary hover:underline font-medium">
+                Forgot your password?
+              </Link>
+            </p>
             <p className="text-muted-foreground text-sm">
               Don't have an account?{" "}
               <Link href="/auth/register" className="font-bold text-primary hover:underline">

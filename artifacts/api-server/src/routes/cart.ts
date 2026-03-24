@@ -80,6 +80,12 @@ router.post("/cart/items", async (req, res): Promise<void> => {
     return;
   }
 
+  const stepQty = product.productType === "eggs_chicken" ? 12
+    : product.productType === "eggs_duck" ? 6
+    : 1;
+  const minQty = stepQty;
+  const normalizedQty = Math.max(minQty, Math.ceil(quantity / stepQty) * stepQty);
+
   const session = (req as any).session;
   if (!session.cart) session.cart = [];
 
@@ -88,10 +94,11 @@ router.post("/cart/items", async (req, res): Promise<void> => {
   );
 
   if (existing) {
-    existing.quantity += quantity;
+    const newTotal = existing.quantity + normalizedQty;
+    existing.quantity = Math.ceil(newTotal / stepQty) * stepQty;
     if (addGiblets) existing.addGiblets = true;
   } else {
-    session.cart.push({ productId, quantity, addGiblets: addGiblets ?? false });
+    session.cart.push({ productId, quantity: normalizedQty, addGiblets: addGiblets ?? false });
   }
 
   await new Promise<void>((resolve, reject) =>

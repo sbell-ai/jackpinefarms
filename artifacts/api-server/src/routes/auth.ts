@@ -8,8 +8,26 @@ import {
   AuthLoginBody,
   AuthUpdateProfileBody,
 } from "@workspace/api-zod";
+import rateLimit from "express-rate-limit";
+import crypto from "node:crypto";
 
 const router: IRouter = Router();
+
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 20,
+  message: { error: "Too many attempts. Please try again in 15 minutes." },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+const resetLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: 5,
+  message: { error: "Too many password reset requests. Please try again in an hour." },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
 
 function toCustomerSession(customer: typeof customersTable.$inferSelect) {
   return {
@@ -20,7 +38,7 @@ function toCustomerSession(customer: typeof customersTable.$inferSelect) {
   };
 }
 
-router.post("/auth/register", async (req, res): Promise<void> => {
+router.post("/auth/register", authLimiter, async (req, res): Promise<void> => {
   const parsed = AuthRegisterBody.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: parsed.error.message });
@@ -57,10 +75,12 @@ router.post("/auth/register", async (req, res): Promise<void> => {
     req.session.save((err) => (err ? reject(err) : resolve()))
   );
 
+  console.log(`[EMAIL STUB] Welcome email to ${customer.email}: Account created for ${customer.name}`);
+
   res.status(201).json(toCustomerSession(customer));
 });
 
-router.post("/auth/login", async (req, res): Promise<void> => {
+router.post("/auth/login", authLimiter, async (req, res): Promise<void> => {
   const parsed = AuthLoginBody.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: parsed.error.message });
@@ -140,6 +160,78 @@ router.patch("/auth/profile", async (req, res): Promise<void> => {
     .returning();
 
   res.json(toCustomerSession(updated));
+});
+
+router.post("/auth/forgot-password", resetLimiter, async (req, res): Promise<void> => {
+  const { email } = req.body;
+
+  if (!email || typeof email !== "string") {
+    res.status(400).json({ error: "Email is required" });
+    return;
+  }
+
+  const [customer] = await db
+    .select({ id: customersTable.id, email: customersTable.email, name: customersTable.name })
+    .from(customersTable)
+    .where(eq(customersTable.email, email.toLowerCase().trim()))
+    .limit(1);
+
+  if (customer) {
+    const token = crypto.randomBytes(32).toString("hex");
+    const expiresAt = new Date(Date.now() + 60 * 60 * 1000);
+
+    await db
+      .update(customersTable)
+      .set({ resetToken: token, resetTokenExpiresAt: expiresAt })
+      .where(eq(customersTable.id, customer.id));
+
+    const baseUrl = process.env.STORE_BASE_URL ?? `https://${process.env.REPLIT_DEV_DOMAIN}/store`;
+    const resetLink = `${baseUrl}/auth/reset-password?token=${token}`;
+
+    console.log(
+      `[EMAIL STUB] Password reset for ${customer.email}:\n  Reset link: ${resetLink}\n  Expires: ${expiresAt.toISOString()}`
+    );
+  }
+
+  res.json({ message: "If an account with that email exists, a reset link has been sent." });
+});
+
+router.post("/auth/reset-password", resetLimiter, async (req, res): Promise<void> => {
+  const { token, password } = req.body;
+
+  if (!token || typeof token !== "string" || !password || typeof password !== "string") {
+    res.status(400).json({ error: "Token and password are required" });
+    return;
+  }
+
+  if (password.length < 8) {
+    res.status(400).json({ error: "Password must be at least 8 characters" });
+    return;
+  }
+
+  const [customer] = await db
+    .select()
+    .from(customersTable)
+    .where(eq(customersTable.resetToken, token))
+    .limit(1);
+
+  if (
+    !customer ||
+    !customer.resetTokenExpiresAt ||
+    customer.resetTokenExpiresAt < new Date()
+  ) {
+    res.status(400).json({ error: "Invalid or expired reset token" });
+    return;
+  }
+
+  const passwordHash = await bcrypt.hash(password, 12);
+
+  await db
+    .update(customersTable)
+    .set({ passwordHash, resetToken: null, resetTokenExpiresAt: null })
+    .where(eq(customersTable.id, customer.id));
+
+  res.json({ message: "Password updated successfully. You can now log in." });
 });
 
 export default router;

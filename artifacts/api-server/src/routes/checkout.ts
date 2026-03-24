@@ -1,7 +1,13 @@
 import "../types/session.d.ts";
 import { Router, type IRouter } from "express";
 import { inArray, eq } from "drizzle-orm";
-import { db, productsTable, ordersTable, orderItemsTable } from "@workspace/db";
+import {
+  db,
+  productsTable,
+  ordersTable,
+  orderItemsTable,
+  stripePendingCheckoutsTable,
+} from "@workspace/db";
 import { CreateStripeCheckoutBody, CreateCashOrderBody } from "@workspace/api-zod";
 
 const router: IRouter = Router();
@@ -71,6 +77,61 @@ async function buildOrderItems(
   return { lineItems, totalInCents };
 }
 
+export async function createOrderFromData(data: {
+  customerId: number | null;
+  customerName: string;
+  customerEmail: string;
+  customerPhone: string;
+  notes: string | null;
+  paymentMethod: "stripe" | "cash";
+  status: "pending_payment" | "deposit_paid" | "cash_pending" | "cancelled";
+  totalInCents: number;
+  stripeCheckoutSessionId?: string | null;
+  stripePaymentIntentId?: string | null;
+  lineItems: Array<{
+    productId: number;
+    productName: string;
+    quantity: number;
+    pricingType: string;
+    unitPriceInCents: number;
+    unitLabel: string | null;
+    isGiblets: boolean;
+    lineTotalInCents: number;
+  }>;
+}) {
+  const [order] = await db
+    .insert(ordersTable)
+    .values({
+      customerId: data.customerId,
+      customerName: data.customerName,
+      customerEmail: data.customerEmail,
+      customerPhone: data.customerPhone,
+      notes: data.notes,
+      paymentMethod: data.paymentMethod,
+      status: data.status,
+      totalInCents: data.totalInCents,
+      stripeCheckoutSessionId: data.stripeCheckoutSessionId ?? null,
+      stripePaymentIntentId: data.stripePaymentIntentId ?? null,
+    })
+    .returning();
+
+  await db.insert(orderItemsTable).values(
+    data.lineItems.map((li) => ({
+      orderId: order.id,
+      productId: li.productId,
+      productName: li.productName,
+      quantity: li.quantity,
+      pricingType: li.pricingType,
+      unitPriceInCents: li.unitPriceInCents,
+      unitLabel: li.unitLabel,
+      isGiblets: li.isGiblets,
+      lineTotalInCents: li.lineTotalInCents,
+    }))
+  );
+
+  return order;
+}
+
 router.post("/checkout/stripe", async (req, res): Promise<void> => {
   const parsed = CreateStripeCheckoutBody.safeParse(req.body);
   if (!parsed.success) {
@@ -101,34 +162,6 @@ router.post("/checkout/stripe", async (req, res): Promise<void> => {
     return;
   }
 
-  const [order] = await db
-    .insert(ordersTable)
-    .values({
-      customerId: session.customerId ?? null,
-      customerName,
-      customerEmail,
-      customerPhone,
-      notes: notes ?? null,
-      paymentMethod: "stripe",
-      status: "pending_payment",
-      totalInCents: orderData.totalInCents,
-    })
-    .returning();
-
-  await db.insert(orderItemsTable).values(
-    orderData.lineItems.map((li) => ({
-      orderId: order.id,
-      productId: li.productId,
-      productName: li.productName,
-      quantity: li.quantity,
-      pricingType: li.pricingType,
-      unitPriceInCents: li.unitPriceInCents,
-      unitLabel: li.unitLabel,
-      isGiblets: li.isGiblets,
-      lineTotalInCents: li.lineTotalInCents,
-    }))
-  );
-
   const baseUrl = process.env.STORE_BASE_URL ?? `https://${process.env.REPLIT_DEV_DOMAIN}/store`;
 
   const stripeLineItems = orderData.lineItems.map((li) => ({
@@ -145,17 +178,22 @@ router.post("/checkout/stripe", async (req, res): Promise<void> => {
     line_items: stripeLineItems,
     mode: "payment",
     customer_email: customerEmail,
-    metadata: { orderId: String(order.id) },
-    success_url: `${baseUrl}/order-confirmation?orderId=${order.id}&stripe=1`,
+    success_url: `${baseUrl}/order-confirmation?stripe=1`,
     cancel_url: `${baseUrl}/checkout`,
   });
 
-  await db
-    .update(ordersTable)
-    .set({ stripeCheckoutSessionId: checkoutSession.id })
-    .where(eq(ordersTable.id, order.id));
+  await db.insert(stripePendingCheckoutsTable).values({
+    stripeSessionId: checkoutSession.id,
+    customerId: session.customerId ?? null,
+    customerName,
+    customerEmail,
+    customerPhone,
+    notes: notes ?? null,
+    cartSnapshot: orderData.lineItems as any,
+    totalInCents: orderData.totalInCents,
+  });
 
-  res.json({ checkoutUrl: checkoutSession.url, sessionId: checkoutSession.id, orderId: order.id });
+  res.json({ checkoutUrl: checkoutSession.url, sessionId: checkoutSession.id });
 });
 
 router.post("/checkout/cash", async (req, res): Promise<void> => {
@@ -181,33 +219,17 @@ router.post("/checkout/cash", async (req, res): Promise<void> => {
 
   const { name: customerName, email: customerEmail, phone: customerPhone, notes } = parsed.data;
 
-  const [order] = await db
-    .insert(ordersTable)
-    .values({
-      customerId: session.customerId ?? null,
-      customerName,
-      customerEmail,
-      customerPhone,
-      notes: notes ?? null,
-      paymentMethod: "cash",
-      status: "cash_pending",
-      totalInCents: orderData.totalInCents,
-    })
-    .returning();
-
-  await db.insert(orderItemsTable).values(
-    orderData.lineItems.map((li) => ({
-      orderId: order.id,
-      productId: li.productId,
-      productName: li.productName,
-      quantity: li.quantity,
-      pricingType: li.pricingType,
-      unitPriceInCents: li.unitPriceInCents,
-      unitLabel: li.unitLabel,
-      isGiblets: li.isGiblets,
-      lineTotalInCents: li.lineTotalInCents,
-    }))
-  );
+  const order = await createOrderFromData({
+    customerId: session.customerId ?? null,
+    customerName,
+    customerEmail,
+    customerPhone,
+    notes: notes ?? null,
+    paymentMethod: "cash",
+    status: "cash_pending",
+    totalInCents: orderData.totalInCents,
+    lineItems: orderData.lineItems,
+  });
 
   session.cart = [];
   await new Promise<void>((resolve, reject) =>
@@ -218,6 +240,11 @@ router.post("/checkout/cash", async (req, res): Promise<void> => {
     .select()
     .from(orderItemsTable)
     .where(eq(orderItemsTable.orderId, order.id));
+
+  const baseUrl = process.env.STORE_BASE_URL ?? `https://${process.env.REPLIT_DEV_DOMAIN}/store`;
+  console.log(
+    `[EMAIL STUB] Order confirmation for ${customerEmail}:\n  Order #${String(order.id).padStart(6, "0")}\n  Total: $${(orderData.totalInCents / 100).toFixed(2)}\n  Payment: Cash at Pickup\n  Order detail: ${baseUrl}/account/orders/${order.id}`
+  );
 
   res.status(201).json({ ...order, items });
 });
