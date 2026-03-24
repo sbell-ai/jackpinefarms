@@ -1,11 +1,13 @@
 import { useState } from "react";
 import { useLocation } from "wouter";
-import { useAdminLogin } from "@workspace/api-client-react";
+import { useQueryClient } from "@tanstack/react-query";
+import { useAdminLogin, getAdminMeQueryKey } from "@workspace/api-client-react";
 import { Store, Loader2, Lock } from "lucide-react";
 
 export default function AdminLogin() {
   const [, setLocation] = useLocation();
   const [password, setPassword] = useState("");
+  const queryClient = useQueryClient();
   const loginMutation = useAdminLogin();
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -16,6 +18,9 @@ export default function AdminLogin() {
       await loginMutation.mutateAsync({
         data: { password }
       });
+      // Clear any stale "unauthenticated" cache before navigating so AdminLayout
+      // always waits for a fresh /admin/me response rather than bouncing on stale data.
+      await queryClient.invalidateQueries({ queryKey: getAdminMeQueryKey() });
       setLocation("/admin/products");
     } catch (err) {
       // Handled by mutation UI state

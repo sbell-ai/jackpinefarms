@@ -6,7 +6,7 @@ import { cn } from "@/lib/utils";
 
 export function AdminLayout({ children }: { children: ReactNode }) {
   const [location, setLocation] = useLocation();
-  const { data: session, isLoading, isError } = useAdminMe({
+  const { data: session, isLoading, isFetching, isError } = useAdminMe({
     query: {
       queryKey: getAdminMeQueryKey(),
       retry: false,
@@ -21,7 +21,11 @@ export function AdminLayout({ children }: { children: ReactNode }) {
     }
   });
 
-  const shouldRedirect = !isLoading && (isError || !session?.authenticated);
+  // Do not redirect while loading or actively refetching — a stale unauthenticated
+  // cache entry after login would otherwise bounce the user back to the login page
+  // before the fresh /admin/me response arrives.
+  const isSettling = isLoading || isFetching;
+  const shouldRedirect = !isSettling && (isError || !session?.authenticated);
 
   useEffect(() => {
     if (shouldRedirect) {
@@ -29,7 +33,7 @@ export function AdminLayout({ children }: { children: ReactNode }) {
     }
   }, [shouldRedirect, setLocation]);
 
-  if (isLoading || shouldRedirect) {
+  if (isSettling || shouldRedirect) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <Loader2 className="w-8 h-8 animate-spin text-primary" />
