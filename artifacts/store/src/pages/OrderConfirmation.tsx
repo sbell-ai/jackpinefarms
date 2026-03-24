@@ -1,11 +1,49 @@
-import { useLocation } from "wouter";
+import { useEffect, useState } from "react";
 import { Link } from "wouter";
-import { CheckCircle2, Package, MapPin, Calendar } from "lucide-react";
+import { CheckCircle2, Package, MapPin, Calendar, Loader2 } from "lucide-react";
+import { useQueryClient } from "@tanstack/react-query";
+import { getGetCartQueryKey } from "@workspace/api-client-react";
 
 export default function OrderConfirmation() {
-  const [location] = useLocation();
   const searchParams = new URLSearchParams(window.location.search);
   const orderId = searchParams.get("id");
+  const stripeSessionId = searchParams.get("stripe_session_id");
+
+  const queryClient = useQueryClient();
+  const [stripeOrderId, setStripeOrderId] = useState<number | null>(null);
+  const [lookupDone, setLookupDone] = useState(false);
+
+  useEffect(() => {
+    if (!stripeSessionId) return;
+
+    fetch("/api/cart/clear", { method: "POST", credentials: "include" }).then(() => {
+      queryClient.invalidateQueries({ queryKey: getGetCartQueryKey() });
+    });
+
+    let attempts = 0;
+    const maxAttempts = 10;
+    const poll = async () => {
+      attempts++;
+      try {
+        const res = await fetch(`/api/orders/by-stripe-session/${stripeSessionId}`, { credentials: "include" });
+        if (res.ok) {
+          const data = await res.json();
+          setStripeOrderId(data.id);
+          setLookupDone(true);
+          return;
+        }
+      } catch {}
+      if (attempts < maxAttempts) {
+        setTimeout(poll, 1500);
+      } else {
+        setLookupDone(true);
+      }
+    };
+    poll();
+  }, [stripeSessionId]);
+
+  const displayOrderId = orderId ? Number(orderId) : stripeOrderId;
+  const isLoading = stripeSessionId && !lookupDone;
 
   return (
     <div className="flex-1 bg-muted/20 flex items-center justify-center py-16 px-4">
@@ -19,11 +57,16 @@ export default function OrderConfirmation() {
           Thank you for supporting Jack Pine Farm. Your order has been successfully placed.
         </p>
 
-        {orderId && (
-          <div className="inline-block bg-muted px-6 py-3 rounded-xl font-mono text-lg font-bold text-foreground mb-10 border border-border">
-            Order #{orderId.padStart(6, '0')}
+        {isLoading ? (
+          <div className="inline-flex items-center gap-2 bg-muted px-6 py-3 rounded-xl font-mono text-lg font-bold text-foreground mb-10 border border-border">
+            <Loader2 className="w-4 h-4 animate-spin" />
+            Looking up your order…
           </div>
-        )}
+        ) : displayOrderId ? (
+          <div className="inline-block bg-muted px-6 py-3 rounded-xl font-mono text-lg font-bold text-foreground mb-10 border border-border">
+            Order #{String(displayOrderId).padStart(6, '0')}
+          </div>
+        ) : null}
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10 text-left">
           <div className="p-5 rounded-2xl bg-background border border-border">

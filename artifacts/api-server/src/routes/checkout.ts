@@ -171,7 +171,7 @@ router.post("/checkout/stripe", async (req, res): Promise<void> => {
     line_items: stripeLineItems,
     mode: "payment",
     customer_email: customerEmail,
-    success_url: `${baseUrl}/order-confirmation?stripe=1`,
+    success_url: `${baseUrl}/order-confirmation?stripe_session_id={CHECKOUT_SESSION_ID}`,
     cancel_url: `${baseUrl}/checkout`,
   });
 

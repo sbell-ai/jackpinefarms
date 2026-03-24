@@ -40,6 +40,22 @@ export async function getOrderWithItems(orderId: number) {
   return { ...order, items };
 }
 
+router.get("/orders/by-stripe-session/:sessionId", async (req, res): Promise<void> => {
+  const { sessionId } = req.params;
+  const [order] = await db
+    .select({ id: ordersTable.id, status: ordersTable.status })
+    .from(ordersTable)
+    .where(eq(ordersTable.stripeCheckoutSessionId, sessionId))
+    .limit(1);
+
+  if (!order) {
+    res.status(404).json({ error: "Order not found yet" });
+    return;
+  }
+
+  res.json({ id: order.id, status: order.status });
+});
+
 router.get("/orders", async (req, res): Promise<void> => {
   if (!requireCustomer(req, res)) return;
 
