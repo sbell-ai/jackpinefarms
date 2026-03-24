@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { eq } from "drizzle-orm";
+import { eq, lt } from "drizzle-orm";
 import { db, ordersTable, stripePendingCheckoutsTable, customerCartsTable } from "@workspace/db";
 import { createOrderFromData, generateClaimToken } from "./checkout.js";
 
@@ -37,6 +37,11 @@ router.post("/webhooks/stripe", async (req, res): Promise<void> => {
       return;
     }
   }
+
+  // Opportunistically purge pending checkouts older than 25 hours (sessions expire at 24h)
+  db.delete(stripePendingCheckoutsTable)
+    .where(lt(stripePendingCheckoutsTable.createdAt, new Date(Date.now() - 25 * 60 * 60 * 1000)))
+    .catch((e: unknown) => console.warn("Stale pending checkout cleanup error:", e));
 
   if (event.type === "checkout.session.completed") {
     const checkoutSession = event.data.object;
@@ -109,11 +114,16 @@ router.post("/webhooks/stripe", async (req, res): Promise<void> => {
       console.warn(`No pending checkout found for Stripe session ${stripeSessionId}`);
     }
   } else if (event.type === "payment_intent.succeeded") {
-    // Deposit orders are created via checkout.session.completed above.
-    // payment_intent.succeeded is a no-op here; Stripe sessions emit
-    // both events and the session event is preferred for order creation
-    // because it carries the full checkout session context.
-    console.log(`[Webhook] payment_intent.succeeded received for ${(event.data.object as any).id} — handled via session.completed`);
+    // Orders are created via checkout.session.completed which carries full context.
+    // This event is a safe no-op; session.completed always fires alongside it.
+    console.log(`[Webhook] payment_intent.succeeded for ${(event.data.object as any).id} — order handled via session.completed`);
+  } else if (event.type === "payment_intent.payment_failed") {
+    // A payment attempt failed inside an open Checkout Session.
+    // The session remains open so the customer can retry — we do not delete
+    // the pending checkout here. If the session eventually expires without
+    // success, checkout.session.expired will fire and clean it up.
+    // Stale rows are also pruned by the opportunistic cleanup above.
+    console.log(`[Webhook] payment_intent.payment_failed for ${(event.data.object as any).id} — no action needed`);
   } else if (
     event.type === "checkout.session.expired" ||
     event.type === "checkout.session.async_payment_failed"

@@ -107,6 +107,10 @@ router.post("/auth/login", authLimiter, async (req, res): Promise<void> => {
     return;
   }
 
+  // Email verification is sent but not enforced on login intentionally —
+  // a real email provider is required before gating access by emailVerified.
+  // To enforce: add `if (!customer.emailVerified) { res.status(403)... }`
+
   req.session.customerId = customer.id;
 
   const [dbCart] = await db
