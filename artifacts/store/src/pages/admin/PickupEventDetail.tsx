@@ -65,15 +65,36 @@ export default function AdminPickupEventDetail() {
 
   const invalidate = () => qc.invalidateQueries({ queryKey: getAdminGetPickupEventQueryKey(eventId) });
 
+  const [assigningItemId, setAssigningItemId] = useState<number | null>(null);
+
   const assignOrder = useAdminAssignOrderToPickupEvent({
     mutation: {
       onSuccess: () => {
-        toast({ title: "Order assigned to pickup event" });
+        toast({ title: "All order items assigned to pickup event" });
         invalidate();
       },
       onError: (e: any) => toast({ title: "Error", description: e.response?.data?.error ?? e.message, variant: "destructive" }),
     },
   });
+
+  async function assignItem(orderItemId: number) {
+    setAssigningItemId(orderItemId);
+    try {
+      const resp = await fetch(`/api/admin/pickup-events/${eventId}/assign-item`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ orderItemId }),
+        credentials: "include",
+      });
+      if (!resp.ok) throw new Error((await resp.json()).error ?? "Failed");
+      toast({ title: "Item assigned to pickup event" });
+      invalidate();
+    } catch (e: any) {
+      toast({ title: "Error", description: e.message, variant: "destructive" });
+    } finally {
+      setAssigningItemId(null);
+    }
+  }
 
   const updateEvent = useAdminUpdatePickupEvent({
     mutation: {
@@ -190,35 +211,55 @@ export default function AdminPickupEventDetail() {
             {unassignedOrders.map((order: any) => {
               const depositItems = order.items?.filter((i: any) => i.pricingType === "deposit") ?? [];
               return (
-                <div key={order.id} className="px-4 py-3 flex items-center gap-4">
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className="font-mono text-xs text-muted-foreground">
-                        #{String(order.id).padStart(4, "0")}
-                      </span>
-                      <span className="font-medium text-foreground text-sm">{order.customerName}</span>
-                      <span className="text-xs text-muted-foreground">{order.customerEmail}</span>
-                    </div>
-                    <div className="flex items-center gap-2 mt-0.5 flex-wrap">
-                      <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium ${STATUS_COLORS[order.status] ?? "bg-gray-100 text-gray-800"}`}>
-                        {STATUS_LABELS[order.status] ?? order.status}
-                      </span>
-                      {depositItems.map((item: any) => (
-                        <span key={item.id} className="text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded">
-                          {item.productName} × {item.quantity}
+                <div key={order.id} className="px-4 py-3">
+                  <div className="flex items-start gap-3">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="font-mono text-xs text-muted-foreground">
+                          <Link href={`/admin/orders/${order.id}`} className="hover:text-primary">
+                            #{String(order.id).padStart(4, "0")}
+                          </Link>
                         </span>
-                      ))}
+                        <span className="font-medium text-foreground text-sm">{order.customerName}</span>
+                        <span className="text-xs text-muted-foreground">{order.customerEmail}</span>
+                        <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium ${STATUS_COLORS[order.status] ?? "bg-gray-100 text-gray-800"}`}>
+                          {STATUS_LABELS[order.status] ?? order.status}
+                        </span>
+                      </div>
+                      {/* Per-item assignment */}
+                      {depositItems.length > 0 && (
+                        <div className="mt-2 space-y-1">
+                          {depositItems.map((item: any) => (
+                            <div key={item.id} className="flex items-center gap-2">
+                              <span className="text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded flex-1">
+                                {item.productName} × {item.quantity}
+                                {item.isGiblets && " (giblets)"}
+                              </span>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="h-5 text-xs px-2 py-0"
+                                disabled={assigningItemId === item.id}
+                                onClick={() => assignItem(item.id)}
+                              >
+                                {assigningItemId === item.id ? "…" : "Assign item"}
+                              </Button>
+                            </div>
+                          ))}
+                        </div>
+                      )}
                     </div>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      disabled={assignOrder.isPending}
+                      onClick={() => assignOrder.mutate({ id: eventId, data: { orderId: order.id } })}
+                      className="shrink-0"
+                      title="Assign all items in this order"
+                    >
+                      <UserPlus className="w-3 h-3 mr-1" /> Assign all
+                    </Button>
                   </div>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    disabled={assignOrder.isPending}
-                    onClick={() => assignOrder.mutate({ id: eventId, data: { orderId: order.id } })}
-                    className="shrink-0"
-                  >
-                    <UserPlus className="w-3 h-3 mr-1" /> Assign
-                  </Button>
                 </div>
               );
             })}

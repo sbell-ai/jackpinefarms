@@ -1,6 +1,6 @@
 import "../types/session.d.ts";
 import { Router, type IRouter } from "express";
-import { eq, count, inArray, isNull, and, not } from "drizzle-orm";
+import { eq, count, inArray, isNull, and, not, ne } from "drizzle-orm";
 import { db, pickupEventsTable, ordersTable, orderEventsTable, orderItemsTable, preorderBatchesTable } from "@workspace/db";
 import { requireAdmin } from "../middlewares/require-admin.js";
 import * as z from "zod";
@@ -22,6 +22,10 @@ const UpdatePickupEventBody = z.object({
 
 const AssignOrderBody = z.object({
   orderId: z.number().int().positive(),
+});
+
+const AssignItemBody = z.object({
+  orderItemId: z.number().int().positive(),
 });
 
 const WeightEntry = z.object({
@@ -260,13 +264,55 @@ router.post("/admin/pickup-events/:id/assign-order", requireAdmin, async (req, r
     .set({ pickupEventId: eventId, status: "pickup_assigned" })
     .where(eq(ordersTable.id, orderId));
 
+  await db
+    .update(orderItemsTable)
+    .set({ pickupEventId: eventId })
+    .where(eq(orderItemsTable.orderId, orderId));
+
   await db.insert(orderEventsTable).values({
     orderId,
     eventType: "pickup_assigned",
-    body: `Assigned to pickup event: ${event.name} (${event.scheduledAt.toLocaleDateString()})`,
+    body: `All items assigned to pickup event: ${event.name} (${event.scheduledAt.toLocaleDateString()})`,
   });
 
-  res.json({ message: "Order assigned to pickup event" });
+  res.json({ message: "Order and all its items assigned to pickup event" });
+});
+
+router.post("/admin/pickup-events/:id/assign-item", requireAdmin, async (req, res): Promise<void> => {
+  const eventId = Number(req.params.id);
+  if (isNaN(eventId)) { res.status(400).json({ error: "Invalid id" }); return; }
+
+  const parsed = AssignItemBody.safeParse(req.body);
+  if (!parsed.success) { res.status(400).json({ error: parsed.error.message }); return; }
+
+  const { orderItemId } = parsed.data;
+
+  const [event] = await db.select().from(pickupEventsTable).where(eq(pickupEventsTable.id, eventId)).limit(1);
+  if (!event) { res.status(404).json({ error: "Pickup event not found" }); return; }
+
+  const [item] = await db.select().from(orderItemsTable).where(eq(orderItemsTable.id, orderItemId)).limit(1);
+  if (!item) { res.status(404).json({ error: "Order item not found" }); return; }
+
+  await db
+    .update(orderItemsTable)
+    .set({ pickupEventId: eventId })
+    .where(eq(orderItemsTable.id, orderItemId));
+
+  const [order] = await db.select().from(ordersTable).where(eq(ordersTable.id, item.orderId)).limit(1);
+  if (order && order.status !== "pickup_assigned" && order.status !== "weights_entered" && order.status !== "invoice_sent" && order.status !== "fulfilled") {
+    await db
+      .update(ordersTable)
+      .set({ pickupEventId: eventId, status: "pickup_assigned" })
+      .where(eq(ordersTable.id, item.orderId));
+  }
+
+  await db.insert(orderEventsTable).values({
+    orderId: item.orderId,
+    eventType: "pickup_assigned",
+    body: `Item "${item.productName}" (×${item.quantity}) assigned to pickup event: ${event.name} (${event.scheduledAt.toLocaleDateString()})`,
+  });
+
+  res.json({ message: "Item assigned to pickup event", orderItemId, eventId });
 });
 
 router.post("/admin/pickup-events/:id/send-invoices", requireAdmin, async (req, res): Promise<void> => {
@@ -317,7 +363,7 @@ router.post("/admin/pickup-events/:id/send-invoices", requireAdmin, async (req, 
 
     await db
       .update(ordersTable)
-      .set({ finalWeightLbs: weightLbs, status: "invoice_sent" })
+      .set({ finalWeightLbs: weightLbs, status: "weights_entered" })
       .where(eq(ordersTable.id, orderId));
 
     await db.insert(orderEventsTable).values({
@@ -340,7 +386,7 @@ router.post("/admin/pickup-events/:id/send-invoices", requireAdmin, async (req, 
         });
 
         if (invoiceId) {
-          await db.update(ordersTable).set({ stripeInvoiceId: invoiceId }).where(eq(ordersTable.id, orderId));
+          await db.update(ordersTable).set({ stripeInvoiceId: invoiceId, status: "invoice_sent" }).where(eq(ordersTable.id, orderId));
           await db.insert(orderEventsTable).values({
             orderId,
             eventType: "invoice_sent",
@@ -348,10 +394,11 @@ router.post("/admin/pickup-events/:id/send-invoices", requireAdmin, async (req, 
           });
           results.push({ orderId, status: "invoiced", invoiceId, remainingCents });
         } else {
+          await db.update(ordersTable).set({ status: "invoice_sent" }).where(eq(ordersTable.id, orderId));
           await db.insert(orderEventsTable).values({
             orderId,
             eventType: "invoice_sent",
-            body: `[STUB] Invoice pending for ${order.customerEmail}. Remaining: $${(remainingCents / 100).toFixed(2)} (${weightLbs} lbs × $${(pricePerLbCents / 100).toFixed(2)}/lb − $${(depositPaidCents / 100).toFixed(2)} deposit). Configure STRIPE_SECRET_KEY to send real invoices.`,
+            body: `[STUB] Invoice queued for ${order.customerEmail}. Remaining: $${(remainingCents / 100).toFixed(2)} (${weightLbs} lbs × $${(pricePerLbCents / 100).toFixed(2)}/lb − $${(depositPaidCents / 100).toFixed(2)} deposit). Configure STRIPE_SECRET_KEY to send real invoices.`,
           });
           console.log(
             `[INVOICE STUB] Order ${orderId} — ${order.customerEmail}\n` +
@@ -371,6 +418,7 @@ router.post("/admin/pickup-events/:id/send-invoices", requireAdmin, async (req, 
         console.error(`[INVOICE ERROR] Order ${orderId}:`, err.message);
       }
     } else {
+      await db.update(ordersTable).set({ status: "invoice_sent" }).where(eq(ordersTable.id, orderId));
       await db.insert(orderEventsTable).values({
         orderId,
         eventType: "invoice_sent",

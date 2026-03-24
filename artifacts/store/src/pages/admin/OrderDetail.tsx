@@ -9,9 +9,11 @@ import {
   useAdminUpdateOrderStatus,
   useAdminRefundGiblets,
   useAdminAddOrderNote,
+  useAdminListBatches,
+  useAdminAssignOrderBatch,
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, RefreshCw, FileText, CheckCircle, XCircle, MessageSquare } from "lucide-react";
+import { ArrowLeft, RefreshCw, FileText, CheckCircle, XCircle, MessageSquare, Package } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -64,6 +66,7 @@ export default function AdminOrderDetail() {
   const [newNote, setNewNote] = useState("");
   const [newStatus, setNewStatus] = useState("");
   const [statusNote, setStatusNote] = useState("");
+  const [selectedBatchId, setSelectedBatchId] = useState("");
 
   const { data: order, isLoading } = useAdminGetOrder(orderId, {
     query: { queryKey: getAdminGetOrderQueryKey(orderId) },
@@ -108,6 +111,19 @@ export default function AdminOrderDetail() {
         invalidate();
       },
       onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
+    },
+  });
+
+  const { data: batches = [] } = useAdminListBatches();
+
+  const assignBatch = useAdminAssignOrderBatch({
+    mutation: {
+      onSuccess: () => {
+        toast({ title: "Batch assigned" });
+        setSelectedBatchId("");
+        invalidate();
+      },
+      onError: (e: any) => toast({ title: "Error", description: e.response?.data?.error ?? e.message, variant: "destructive" }),
     },
   });
 
@@ -285,6 +301,47 @@ export default function AdminOrderDetail() {
           {addNote.isPending ? "Saving…" : "Add Note"}
         </Button>
       </div>
+
+      {/* Preorder Batch Assignment */}
+      {(order as any).items?.some((i: any) => i.pricingType === "deposit") && (
+        <div className="rounded-lg border border-border bg-card p-4 space-y-3">
+          <div className="text-sm font-semibold text-foreground flex items-center gap-2">
+            <Package className="w-4 h-4" /> Preorder Batch
+          </div>
+          {(order as any).batchId ? (
+            <div className="text-sm text-muted-foreground">
+              Currently assigned to batch ID{" "}
+              <span className="font-medium text-foreground">#{(order as any).batchId}</span>.
+              {" "}Reassign below if needed.
+            </div>
+          ) : (
+            <p className="text-sm text-muted-foreground">
+              This order has deposit items but is not assigned to a preorder batch. Assign a batch so final invoice pricing is available.
+            </p>
+          )}
+          <div className="flex gap-2">
+            <Select value={selectedBatchId} onValueChange={setSelectedBatchId}>
+              <SelectTrigger className="flex-1">
+                <SelectValue placeholder="Select a preorder batch…" />
+              </SelectTrigger>
+              <SelectContent>
+                {(batches as any[]).map((b: any) => (
+                  <SelectItem key={b.id} value={String(b.id)}>
+                    {b.name} — Whole: ${(b.pricePerLbCentsWhole / 100).toFixed(2)}/lb
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Button
+              size="sm"
+              disabled={!selectedBatchId || assignBatch.isPending}
+              onClick={() => assignBatch.mutate({ id: orderId, data: { batchId: Number(selectedBatchId) } })}
+            >
+              {assignBatch.isPending ? "Saving…" : "Assign Batch"}
+            </Button>
+          </div>
+        </div>
+      )}
 
       {/* Event Timeline */}
       <div className="rounded-lg border border-border bg-card">

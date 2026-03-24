@@ -70,6 +70,7 @@ export const orderItemsTable = pgTable("order_items", {
   unitLabel: text("unit_label"),
   isGiblets: boolean("is_giblets").notNull().default(false),
   lineTotalInCents: integer("line_total_in_cents").notNull(),
+  pickupEventId: integer("pickup_event_id").references(() => pickupEventsTable.id),
 });
 
 export const insertOrderSchema = createInsertSchema(ordersTable).omit({
