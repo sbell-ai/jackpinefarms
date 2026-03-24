@@ -3,8 +3,11 @@ import cors from "cors";
 import pinoHttp from "pino-http";
 import session from "express-session";
 import cookieParser from "cookie-parser";
+import connectPgSimple from "connect-pg-simple";
 import router from "./routes";
 import { logger } from "./lib/logger";
+
+const PgSession = connectPgSimple(session);
 
 const app: Express = express();
 
@@ -52,12 +55,18 @@ app.use(express.urlencoded({ extended: true }));
 
 app.use(
   session({
+    store: new PgSession({
+      conString: process.env.DATABASE_URL,
+      tableName: "sessions",
+      createTableIfMissing: true,
+    }),
     secret: process.env.SESSION_SECRET ?? "jack-pine-farm-dev-secret",
     resave: false,
     saveUninitialized: false,
     cookie: {
       httpOnly: true,
       secure: isProduction,
+      sameSite: isProduction ? "none" : "lax",
       maxAge: 7 * 24 * 60 * 60 * 1000,
     },
   }),
