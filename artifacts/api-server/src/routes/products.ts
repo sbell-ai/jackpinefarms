@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { eq, asc, ne } from "drizzle-orm";
+import { eq, asc, ne, and } from "drizzle-orm";
 import { db, productsTable, notifyMeTable } from "@workspace/db";
 import {
   ListProductsResponse,
@@ -15,8 +15,37 @@ import {
   ListProductsQueryParams,
 } from "@workspace/api-zod";
 import { requireAdmin } from "../middlewares/require-admin";
+import { generateUnsubscribeToken } from "./notify-me.js";
 
 const router: IRouter = Router();
+
+const BASE_URL = process.env.PUBLIC_URL ?? "http://localhost:8080";
+
+async function triggerNotifyMeEmails(productId: number, productName: string): Promise<void> {
+  const subscribers = await db
+    .select()
+    .from(notifyMeTable)
+    .where(
+      and(
+        eq(notifyMeTable.productId, productId),
+        eq(notifyMeTable.globalUnsubscribe, false)
+      )
+    );
+
+  if (subscribers.length === 0) return;
+
+  for (const sub of subscribers) {
+    const unsubscribeUrl = `${BASE_URL}/unsubscribe?token=${sub.unsubscribeToken}`;
+    console.log(
+      `[EMAIL STUB] Restock notification for ${sub.email}:\n` +
+      `  Product: ${productName} is now taking orders!\n` +
+      `  Link: ${BASE_URL}/shop\n` +
+      `  Unsubscribe: ${unsubscribeUrl}`
+    );
+  }
+
+  console.log(`[NOTIFY-ME] Sent ${subscribers.length} restock notification(s) for "${productName}"`);
+}
 
 router.get("/products", async (req, res): Promise<void> => {
   const queryParsed = ListProductsQueryParams.safeParse(req.query);
@@ -78,6 +107,17 @@ router.patch("/products/:id", requireAdmin, async (req, res): Promise<void> => {
     return;
   }
 
+  const [existing] = await db
+    .select()
+    .from(productsTable)
+    .where(eq(productsTable.id, params.data.id))
+    .limit(1);
+
+  if (!existing) {
+    res.status(404).json({ error: "Product not found" });
+    return;
+  }
+
   const [product] = await db
     .update(productsTable)
     .set({ ...parsed.data, updatedAt: new Date() })
@@ -87,6 +127,15 @@ router.patch("/products/:id", requireAdmin, async (req, res): Promise<void> => {
   if (!product) {
     res.status(404).json({ error: "Product not found" });
     return;
+  }
+
+  if (
+    existing.availability === "sold_out" &&
+    parsed.data.availability === "taking_orders"
+  ) {
+    triggerNotifyMeEmails(product.id, product.name).catch((err) =>
+      console.error("Error sending restock notifications:", err)
+    );
   }
 
   res.json(UpdateProductResponse.parse(product));
@@ -116,9 +165,15 @@ router.post("/products/:id/notify-me", async (req, res): Promise<void> => {
     return;
   }
 
+  const unsubscribeToken = generateUnsubscribeToken();
+
   await db
     .insert(notifyMeTable)
-    .values({ productId: params.data.id, email: parsed.data.email })
+    .values({
+      productId: params.data.id,
+      email: parsed.data.email,
+      unsubscribeToken,
+    })
     .onConflictDoNothing();
 
   res.json(SubscribeNotifyMeResponse.parse({ message: "You're on the list!" }));

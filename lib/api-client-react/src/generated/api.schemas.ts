@@ -53,7 +53,12 @@ export const OrderStatus = {
   pending_payment: "pending_payment",
   deposit_paid: "deposit_paid",
   cash_pending: "cash_pending",
+  pickup_assigned: "pickup_assigned",
+  weights_entered: "weights_entered",
+  invoice_sent: "invoice_sent",
+  fulfilled: "fulfilled",
   cancelled: "cancelled",
+  no_show: "no_show",
 } as const;
 
 export type PaymentMethod = (typeof PaymentMethod)[keyof typeof PaymentMethod];
@@ -240,6 +245,175 @@ export interface OrderDetail {
   updatedAt: string;
 }
 
+export interface ClaimOrderBody {
+  token: string;
+}
+
+export type BatchStatus = (typeof BatchStatus)[keyof typeof BatchStatus];
+
+export const BatchStatus = {
+  open: "open",
+  closed: "closed",
+  complete: "complete",
+} as const;
+
+export interface PreorderBatch {
+  id: number;
+  productId: number;
+  name: string;
+  status: BatchStatus;
+  capacityBirds: number;
+  pricePerLbCentsWhole: number;
+  pricePerLbCentsHalf: number;
+  pricePerLbCentsQuarter: number;
+  /** @nullable */
+  notes: string | null;
+  orderCount: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreateBatchBody {
+  productId: number;
+  name: string;
+  status?: BatchStatus;
+  capacityBirds: number;
+  pricePerLbCentsWhole: number;
+  pricePerLbCentsHalf: number;
+  pricePerLbCentsQuarter: number;
+  /** @nullable */
+  notes?: string | null;
+}
+
+export interface UpdateBatchBody {
+  name?: string;
+  status?: BatchStatus;
+  capacityBirds?: number;
+  pricePerLbCentsWhole?: number;
+  pricePerLbCentsHalf?: number;
+  pricePerLbCentsQuarter?: number;
+  /** @nullable */
+  notes?: string | null;
+}
+
+export type PickupEventStatus =
+  (typeof PickupEventStatus)[keyof typeof PickupEventStatus];
+
+export const PickupEventStatus = {
+  scheduled: "scheduled",
+  completed: "completed",
+  cancelled: "cancelled",
+} as const;
+
+export interface PickupEvent {
+  id: number;
+  name: string;
+  scheduledAt: string;
+  /** @nullable */
+  locationNotes: string | null;
+  status: PickupEventStatus;
+  assignedOrderCount: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreatePickupEventBody {
+  name: string;
+  scheduledAt: string;
+  /** @nullable */
+  locationNotes?: string | null;
+}
+
+export interface UpdatePickupEventBody {
+  name?: string;
+  scheduledAt?: string;
+  /** @nullable */
+  locationNotes?: string | null;
+  status?: PickupEventStatus;
+}
+
+export interface AssignOrderBody {
+  orderId: number;
+}
+
+export type SendInvoicesBodyWeightsItem = {
+  orderId: number;
+  weightLbs: number;
+};
+
+export interface SendInvoicesBody {
+  weights: SendInvoicesBodyWeightsItem[];
+}
+
+export interface UpdateOrderStatusBody {
+  status: OrderStatus;
+  note?: string;
+}
+
+export interface AddNoteBody {
+  body: string;
+}
+
+export interface AssignBatchBody {
+  /** @nullable */
+  batchId: number | null;
+}
+
+export type OrderEventType =
+  (typeof OrderEventType)[keyof typeof OrderEventType];
+
+export const OrderEventType = {
+  note: "note",
+  status_change: "status_change",
+  refund: "refund",
+  invoice_sent: "invoice_sent",
+  pickup_assigned: "pickup_assigned",
+  weights_entered: "weights_entered",
+} as const;
+
+export interface OrderEvent {
+  id: number;
+  orderId: number;
+  eventType: OrderEventType;
+  body: string;
+  createdAt: string;
+}
+
+export interface AdminCustomerSummary {
+  id: number;
+  email: string;
+  name: string;
+  /** @nullable */
+  phone: string | null;
+  orderCount: number;
+  createdAt: string;
+}
+
+export interface AdminCustomerDetail {
+  id: number;
+  email: string;
+  name: string;
+  /** @nullable */
+  phone: string | null;
+  emailVerified: boolean;
+  orderCount: number;
+  orders: OrderSummary[];
+  createdAt: string;
+}
+
+export interface UnsubscribePreferences {
+  email: string;
+  /** @nullable */
+  productName: string | null;
+  globalUnsubscribe: boolean;
+  token: string;
+}
+
+export interface UnsubscribeBody {
+  token: string;
+  globalUnsubscribe?: boolean;
+}
+
 export type ListProductsParams = {
   /**
    * When true (admin only), include disabled products
@@ -254,4 +428,13 @@ export type AdminListOrdersParams = {
   status?: OrderStatus;
   limit?: number;
   offset?: number;
+};
+
+export type AdminListCustomersParams = {
+  limit?: number;
+  offset?: number;
+};
+
+export type GetUnsubscribePreferencesParams = {
+  token: string;
 };

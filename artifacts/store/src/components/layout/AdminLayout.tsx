@@ -1,7 +1,7 @@
 import { ReactNode, useEffect } from "react";
 import { Link, useLocation } from "wouter";
 import { useAdminMe, useAdminLogout, getAdminMeQueryKey } from "@workspace/api-client-react";
-import { Store, Package, LogOut, Loader2, Home, ShoppingBag } from "lucide-react";
+import { Store, Package, LogOut, Loader2, Home, ShoppingBag, Layers, CalendarDays, Users, LayoutDashboard } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export function AdminLayout({ children }: { children: ReactNode }) {
@@ -38,8 +38,12 @@ export function AdminLayout({ children }: { children: ReactNode }) {
   }
 
   const navItems = [
+    { href: "/admin", label: "Dashboard", icon: LayoutDashboard, exact: true },
     { href: "/admin/products", label: "Products", icon: Package },
     { href: "/admin/orders", label: "Orders", icon: ShoppingBag },
+    { href: "/admin/batches", label: "Batches", icon: Layers },
+    { href: "/admin/pickup-events", label: "Pickup Events", icon: CalendarDays },
+    { href: "/admin/customers", label: "Customers", icon: Users },
   ];
 
   return (
@@ -56,7 +60,9 @@ export function AdminLayout({ children }: { children: ReactNode }) {
         <nav className="flex-1 p-4 space-y-1">
           {navItems.map((item) => {
             const Icon = item.icon;
-            const isActive = location.startsWith(item.href);
+            const isActive = item.exact
+              ? location === item.href
+              : location.startsWith(item.href) && item.href !== "/admin";
             return (
               <Link
                 key={item.href}

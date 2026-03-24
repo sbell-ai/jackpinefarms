@@ -12,5 +12,10 @@ export const OrderStatus = {
   pending_payment: "pending_payment",
   deposit_paid: "deposit_paid",
   cash_pending: "cash_pending",
+  pickup_assigned: "pickup_assigned",
+  weights_entered: "weights_entered",
+  invoice_sent: "invoice_sent",
+  fulfilled: "fulfilled",
   cancelled: "cancelled",
+  no_show: "no_show",
 } as const;

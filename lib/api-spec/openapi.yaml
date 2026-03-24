@@ -24,6 +24,12 @@ tags:
     description: Checkout flow
   - name: orders
     description: Customer orders
+  - name: batches
+    description: Preorder batch management
+  - name: pickup-events
+    description: Pickup event scheduling
+  - name: customers
+    description: Customer management (admin)
 paths:
   /healthz:
     get:
@@ -615,6 +621,672 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
 
+  /orders/claim:
+    post:
+      operationId: claimOrder
+      tags: [orders]
+      summary: Claim a guest order using a claim token (requires auth)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ClaimOrderBody"
+      responses:
+        "200":
+          description: Order claimed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OrderSummary"
+        "400":
+          description: Invalid or expired token
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /admin/batches:
+    get:
+      operationId: adminListBatches
+      tags: [admin, batches]
+      summary: List all preorder batches (admin)
+      responses:
+        "200":
+          description: Batch list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/PreorderBatch"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    post:
+      operationId: adminCreateBatch
+      tags: [admin, batches]
+      summary: Create a preorder batch (admin)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateBatchBody"
+      responses:
+        "201":
+          description: Batch created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PreorderBatch"
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /admin/batches/{id}:
+    get:
+      operationId: adminGetBatch
+      tags: [admin, batches]
+      summary: Get batch details with linked orders (admin)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Batch detail
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PreorderBatch"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    patch:
+      operationId: adminUpdateBatch
+      tags: [admin, batches]
+      summary: Update a preorder batch (admin)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateBatchBody"
+      responses:
+        "200":
+          description: Batch updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PreorderBatch"
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /admin/pickup-events:
+    get:
+      operationId: adminListPickupEvents
+      tags: [admin, pickup-events]
+      summary: List all pickup events (admin)
+      responses:
+        "200":
+          description: Pickup event list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/PickupEvent"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    post:
+      operationId: adminCreatePickupEvent
+      tags: [admin, pickup-events]
+      summary: Create a pickup event (admin)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreatePickupEventBody"
+      responses:
+        "201":
+          description: Pickup event created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PickupEvent"
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /admin/pickup-events/{id}:
+    get:
+      operationId: adminGetPickupEvent
+      tags: [admin, pickup-events]
+      summary: Get pickup event with assigned orders (admin)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Pickup event detail
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PickupEvent"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    patch:
+      operationId: adminUpdatePickupEvent
+      tags: [admin, pickup-events]
+      summary: Update a pickup event (admin)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdatePickupEventBody"
+      responses:
+        "200":
+          description: Pickup event updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PickupEvent"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /admin/pickup-events/{id}/assign-order:
+    post:
+      operationId: adminAssignOrderToPickupEvent
+      tags: [admin, pickup-events]
+      summary: Assign an order to a pickup event (admin)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AssignOrderBody"
+      responses:
+        "200":
+          description: Order assigned
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /admin/pickup-events/{id}/send-invoices:
+    post:
+      operationId: adminSendPickupInvoices
+      tags: [admin, pickup-events]
+      summary: Enter weights and send final balance invoices for a pickup event (admin)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SendInvoicesBody"
+      responses:
+        "200":
+          description: Invoices sent
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /admin/orders/{id}/status:
+    patch:
+      operationId: adminUpdateOrderStatus
+      tags: [admin, orders]
+      summary: Update order status (admin)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateOrderStatusBody"
+      responses:
+        "200":
+          description: Status updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OrderDetail"
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /admin/orders/{id}/refund-giblets:
+    post:
+      operationId: adminRefundGiblets
+      tags: [admin, orders]
+      summary: Refund the giblets add-on for an order (admin)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Refund processed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+        "400":
+          description: Cannot refund (no giblets or already refunded)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /admin/orders/{id}/notes:
+    post:
+      operationId: adminAddOrderNote
+      tags: [admin, orders]
+      summary: Add a note to an order (admin)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AddNoteBody"
+      responses:
+        "201":
+          description: Note added
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OrderEvent"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /admin/orders/{id}/events:
+    get:
+      operationId: adminGetOrderEvents
+      tags: [admin, orders]
+      summary: Get audit trail for an order (admin)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Order events
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/OrderEvent"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /admin/orders/{id}/assign-batch:
+    patch:
+      operationId: adminAssignOrderBatch
+      tags: [admin, orders]
+      summary: Assign an order to a preorder batch (admin)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AssignBatchBody"
+      responses:
+        "200":
+          description: Batch assigned
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OrderDetail"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /admin/customers:
+    get:
+      operationId: adminListCustomers
+      tags: [admin, customers]
+      summary: List all customers (admin)
+      parameters:
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            default: 50
+        - in: query
+          name: offset
+          schema:
+            type: integer
+            default: 0
+      responses:
+        "200":
+          description: Customer list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AdminCustomerSummary"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /admin/customers/{id}:
+    get:
+      operationId: adminGetCustomer
+      tags: [admin, customers]
+      summary: Get customer detail with order history (admin)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Customer detail
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminCustomerDetail"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /unsubscribe:
+    get:
+      operationId: getUnsubscribePreferences
+      tags: [notify-me]
+      summary: Get unsubscribe preferences by token (public)
+      parameters:
+        - in: query
+          name: token
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Unsubscribe preferences
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnsubscribePreferences"
+        "404":
+          description: Invalid token
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    post:
+      operationId: processUnsubscribe
+      tags: [notify-me]
+      summary: Process unsubscribe request (public)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UnsubscribeBody"
+      responses:
+        "200":
+          description: Unsubscribed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+        "404":
+          description: Invalid token
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /resubscribe:
+    post:
+      operationId: processResubscribe
+      tags: [notify-me]
+      summary: Re-subscribe to notifications (public)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UnsubscribeBody"
+      responses:
+        "200":
+          description: Re-subscribed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+        "404":
+          description: Invalid token
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
 components:
   schemas:
     HealthStatus:
@@ -677,7 +1349,12 @@ components:
         - pending_payment
         - deposit_paid
         - cash_pending
+        - pickup_assigned
+        - weights_entered
+        - invoice_sent
+        - fulfilled
         - cancelled
+        - no_show
 
     PaymentMethod:
       type: string
@@ -1059,3 +1736,337 @@ components:
         - items
         - createdAt
         - updatedAt
+    ClaimOrderBody:
+      type: object
+      properties:
+        token:
+          type: string
+      required:
+        - token
+
+    BatchStatus:
+      type: string
+      enum:
+        - open
+        - closed
+        - complete
+
+    PreorderBatch:
+      type: object
+      properties:
+        id:
+          type: integer
+        productId:
+          type: integer
+        name:
+          type: string
+        status:
+          $ref: "#/components/schemas/BatchStatus"
+        capacityBirds:
+          type: integer
+        pricePerLbCentsWhole:
+          type: integer
+        pricePerLbCentsHalf:
+          type: integer
+        pricePerLbCentsQuarter:
+          type: integer
+        notes:
+          type: ["string", "null"]
+        orderCount:
+          type: integer
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - productId
+        - name
+        - status
+        - capacityBirds
+        - pricePerLbCentsWhole
+        - pricePerLbCentsHalf
+        - pricePerLbCentsQuarter
+        - notes
+        - orderCount
+        - createdAt
+        - updatedAt
+
+    CreateBatchBody:
+      type: object
+      properties:
+        productId:
+          type: integer
+        name:
+          type: string
+        status:
+          $ref: "#/components/schemas/BatchStatus"
+        capacityBirds:
+          type: integer
+        pricePerLbCentsWhole:
+          type: integer
+        pricePerLbCentsHalf:
+          type: integer
+        pricePerLbCentsQuarter:
+          type: integer
+        notes:
+          type: ["string", "null"]
+      required:
+        - productId
+        - name
+        - capacityBirds
+        - pricePerLbCentsWhole
+        - pricePerLbCentsHalf
+        - pricePerLbCentsQuarter
+
+    UpdateBatchBody:
+      type: object
+      properties:
+        name:
+          type: string
+        status:
+          $ref: "#/components/schemas/BatchStatus"
+        capacityBirds:
+          type: integer
+        pricePerLbCentsWhole:
+          type: integer
+        pricePerLbCentsHalf:
+          type: integer
+        pricePerLbCentsQuarter:
+          type: integer
+        notes:
+          type: ["string", "null"]
+
+    PickupEventStatus:
+      type: string
+      enum:
+        - scheduled
+        - completed
+        - cancelled
+
+    PickupEvent:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        scheduledAt:
+          type: string
+          format: date-time
+        locationNotes:
+          type: ["string", "null"]
+        status:
+          $ref: "#/components/schemas/PickupEventStatus"
+        assignedOrderCount:
+          type: integer
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - name
+        - scheduledAt
+        - locationNotes
+        - status
+        - assignedOrderCount
+        - createdAt
+        - updatedAt
+
+    CreatePickupEventBody:
+      type: object
+      properties:
+        name:
+          type: string
+        scheduledAt:
+          type: string
+          format: date-time
+        locationNotes:
+          type: ["string", "null"]
+      required:
+        - name
+        - scheduledAt
+
+    UpdatePickupEventBody:
+      type: object
+      properties:
+        name:
+          type: string
+        scheduledAt:
+          type: string
+          format: date-time
+        locationNotes:
+          type: ["string", "null"]
+        status:
+          $ref: "#/components/schemas/PickupEventStatus"
+
+    AssignOrderBody:
+      type: object
+      properties:
+        orderId:
+          type: integer
+      required:
+        - orderId
+
+    SendInvoicesBody:
+      type: object
+      properties:
+        weights:
+          type: array
+          items:
+            type: object
+            properties:
+              orderId:
+                type: integer
+              weightLbs:
+                type: number
+            required:
+              - orderId
+              - weightLbs
+      required:
+        - weights
+
+    UpdateOrderStatusBody:
+      type: object
+      properties:
+        status:
+          $ref: "#/components/schemas/OrderStatus"
+        note:
+          type: string
+      required:
+        - status
+
+    AddNoteBody:
+      type: object
+      properties:
+        body:
+          type: string
+      required:
+        - body
+
+    AssignBatchBody:
+      type: object
+      properties:
+        batchId:
+          type: ["integer", "null"]
+      required:
+        - batchId
+
+    OrderEventType:
+      type: string
+      enum:
+        - note
+        - status_change
+        - refund
+        - invoice_sent
+        - pickup_assigned
+        - weights_entered
+
+    OrderEvent:
+      type: object
+      properties:
+        id:
+          type: integer
+        orderId:
+          type: integer
+        eventType:
+          $ref: "#/components/schemas/OrderEventType"
+        body:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - orderId
+        - eventType
+        - body
+        - createdAt
+
+    AdminCustomerSummary:
+      type: object
+      properties:
+        id:
+          type: integer
+        email:
+          type: string
+        name:
+          type: string
+        phone:
+          type: ["string", "null"]
+        orderCount:
+          type: integer
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - email
+        - name
+        - phone
+        - orderCount
+        - createdAt
+
+    AdminCustomerDetail:
+      type: object
+      properties:
+        id:
+          type: integer
+        email:
+          type: string
+        name:
+          type: string
+        phone:
+          type: ["string", "null"]
+        emailVerified:
+          type: boolean
+        orderCount:
+          type: integer
+        orders:
+          type: array
+          items:
+            $ref: "#/components/schemas/OrderSummary"
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - email
+        - name
+        - phone
+        - emailVerified
+        - orderCount
+        - orders
+        - createdAt
+
+    UnsubscribePreferences:
+      type: object
+      properties:
+        email:
+          type: string
+        productName:
+          type: ["string", "null"]
+        globalUnsubscribe:
+          type: boolean
+        token:
+          type: string
+      required:
+        - email
+        - productName
+        - globalUnsubscribe
+        - token
+
+    UnsubscribeBody:
+      type: object
+      properties:
+        token:
+          type: string
+        globalUnsubscribe:
+          type: boolean
+      required:
+        - token

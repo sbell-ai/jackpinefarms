@@ -220,7 +220,17 @@ export const adminListOrdersQueryOffsetDefault = 0;
 
 export const AdminListOrdersQueryParams = zod.object({
   status: zod
-    .enum(["pending_payment", "deposit_paid", "cash_pending", "cancelled"])
+    .enum([
+      "pending_payment",
+      "deposit_paid",
+      "cash_pending",
+      "pickup_assigned",
+      "weights_entered",
+      "invoice_sent",
+      "fulfilled",
+      "cancelled",
+      "no_show",
+    ])
     .optional()
     .describe("Filter by status"),
   limit: zod.coerce.number().default(adminListOrdersQueryLimitDefault),
@@ -235,7 +245,12 @@ export const AdminListOrdersResponseItem = zod.object({
     "pending_payment",
     "deposit_paid",
     "cash_pending",
+    "pickup_assigned",
+    "weights_entered",
+    "invoice_sent",
+    "fulfilled",
     "cancelled",
+    "no_show",
   ]),
   paymentMethod: zod.enum(["stripe", "cash"]),
   totalInCents: zod.number(),
@@ -260,7 +275,12 @@ export const AdminGetOrderResponse = zod.object({
     "pending_payment",
     "deposit_paid",
     "cash_pending",
+    "pickup_assigned",
+    "weights_entered",
+    "invoice_sent",
+    "fulfilled",
     "cancelled",
+    "no_show",
   ]),
   paymentMethod: zod.enum(["stripe", "cash"]),
   stripeCheckoutSessionId: zod.string().nullable(),
@@ -501,7 +521,12 @@ export const ListMyOrdersResponseItem = zod.object({
     "pending_payment",
     "deposit_paid",
     "cash_pending",
+    "pickup_assigned",
+    "weights_entered",
+    "invoice_sent",
+    "fulfilled",
     "cancelled",
+    "no_show",
   ]),
   paymentMethod: zod.enum(["stripe", "cash"]),
   totalInCents: zod.number(),
@@ -526,7 +551,12 @@ export const GetMyOrderResponse = zod.object({
     "pending_payment",
     "deposit_paid",
     "cash_pending",
+    "pickup_assigned",
+    "weights_entered",
+    "invoice_sent",
+    "fulfilled",
     "cancelled",
+    "no_show",
   ]),
   paymentMethod: zod.enum(["stripe", "cash"]),
   stripeCheckoutSessionId: zod.string().nullable(),
@@ -547,4 +577,477 @@ export const GetMyOrderResponse = zod.object({
   ),
   createdAt: zod.date(),
   updatedAt: zod.date(),
+});
+
+/**
+ * @summary Claim a guest order using a claim token (requires auth)
+ */
+export const ClaimOrderBody = zod.object({
+  token: zod.string(),
+});
+
+export const ClaimOrderResponse = zod.object({
+  id: zod.number(),
+  customerName: zod.string(),
+  customerEmail: zod.string(),
+  status: zod.enum([
+    "pending_payment",
+    "deposit_paid",
+    "cash_pending",
+    "pickup_assigned",
+    "weights_entered",
+    "invoice_sent",
+    "fulfilled",
+    "cancelled",
+    "no_show",
+  ]),
+  paymentMethod: zod.enum(["stripe", "cash"]),
+  totalInCents: zod.number(),
+  createdAt: zod.date(),
+});
+
+/**
+ * @summary List all preorder batches (admin)
+ */
+export const AdminListBatchesResponseItem = zod.object({
+  id: zod.number(),
+  productId: zod.number(),
+  name: zod.string(),
+  status: zod.enum(["open", "closed", "complete"]),
+  capacityBirds: zod.number(),
+  pricePerLbCentsWhole: zod.number(),
+  pricePerLbCentsHalf: zod.number(),
+  pricePerLbCentsQuarter: zod.number(),
+  notes: zod.string().nullable(),
+  orderCount: zod.number(),
+  createdAt: zod.date(),
+  updatedAt: zod.date(),
+});
+export const AdminListBatchesResponse = zod.array(AdminListBatchesResponseItem);
+
+/**
+ * @summary Create a preorder batch (admin)
+ */
+export const AdminCreateBatchBody = zod.object({
+  productId: zod.number(),
+  name: zod.string(),
+  status: zod.enum(["open", "closed", "complete"]).optional(),
+  capacityBirds: zod.number(),
+  pricePerLbCentsWhole: zod.number(),
+  pricePerLbCentsHalf: zod.number(),
+  pricePerLbCentsQuarter: zod.number(),
+  notes: zod.string().nullish(),
+});
+
+/**
+ * @summary Get batch details with linked orders (admin)
+ */
+export const AdminGetBatchParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const AdminGetBatchResponse = zod.object({
+  id: zod.number(),
+  productId: zod.number(),
+  name: zod.string(),
+  status: zod.enum(["open", "closed", "complete"]),
+  capacityBirds: zod.number(),
+  pricePerLbCentsWhole: zod.number(),
+  pricePerLbCentsHalf: zod.number(),
+  pricePerLbCentsQuarter: zod.number(),
+  notes: zod.string().nullable(),
+  orderCount: zod.number(),
+  createdAt: zod.date(),
+  updatedAt: zod.date(),
+});
+
+/**
+ * @summary Update a preorder batch (admin)
+ */
+export const AdminUpdateBatchParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const AdminUpdateBatchBody = zod.object({
+  name: zod.string().optional(),
+  status: zod.enum(["open", "closed", "complete"]).optional(),
+  capacityBirds: zod.number().optional(),
+  pricePerLbCentsWhole: zod.number().optional(),
+  pricePerLbCentsHalf: zod.number().optional(),
+  pricePerLbCentsQuarter: zod.number().optional(),
+  notes: zod.string().nullish(),
+});
+
+export const AdminUpdateBatchResponse = zod.object({
+  id: zod.number(),
+  productId: zod.number(),
+  name: zod.string(),
+  status: zod.enum(["open", "closed", "complete"]),
+  capacityBirds: zod.number(),
+  pricePerLbCentsWhole: zod.number(),
+  pricePerLbCentsHalf: zod.number(),
+  pricePerLbCentsQuarter: zod.number(),
+  notes: zod.string().nullable(),
+  orderCount: zod.number(),
+  createdAt: zod.date(),
+  updatedAt: zod.date(),
+});
+
+/**
+ * @summary List all pickup events (admin)
+ */
+export const AdminListPickupEventsResponseItem = zod.object({
+  id: zod.number(),
+  name: zod.string(),
+  scheduledAt: zod.date(),
+  locationNotes: zod.string().nullable(),
+  status: zod.enum(["scheduled", "completed", "cancelled"]),
+  assignedOrderCount: zod.number(),
+  createdAt: zod.date(),
+  updatedAt: zod.date(),
+});
+export const AdminListPickupEventsResponse = zod.array(
+  AdminListPickupEventsResponseItem,
+);
+
+/**
+ * @summary Create a pickup event (admin)
+ */
+export const AdminCreatePickupEventBody = zod.object({
+  name: zod.string(),
+  scheduledAt: zod.date(),
+  locationNotes: zod.string().nullish(),
+});
+
+/**
+ * @summary Get pickup event with assigned orders (admin)
+ */
+export const AdminGetPickupEventParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const AdminGetPickupEventResponse = zod.object({
+  id: zod.number(),
+  name: zod.string(),
+  scheduledAt: zod.date(),
+  locationNotes: zod.string().nullable(),
+  status: zod.enum(["scheduled", "completed", "cancelled"]),
+  assignedOrderCount: zod.number(),
+  createdAt: zod.date(),
+  updatedAt: zod.date(),
+});
+
+/**
+ * @summary Update a pickup event (admin)
+ */
+export const AdminUpdatePickupEventParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const AdminUpdatePickupEventBody = zod.object({
+  name: zod.string().optional(),
+  scheduledAt: zod.date().optional(),
+  locationNotes: zod.string().nullish(),
+  status: zod.enum(["scheduled", "completed", "cancelled"]).optional(),
+});
+
+export const AdminUpdatePickupEventResponse = zod.object({
+  id: zod.number(),
+  name: zod.string(),
+  scheduledAt: zod.date(),
+  locationNotes: zod.string().nullable(),
+  status: zod.enum(["scheduled", "completed", "cancelled"]),
+  assignedOrderCount: zod.number(),
+  createdAt: zod.date(),
+  updatedAt: zod.date(),
+});
+
+/**
+ * @summary Assign an order to a pickup event (admin)
+ */
+export const AdminAssignOrderToPickupEventParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const AdminAssignOrderToPickupEventBody = zod.object({
+  orderId: zod.number(),
+});
+
+export const AdminAssignOrderToPickupEventResponse = zod.object({
+  message: zod.string(),
+});
+
+/**
+ * @summary Enter weights and send final balance invoices for a pickup event (admin)
+ */
+export const AdminSendPickupInvoicesParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const AdminSendPickupInvoicesBody = zod.object({
+  weights: zod.array(
+    zod.object({
+      orderId: zod.number(),
+      weightLbs: zod.number(),
+    }),
+  ),
+});
+
+export const AdminSendPickupInvoicesResponse = zod.object({
+  message: zod.string(),
+});
+
+/**
+ * @summary Update order status (admin)
+ */
+export const AdminUpdateOrderStatusParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const AdminUpdateOrderStatusBody = zod.object({
+  status: zod.enum([
+    "pending_payment",
+    "deposit_paid",
+    "cash_pending",
+    "pickup_assigned",
+    "weights_entered",
+    "invoice_sent",
+    "fulfilled",
+    "cancelled",
+    "no_show",
+  ]),
+  note: zod.string().optional(),
+});
+
+export const AdminUpdateOrderStatusResponse = zod.object({
+  id: zod.number(),
+  customerId: zod.number().nullable(),
+  customerName: zod.string(),
+  customerEmail: zod.string(),
+  customerPhone: zod.string(),
+  status: zod.enum([
+    "pending_payment",
+    "deposit_paid",
+    "cash_pending",
+    "pickup_assigned",
+    "weights_entered",
+    "invoice_sent",
+    "fulfilled",
+    "cancelled",
+    "no_show",
+  ]),
+  paymentMethod: zod.enum(["stripe", "cash"]),
+  stripeCheckoutSessionId: zod.string().nullable(),
+  totalInCents: zod.number(),
+  notes: zod.string().nullable(),
+  items: zod.array(
+    zod.object({
+      id: zod.number(),
+      productId: zod.number().nullable(),
+      productName: zod.string(),
+      quantity: zod.number(),
+      pricingType: zod.enum(["unit", "deposit"]),
+      unitPriceInCents: zod.number(),
+      unitLabel: zod.string().nullable(),
+      isGiblets: zod.boolean(),
+      lineTotalInCents: zod.number(),
+    }),
+  ),
+  createdAt: zod.date(),
+  updatedAt: zod.date(),
+});
+
+/**
+ * @summary Refund the giblets add-on for an order (admin)
+ */
+export const AdminRefundGibletsParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const AdminRefundGibletsResponse = zod.object({
+  message: zod.string(),
+});
+
+/**
+ * @summary Add a note to an order (admin)
+ */
+export const AdminAddOrderNoteParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const AdminAddOrderNoteBody = zod.object({
+  body: zod.string(),
+});
+
+/**
+ * @summary Get audit trail for an order (admin)
+ */
+export const AdminGetOrderEventsParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const AdminGetOrderEventsResponseItem = zod.object({
+  id: zod.number(),
+  orderId: zod.number(),
+  eventType: zod.enum([
+    "note",
+    "status_change",
+    "refund",
+    "invoice_sent",
+    "pickup_assigned",
+    "weights_entered",
+  ]),
+  body: zod.string(),
+  createdAt: zod.date(),
+});
+export const AdminGetOrderEventsResponse = zod.array(
+  AdminGetOrderEventsResponseItem,
+);
+
+/**
+ * @summary Assign an order to a preorder batch (admin)
+ */
+export const AdminAssignOrderBatchParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const AdminAssignOrderBatchBody = zod.object({
+  batchId: zod.number().nullable(),
+});
+
+export const AdminAssignOrderBatchResponse = zod.object({
+  id: zod.number(),
+  customerId: zod.number().nullable(),
+  customerName: zod.string(),
+  customerEmail: zod.string(),
+  customerPhone: zod.string(),
+  status: zod.enum([
+    "pending_payment",
+    "deposit_paid",
+    "cash_pending",
+    "pickup_assigned",
+    "weights_entered",
+    "invoice_sent",
+    "fulfilled",
+    "cancelled",
+    "no_show",
+  ]),
+  paymentMethod: zod.enum(["stripe", "cash"]),
+  stripeCheckoutSessionId: zod.string().nullable(),
+  totalInCents: zod.number(),
+  notes: zod.string().nullable(),
+  items: zod.array(
+    zod.object({
+      id: zod.number(),
+      productId: zod.number().nullable(),
+      productName: zod.string(),
+      quantity: zod.number(),
+      pricingType: zod.enum(["unit", "deposit"]),
+      unitPriceInCents: zod.number(),
+      unitLabel: zod.string().nullable(),
+      isGiblets: zod.boolean(),
+      lineTotalInCents: zod.number(),
+    }),
+  ),
+  createdAt: zod.date(),
+  updatedAt: zod.date(),
+});
+
+/**
+ * @summary List all customers (admin)
+ */
+export const adminListCustomersQueryLimitDefault = 50;
+export const adminListCustomersQueryOffsetDefault = 0;
+
+export const AdminListCustomersQueryParams = zod.object({
+  limit: zod.coerce.number().default(adminListCustomersQueryLimitDefault),
+  offset: zod.coerce.number().default(adminListCustomersQueryOffsetDefault),
+});
+
+export const AdminListCustomersResponseItem = zod.object({
+  id: zod.number(),
+  email: zod.string(),
+  name: zod.string(),
+  phone: zod.string().nullable(),
+  orderCount: zod.number(),
+  createdAt: zod.date(),
+});
+export const AdminListCustomersResponse = zod.array(
+  AdminListCustomersResponseItem,
+);
+
+/**
+ * @summary Get customer detail with order history (admin)
+ */
+export const AdminGetCustomerParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const AdminGetCustomerResponse = zod.object({
+  id: zod.number(),
+  email: zod.string(),
+  name: zod.string(),
+  phone: zod.string().nullable(),
+  emailVerified: zod.boolean(),
+  orderCount: zod.number(),
+  orders: zod.array(
+    zod.object({
+      id: zod.number(),
+      customerName: zod.string(),
+      customerEmail: zod.string(),
+      status: zod.enum([
+        "pending_payment",
+        "deposit_paid",
+        "cash_pending",
+        "pickup_assigned",
+        "weights_entered",
+        "invoice_sent",
+        "fulfilled",
+        "cancelled",
+        "no_show",
+      ]),
+      paymentMethod: zod.enum(["stripe", "cash"]),
+      totalInCents: zod.number(),
+      createdAt: zod.date(),
+    }),
+  ),
+  createdAt: zod.date(),
+});
+
+/**
+ * @summary Get unsubscribe preferences by token (public)
+ */
+export const GetUnsubscribePreferencesQueryParams = zod.object({
+  token: zod.coerce.string(),
+});
+
+export const GetUnsubscribePreferencesResponse = zod.object({
+  email: zod.string(),
+  productName: zod.string().nullable(),
+  globalUnsubscribe: zod.boolean(),
+  token: zod.string(),
+});
+
+/**
+ * @summary Process unsubscribe request (public)
+ */
+export const ProcessUnsubscribeBody = zod.object({
+  token: zod.string(),
+  globalUnsubscribe: zod.boolean().optional(),
+});
+
+export const ProcessUnsubscribeResponse = zod.object({
+  message: zod.string(),
+});
+
+/**
+ * @summary Re-subscribe to notifications (public)
+ */
+export const ProcessResubscribeBody = zod.object({
+  token: zod.string(),
+  globalUnsubscribe: zod.boolean().optional(),
+});
+
+export const ProcessResubscribeResponse = zod.object({
+  message: zod.string(),
 });

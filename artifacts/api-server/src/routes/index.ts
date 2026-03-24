@@ -7,6 +7,10 @@ import cartRouter from "./cart.js";
 import checkoutRouter from "./checkout.js";
 import ordersRouter from "./orders.js";
 import adminOrdersRouter from "./admin-orders.js";
+import batchesRouter from "./batches.js";
+import pickupEventsRouter from "./pickup-events.js";
+import adminCustomersRouter from "./admin-customers.js";
+import notifyMeRouter from "./notify-me.js";
 import webhooksRouter from "./webhooks.js";
 
 const router: IRouter = Router();
@@ -19,6 +23,10 @@ router.use(cartRouter);
 router.use(checkoutRouter);
 router.use(ordersRouter);
 router.use(adminOrdersRouter);
+router.use(batchesRouter);
+router.use(pickupEventsRouter);
+router.use(adminCustomersRouter);
+router.use(notifyMeRouter);
 router.use(webhooksRouter);
 
 export default router;

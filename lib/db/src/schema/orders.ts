@@ -6,17 +6,25 @@ import {
   timestamp,
   boolean,
   pgEnum,
+  doublePrecision,
 } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 import { customersTable } from "./customers";
 import { productsTable } from "./products";
+import { preorderBatchesTable } from "./preorder-batches";
+import { pickupEventsTable } from "./pickup-events";
 
 export const orderStatusEnum = pgEnum("order_status", [
   "pending_payment",
   "deposit_paid",
   "cash_pending",
+  "pickup_assigned",
+  "weights_entered",
+  "invoice_sent",
+  "fulfilled",
   "cancelled",
+  "no_show",
 ]);
 
 export const paymentMethodEnum = pgEnum("payment_method", [
@@ -38,6 +46,12 @@ export const ordersTable = pgTable("orders", {
   notes: text("notes"),
   claimToken: text("claim_token"),
   claimTokenExpiresAt: timestamp("claim_token_expires_at", { withTimezone: true }),
+  batchId: integer("batch_id").references(() => preorderBatchesTable.id),
+  pickupEventId: integer("pickup_event_id").references(() => pickupEventsTable.id),
+  refundedGiblets: boolean("refunded_giblets").notNull().default(false),
+  stripeRefundId: text("stripe_refund_id"),
+  stripeInvoiceId: text("stripe_invoice_id"),
+  finalWeightLbs: doublePrecision("final_weight_lbs"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true })
     .notNull()

@@ -4,7 +4,7 @@
 
 pnpm workspace monorepo using TypeScript. Building the Jack Pine Farm digital platform:
 - **Jack Pine Farm Store** — ecommerce for pastured eggs/meat (deposit model, pickup-only)
-- **FarmOps** — farm management SaaS (future)
+- **FarmOps** — admin UI for farm operations (fulfillment, batches, pickup events, invoicing)
 
 ## Stack
 
@@ -14,7 +14,7 @@ pnpm workspace monorepo using TypeScript. Building the Jack Pine Farm digital pl
 - **TypeScript version**: 5.9
 - **API framework**: Express 5
 - **Database**: PostgreSQL + Drizzle ORM
-- **Validation**: Zod (`zod/v4`), `drizzle-zod`
+- **Validation**: Zod, `drizzle-zod`
 - **API codegen**: Orval (from OpenAPI spec)
 - **Build**: esbuild (API server), Vite (frontend)
 
@@ -30,12 +30,8 @@ artifacts-monorepo/
 │   ├── api-client-react/   # Generated React Query hooks
 │   ├── api-zod/            # Generated Zod schemas from OpenAPI
 │   └── db/                 # Drizzle ORM schema + DB connection
-├── scripts/                # Utility scripts (single workspace package)
-│   └── src/                # Individual .ts scripts, run via `pnpm --filter @workspace/scripts run <script>`
-├── pnpm-workspace.yaml     # pnpm workspace (artifacts/*, lib/*, lib/integrations/*, scripts)
-├── tsconfig.base.json      # Shared TS options (composite, bundler resolution, es2022)
-├── tsconfig.json           # Root TS project references
-└── package.json            # Root package with hoisted devDeps
+├── scripts/                # Utility scripts
+└── ...
 ```
 
 ## TypeScript & Composite Projects
@@ -61,37 +57,68 @@ Express 5 API server. Routes live in `src/routes/` and use `@workspace/api-zod` 
 - App setup: `src/app.ts` — mounts CORS, JSON/urlencoded parsing, session, routes at `/api`
 - Routes: `src/routes/index.ts` mounts sub-routers
   - `src/routes/health.ts` → `GET /api/healthz`
-  - `src/routes/products.ts` → product CRUD + notify-me
+  - `src/routes/products.ts` → product CRUD + notify-me; triggers restock emails on availability change
   - `src/routes/admin.ts` → admin login/logout/me
+  - `src/routes/admin-orders.ts` → order list/detail + status update, refund-giblets, notes, events, assign-batch
+  - `src/routes/batches.ts` → preorder batch CRUD (admin only)
+  - `src/routes/pickup-events.ts` → pickup event CRUD + assign-order + send-invoices (admin only)
+  - `src/routes/admin-customers.ts` → customer list + detail (admin only)
+  - `src/routes/notify-me.ts` → public unsubscribe/resubscribe by token
+  - `src/routes/auth.ts` → customer login/register/logout/me
+  - `src/routes/cart.ts` → cart CRUD
+  - `src/routes/checkout.ts` → Stripe checkout + cash orders
+  - `src/routes/orders.ts` → order list/detail (customer)
+  - `src/routes/webhooks.ts` → Stripe webhook handler
 - Middleware: `src/middlewares/require-admin.ts` — session-based admin guard
 - Session type extension: `src/types/session.d.ts` — adds `admin: boolean` to SessionData
 - Depends on: `@workspace/db`, `@workspace/api-zod`
-- `pnpm --filter @workspace/api-server run dev` — run the dev server
-- `pnpm --filter @workspace/api-server run build` — production esbuild bundle (`dist/index.mjs`)
 - Admin auth: session-based (express-session). Password from `ADMIN_PASSWORD` env var (dev: `jackpine2026`)
 
 ### `artifacts/store` (`@workspace/store`)
 
 Jack Pine Farm Store — React + Vite frontend.
 
-- Pages: Home, Shop, ProductDetail, HowWeRaiseThem, About, Faq, Contact, NotFound
-- Admin pages: Login, ProductList, ProductForm
-- Layouts: PublicLayout (public nav + footer), AdminLayout (sidebar, auth guard via useAdminMe)
-- Router: wouter, base path from `BASE_PATH` env var (set to `/`)
+**Public pages**: Home, Shop, ProductDetail, Cart, Checkout, OrderConfirmation, HowWeRaiseThem, About, Faq, Contact, NotFound
+**Auth pages**: Login, Register, ForgotPassword, ResetPassword, VerifyEmail, ClaimOrder
+**Account pages**: Profile (order history, account management), OrderDetail
+**Admin pages (FarmOps)**:
+  - Dashboard — order status summary + quick navigation
+  - Orders — list all orders; click through to detail
+  - OrderDetail — full detail with events timeline, status update, giblets refund, add note
+  - Products — product list + create/edit
+  - Batches — preorder batch CRUD (create, edit, list with order counts)
+  - PickupEvents — pickup event list + create
+  - PickupEventDetail — assign orders to event, enter weights, send invoices
+  - CustomerList — registered customer list
+  - CustomerDetail — customer info + full order history
+**Public utility page**: Unsubscribe — token-based email unsubscribe/global-unsubscribe (no login)
+
+- Layouts: PublicLayout (public nav + footer), AdminLayout (sidebar with 6 nav items, auth guard)
+- Router: wouter, base path from `BASE_URL` env var (set to `/`)
 - API client: `@workspace/api-client-react` (React Query hooks)
 - CSS: Tailwind v4, custom theme (farm green palette, serif display font)
+- Toast: `@/hooks/use-toast` (not `@/components/ui/use-toast`)
 
 ### `lib/db` (`@workspace/db`)
 
-Database layer using Drizzle ORM with PostgreSQL. Exports a Drizzle client instance and schema models.
+Database layer using Drizzle ORM with PostgreSQL.
 
-- `src/index.ts` — creates a `Pool` + Drizzle instance, exports schema
-- `src/schema/index.ts` — barrel re-export of all models
-- `src/schema/products.ts` — products table with enums (productType, pricingType, availability)
-- `src/schema/notify-me.ts` — notify_me subscriptions table
-- `drizzle.config.ts` — Drizzle Kit config (requires `DATABASE_URL`, automatically provided by Replit)
+**Tables**:
+- `products` — product catalog (type, pricingType, availability, etc.)
+- `customers` — registered customers (email, name, phone, emailVerified, etc.)
+- `orders` — all orders (status enum with 9 values, batchId, pickupEventId, refundedGiblets, finalWeightLbs, stripeRefundId, stripeInvoiceId)
+- `order_items` — line items (productId, quantity, unitPriceInCents, isGiblets, variantLabel)
+- `order_events` — audit trail (orderId, eventType enum, body)
+- `preorder_batches` — meat preorder batches (productId, name, status, capacityBirds, pricePerLbCents*)
+- `pickup_events` — pickup event scheduling (name, scheduledAt, locationNotes, status)
+- `notify_me` — restock subscriptions (email, productId, unsubscribeToken, globalUnsubscribe)
+- `customer_carts` — shopping cart
+- `stripe_pending` — Stripe payment intent tracking
 
-Production migrations are handled by Replit when publishing. In development, we just use `pnpm --filter @workspace/db run push`, and we fallback to `pnpm --filter @workspace/db run push-force`.
+**Order status enum (9 values)**:
+`pending_payment | deposit_paid | cash_pending | pickup_assigned | weights_entered | invoice_sent | fulfilled | cancelled | no_show`
+
+Run migrations: `pnpm --filter @workspace/db run push` (or `--force` to add enum values)
 
 ### `lib/api-spec` (`@workspace/api-spec`)
 
@@ -112,13 +139,6 @@ Generated Zod schemas from the OpenAPI spec. Used by `api-server` for request/re
 Generated React Query hooks and fetch client from the OpenAPI spec.
 When calling hooks with query options in React Query v5, always pass `queryKey` explicitly using the exported `get<HookName>QueryKey()` helper functions.
 
-### `scripts` (`@workspace/scripts`)
-
-Utility scripts package. Each script is a `.ts` file in `src/` with a corresponding npm script in `package.json`. Run scripts via `pnpm --filter @workspace/scripts run <script>`. Scripts can import any workspace package (e.g., `@workspace/db`) by adding it as a dependency in `scripts/package.json`.
-
-Available scripts:
-- `seed-products` — seeds the 4 initial products (Chicken Eggs, Duck Eggs, Pastured Chicken, Pastured Turkey)
-
 ## Product Catalog
 
 4 products seeded:
@@ -133,18 +153,30 @@ Available scripts:
 
 - `taking_orders` — active, add to cart
 - `preorder` — preorder open, pay deposit
-- `sold_out` — display only, show notify-me
+- `sold_out` — display only, show notify-me (triggers restock emails when changed to `taking_orders`)
 - `disabled` — hidden from public
 
 ## Admin
 
 - Password: set via `ADMIN_PASSWORD` env var (dev default: `jackpine2026`)
 - Session: express-session with `SESSION_SECRET` env var
-- Admin UI at `/admin` and `/admin/products`
+- Admin UI at `/admin` (dashboard), `/admin/orders`, `/admin/products`, `/admin/batches`, `/admin/pickup-events`, `/admin/customers`
 
 ## Business Rules
 
 - Pickup-only, no shipping ever
-- Deposit products (chicken, turkey): non-refundable deposit, final price by weight invoiced day before pickup
-- Eggs: fixed unit price
-- Notify-me: email subscription for sold-out products
+- Deposit products (chicken, turkey): non-refundable deposit, final price by weight invoiced at pickup
+- Giblets: +$2.00 deposit, refundable if customer declines (admin can mark as refunded per order)
+- Eggs: fixed unit price (chicken: step=12 min=12; duck: step=6 min=6)
+- Notify-me: email subscription for sold-out products; token-based unsubscribe at `/unsubscribe`
+- Stripe: deposit charging via PaymentIntent; invoice stubs (console.log) until email provider configured
+- Cash orders: status=cash_pending, no Stripe
+
+## Key Dev Notes
+
+- `api-zod` barrel: ONLY `export * from "./generated/api"` — no types file
+- After DB schema changes: `npx tsc --build lib/db && pnpm --filter @workspace/db run push`
+- After codegen: rebuild `lib/api-zod lib/api-client-react` with `npx tsc --build`
+- Auth hook: `useAuthMe` (not `useGetMe`) from `@workspace/api-client-react`
+- Middleware path: `../middlewares/require-admin.js` (plural, kebab-case)
+- Toast: import `useToast` from `@/hooks/use-toast` (not `@/components/ui/use-toast`)

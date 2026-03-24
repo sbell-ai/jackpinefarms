@@ -15,6 +15,7 @@ import About from "./pages/About";
 import Faq from "./pages/Faq";
 import Contact from "./pages/Contact";
 import NotFound from "@/pages/not-found";
+import Unsubscribe from "./pages/Unsubscribe";
 
 // New Customer & Commerce Pages
 import CustomerLogin from "./pages/auth/Login";
@@ -27,13 +28,20 @@ import Cart from "./pages/Cart";
 import Checkout from "./pages/Checkout";
 import OrderConfirmation from "./pages/OrderConfirmation";
 import AccountProfile from "./pages/account/Profile";
-import OrderDetail from "./pages/account/OrderDetail";
+import AccountOrderDetail from "./pages/account/OrderDetail";
 
 // Admin Pages
 import AdminLogin from "./pages/admin/Login";
+import AdminDashboard from "./pages/admin/Dashboard";
 import AdminProducts from "./pages/admin/ProductList";
 import AdminProductForm from "./pages/admin/ProductForm";
 import AdminOrders from "./pages/admin/Orders";
+import AdminOrderDetail from "./pages/admin/OrderDetail";
+import AdminBatches from "./pages/admin/Batches";
+import AdminPickupEvents from "./pages/admin/PickupEvents";
+import AdminPickupEventDetail from "./pages/admin/PickupEventDetail";
+import AdminCustomerList from "./pages/admin/CustomerList";
+import AdminCustomerDetail from "./pages/admin/CustomerDetail";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -60,14 +68,36 @@ function Router() {
       <Route path="/admin/products">
         <AdminLayout><AdminProducts /></AdminLayout>
       </Route>
+      <Route path="/admin/orders/:id">
+        <AdminLayout><AdminOrderDetail /></AdminLayout>
+      </Route>
       <Route path="/admin/orders">
         <AdminLayout><AdminOrders /></AdminLayout>
       </Route>
+      <Route path="/admin/batches">
+        <AdminLayout><AdminBatches /></AdminLayout>
+      </Route>
+      <Route path="/admin/pickup-events/:id">
+        <AdminLayout><AdminPickupEventDetail /></AdminLayout>
+      </Route>
+      <Route path="/admin/pickup-events">
+        <AdminLayout><AdminPickupEvents /></AdminLayout>
+      </Route>
+      <Route path="/admin/customers/:id">
+        <AdminLayout><AdminCustomerDetail /></AdminLayout>
+      </Route>
+      <Route path="/admin/customers">
+        <AdminLayout><AdminCustomerList /></AdminLayout>
+      </Route>
       <Route path="/admin">
-        <AdminLayout><AdminProducts /></AdminLayout>
+        <AdminLayout><AdminDashboard /></AdminLayout>
       </Route>
 
-      {/* Public Storefront Routes with Layout */}
+      {/* Public Storefront Routes */}
+      <Route path="/unsubscribe">
+        <Unsubscribe />
+      </Route>
+
       <Route path="/auth/login">
         <PublicLayout><CustomerLogin /></PublicLayout>
       </Route>
@@ -98,7 +128,7 @@ function Router() {
       </Route>
       
       <Route path="/account/orders/:id">
-        <PublicLayout><OrderDetail /></PublicLayout>
+        <PublicLayout><AccountOrderDetail /></PublicLayout>
       </Route>
       <Route path="/account">
         <PublicLayout><AccountProfile /></PublicLayout>
