@@ -1,7 +1,8 @@
 {
   "permissions": {
     "allow": [
-      "Bash(npm run:*)"
+      "Bash(npm run:*)",
+      "Bash(find /home/runner/workspace -type f \\\\\\(-name .env* -o -name *.env* \\\\\\))"
     ]
   }
 }
