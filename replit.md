@@ -34,6 +34,12 @@ artifacts-monorepo/
 └── ...
 ```
 
+## Engineering Principles
+
+- **Always build for persistence.** Any state that must survive a process restart — sessions, queues, caches, flags, counters — belongs in the PostgreSQL database, never in memory. In-memory stores (e.g. express-session's default MemoryStore) are forbidden in this project. Use `connect-pg-simple` for sessions, Drizzle for everything else.
+- **Fail explicitly.** No silent fallbacks. If a required config is missing, throw or log an error — don't silently degrade.
+- **Stripe-first, then mark success.** When an external call (Stripe refund, invoice, charge) must precede a DB state change, do the external call first. Only update the DB after the external call succeeds.
+
 ## TypeScript & Composite Projects
 
 Every package extends `tsconfig.base.json` which sets `composite: true`. The root `tsconfig.json` lists all packages as project references. This means:
