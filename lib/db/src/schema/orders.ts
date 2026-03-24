@@ -68,6 +68,7 @@ export const orderItemsTable = pgTable("order_items", {
   pricingType: text("pricing_type").notNull(),
   unitPriceInCents: integer("unit_price_in_cents").notNull(),
   unitLabel: text("unit_label"),
+  variantLabel: text("variant_label"),
   isGiblets: boolean("is_giblets").notNull().default(false),
   lineTotalInCents: integer("line_total_in_cents").notNull(),
   pickupEventId: integer("pickup_event_id").references(() => pickupEventsTable.id),

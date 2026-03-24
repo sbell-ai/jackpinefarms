@@ -1,6 +1,6 @@
 import "../types/session.d.ts";
 import { Router, type IRouter } from "express";
-import { eq, count, inArray, isNull, and, not, ne } from "drizzle-orm";
+import { eq, count, inArray, isNull, and, not } from "drizzle-orm";
 import { db, pickupEventsTable, ordersTable, orderEventsTable, orderItemsTable, preorderBatchesTable } from "@workspace/db";
 import { requireAdmin } from "../middlewares/require-admin.js";
 import * as z from "zod";
