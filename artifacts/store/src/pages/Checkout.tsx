@@ -39,6 +39,14 @@ export default function Checkout() {
   const [paymentMethod, setPaymentMethod] = useState<'stripe' | 'cash'>('cash');
   const [gibletsUpdating, setGibletsUpdating] = useState<number | null>(null);
 
+  const hasDeposits = (cart?.items as any[] | undefined)?.some(
+    (item: any) => item.pricingType === "deposit"
+  ) ?? false;
+
+  useEffect(() => {
+    if (hasDeposits) setPaymentMethod('stripe');
+  }, [hasDeposits]);
+
   const handleToggleGiblets = async (productId: number, quantity: number, currentGiblets: boolean) => {
     setGibletsUpdating(productId);
     try {
@@ -78,8 +86,6 @@ export default function Checkout() {
       setLocation("/cart");
     }
   }, [cart, isCartLoading, setLocation]);
-
-  const hasDeposits = cart?.items.some((i: any) => i.pricingType === "deposit");
 
   const onSubmit = async (data: CheckoutForm) => {
     try {
@@ -199,27 +205,35 @@ export default function Checkout() {
                   </label>
 
                   <label className={`
-                    relative flex flex-col p-5 rounded-2xl cursor-pointer border-2 transition-all
-                    ${paymentMethod === 'cash' ? 'border-primary bg-primary/5' : 'border-border bg-background hover:border-primary/30'}
+                    relative flex flex-col p-5 rounded-2xl border-2 transition-all
+                    ${hasDeposits
+                      ? 'border-border bg-muted/30 opacity-50 cursor-not-allowed'
+                      : paymentMethod === 'cash'
+                        ? 'border-primary bg-primary/5 cursor-pointer'
+                        : 'border-border bg-background hover:border-primary/30 cursor-pointer'}
                   `}>
                     <input 
                       type="radio" 
                       name="payment" 
                       value="cash" 
                       checked={paymentMethod === 'cash'}
-                      onChange={() => setPaymentMethod('cash')}
+                      onChange={() => !hasDeposits && setPaymentMethod('cash')}
+                      disabled={hasDeposits}
                       className="sr-only"
                     />
                     <div className="flex justify-between items-center mb-2">
-                      <span className="font-bold text-foreground flex items-center gap-2">
-                        <Banknote className="w-5 h-5 text-primary" />
+                      <span className={`font-bold flex items-center gap-2 ${hasDeposits ? 'text-muted-foreground' : 'text-foreground'}`}>
+                        <Banknote className="w-5 h-5" />
                         Cash at Pickup
                       </span>
-                      <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${paymentMethod === 'cash' ? 'border-primary' : 'border-muted-foreground'}`}>
-                        {paymentMethod === 'cash' && <div className="w-2.5 h-2.5 rounded-full bg-primary" />}
+                      <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${paymentMethod === 'cash' && !hasDeposits ? 'border-primary' : 'border-muted-foreground'}`}>
+                        {paymentMethod === 'cash' && !hasDeposits && <div className="w-2.5 h-2.5 rounded-full bg-primary" />}
                       </div>
                     </div>
-                    <p className="text-sm text-muted-foreground">Pay when you collect your order</p>
+                    {hasDeposits
+                      ? <p className="text-xs text-amber-600 dark:text-amber-400">Preorder deposits require card payment</p>
+                      : <p className="text-sm text-muted-foreground">Pay when you collect your order</p>
+                    }
                   </label>
                 </div>
               </div>

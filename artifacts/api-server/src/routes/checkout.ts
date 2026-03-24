@@ -210,6 +210,14 @@ router.post("/checkout/cash", async (req, res): Promise<void> => {
     return;
   }
 
+  const hasDeposits = orderData.lineItems.some((li) => li.pricingType === "deposit");
+  if (hasDeposits) {
+    res.status(400).json({
+      error: "Your cart contains preorder deposits, which require card payment. Please complete checkout with a card.",
+    });
+    return;
+  }
+
   const { name: customerName, email: customerEmail, phone: customerPhone, notes } = parsed.data;
 
   const isGuest = !session.customerId;
