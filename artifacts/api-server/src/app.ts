@@ -57,8 +57,7 @@ app.use(
   session({
     store: new PgSession({
       conString: process.env.DATABASE_URL,
-      tableName: "sessions",
-      createTableIfMissing: true,
+      tableName: "session",
     }),
     secret: process.env.SESSION_SECRET ?? "jack-pine-farm-dev-secret",
     resave: false,
