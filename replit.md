@@ -39,6 +39,7 @@ artifacts-monorepo/
 - **Always build for persistence.** Any state that must survive a process restart — sessions, queues, caches, flags, counters — belongs in the PostgreSQL database, never in memory. In-memory stores (e.g. express-session's default MemoryStore) are forbidden in this project. Use `connect-pg-simple` for sessions, Drizzle for everything else.
 - **Fail explicitly.** No silent fallbacks. If a required config is missing, throw or log an error — don't silently degrade.
 - **Stripe-first, then mark success.** When an external call (Stripe refund, invoice, charge) must precede a DB state change, do the external call first. Only update the DB after the external call succeeds.
+- **Look at all angles before acting.** Before adding a library or making a change that touches production, check how it behaves end-to-end: Does it do runtime file I/O that will break in an esbuild bundle? Does it need peer deps that aren't directly installed? Does it behave differently in prod vs dev? Catching this before deployment prevents duplicate fixes and wasted deploys. For `connect-pg-simple` specifically: the `createTableIfMissing` option reads a `table.sql` from the package directory — this breaks when bundled. Always create the `session` table via direct SQL and omit that option.
 
 ## TypeScript & Composite Projects
 
