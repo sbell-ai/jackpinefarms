@@ -37,6 +37,22 @@ export default function Checkout() {
   });
 
   const [paymentMethod, setPaymentMethod] = useState<'stripe' | 'cash'>('cash');
+  const [gibletsUpdating, setGibletsUpdating] = useState<number | null>(null);
+
+  const handleToggleGiblets = async (productId: number, quantity: number, currentGiblets: boolean) => {
+    setGibletsUpdating(productId);
+    try {
+      await fetch(`/api/cart/items/${productId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ quantity, addGiblets: !currentGiblets }),
+      });
+      await queryClient.invalidateQueries({ queryKey: getGetCartQueryKey() });
+    } finally {
+      setGibletsUpdating(null);
+    }
+  };
 
   const stripeMutation = useCreateStripeCheckout();
   const cashMutation = useCreateCashOrder();
@@ -217,17 +233,30 @@ export default function Checkout() {
               
               <div className="space-y-4 mb-6 max-h-[40vh] overflow-y-auto pr-2">
                 {(cart.items as any[]).map(item => (
-                  <div key={item.productId} className="flex justify-between items-start text-sm">
-                    <div className="pr-4">
-                      <span className="font-bold text-foreground block">{item.quantity}x {item.productName}</span>
-                      {item.pricingType === "deposit" && (
-                        <span className="text-xs text-accent">Deposit</span>
-                      )}
-                      {item.addGiblets && (
-                        <span className="text-xs text-muted-foreground block">+ Giblets</span>
-                      )}
+                  <div key={item.productId} className="text-sm space-y-2">
+                    <div className="flex justify-between items-start">
+                      <div className="pr-4">
+                        <span className="font-bold text-foreground block">{item.quantity}x {item.productName}</span>
+                        {item.pricingType === "deposit" && (
+                          <span className="text-xs text-accent">Deposit</span>
+                        )}
+                      </div>
+                      <span className="font-bold">{formatMoney(item.lineTotalInCents)}</span>
                     </div>
-                    <span className="font-bold">{formatMoney(item.lineTotalInCents)}</span>
+                    {item.pricingType === "deposit" && (
+                      <label className="flex items-center gap-2 cursor-pointer group">
+                        <input
+                          type="checkbox"
+                          className="w-4 h-4 rounded border-border text-primary focus:ring-primary"
+                          checked={!!item.addGiblets}
+                          disabled={gibletsUpdating === item.productId}
+                          onChange={() => handleToggleGiblets(item.productId, item.quantity, !!item.addGiblets)}
+                        />
+                        <span className="text-xs text-muted-foreground group-hover:text-foreground transition-colors">
+                          Add Giblets (+$2.00)
+                        </span>
+                      </label>
+                    )}
                   </div>
                 ))}
               </div>

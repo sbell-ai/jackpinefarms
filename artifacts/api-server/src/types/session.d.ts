@@ -8,8 +8,8 @@ interface SessionCartItem {
 
 declare module "express-session" {
   interface SessionData {
-    admin: boolean;
-    customerId: number;
-    cart: SessionCartItem[];
+    admin?: boolean;
+    customerId?: number;
+    cart?: SessionCartItem[];
   }
 }

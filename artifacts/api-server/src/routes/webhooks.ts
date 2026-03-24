@@ -108,6 +108,12 @@ router.post("/webhooks/stripe", async (req, res): Promise<void> => {
     } else {
       console.warn(`No pending checkout found for Stripe session ${stripeSessionId}`);
     }
+  } else if (event.type === "payment_intent.succeeded") {
+    // Deposit orders are created via checkout.session.completed above.
+    // payment_intent.succeeded is a no-op here; Stripe sessions emit
+    // both events and the session event is preferred for order creation
+    // because it carries the full checkout session context.
+    console.log(`[Webhook] payment_intent.succeeded received for ${(event.data.object as any).id} — handled via session.completed`);
   } else if (
     event.type === "checkout.session.expired" ||
     event.type === "checkout.session.async_payment_failed"
