@@ -21,6 +21,7 @@ import CustomerLogin from "./pages/auth/Login";
 import CustomerRegister from "./pages/auth/Register";
 import ForgotPassword from "./pages/auth/ForgotPassword";
 import ResetPassword from "./pages/auth/ResetPassword";
+import VerifyEmail from "./pages/auth/VerifyEmail";
 import Cart from "./pages/Cart";
 import Checkout from "./pages/Checkout";
 import OrderConfirmation from "./pages/OrderConfirmation";
@@ -77,6 +78,9 @@ function Router() {
       </Route>
       <Route path="/auth/reset-password">
         <PublicLayout><ResetPassword /></PublicLayout>
+      </Route>
+      <Route path="/auth/verify-email">
+        <VerifyEmail />
       </Route>
       
       <Route path="/cart">

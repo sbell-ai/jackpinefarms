@@ -1,8 +1,8 @@
+import { useState } from "react";
 import { Link, useLocation } from "wouter";
 import { 
   useGetCart, getGetCartQueryKey, 
   useRemoveCartItem, 
-  useAddCartItem 
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { formatMoney } from "@/lib/utils";
@@ -36,17 +36,21 @@ export default function Cart() {
     }
   });
 
-  const updateMutation = useAddCartItem({
-    mutation: {
-      onSuccess: () => queryClient.invalidateQueries({ queryKey: getGetCartQueryKey() })
-    }
-  });
-
-  const handleUpdateQuantity = (productId: number, newQty: number, addGiblets: boolean) => {
+  const [updatePending, setUpdatePending] = useState(false);
+  const handleUpdateQuantity = async (productId: number, newQty: number, addGiblets: boolean) => {
     if (newQty < 1) return;
-    updateMutation.mutate({
-      data: { productId, quantity: newQty, addGiblets }
-    });
+    setUpdatePending(true);
+    try {
+      await fetch(`/api/cart/items/${productId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ quantity: newQty, addGiblets }),
+      });
+      await queryClient.invalidateQueries({ queryKey: getGetCartQueryKey() });
+    } finally {
+      setUpdatePending(false);
+    }
   };
 
   const handleRemove = (productId: number) => {
@@ -118,7 +122,7 @@ export default function Cart() {
                     <div className="flex items-center bg-background border border-border rounded-lg p-0.5">
                       <button 
                         onClick={() => handleUpdateQuantity(item.productId, item.quantity - 1, item.addGiblets)}
-                        disabled={updateMutation.isPending || item.quantity <= 1}
+                        disabled={updatePending || item.quantity <= 1}
                         className="w-8 h-8 flex items-center justify-center rounded hover:bg-muted text-foreground transition-colors disabled:opacity-50"
                       >
                         <Minus className="w-3 h-3" />
@@ -126,7 +130,7 @@ export default function Cart() {
                       <span className="w-10 text-center font-bold text-sm">{item.quantity}</span>
                       <button 
                         onClick={() => handleUpdateQuantity(item.productId, item.quantity + 1, item.addGiblets)}
-                        disabled={updateMutation.isPending}
+                        disabled={updatePending}
                         className="w-8 h-8 flex items-center justify-center rounded hover:bg-muted text-foreground transition-colors disabled:opacity-50"
                       >
                         <Plus className="w-3 h-3" />
@@ -144,7 +148,7 @@ export default function Cart() {
                         className="w-4 h-4 rounded border-border text-primary focus:ring-primary"
                         checked={item.addGiblets}
                         onChange={(e) => handleUpdateQuantity(item.productId, item.quantity, e.target.checked)}
-                        disabled={updateMutation.isPending}
+                        disabled={updatePending}
                       />
                       <span className="text-sm font-medium">Add Giblets (+{formatMoney(200)})</span>
                     </label>
