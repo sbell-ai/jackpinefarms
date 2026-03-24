@@ -7,6 +7,8 @@ import {
   ordersTable,
   orderItemsTable,
   stripePendingCheckoutsTable,
+  customerCartsTable,
+  type CartLineItem,
 } from "@workspace/db";
 import { CreateStripeCheckoutBody, CreateCashOrderBody } from "@workspace/api-zod";
 
@@ -31,16 +33,7 @@ async function buildOrderItems(
     .where(inArray(productsTable.id, productIds));
 
   const productMap = new Map(products.map((p) => [p.id, p]));
-  const lineItems: Array<{
-    productId: number;
-    productName: string;
-    quantity: number;
-    pricingType: string;
-    unitPriceInCents: number;
-    unitLabel: string | null;
-    isGiblets: boolean;
-    lineTotalInCents: number;
-  }> = [];
+  const lineItems: CartLineItem[] = [];
 
   for (const item of sessionCart) {
     const product = productMap.get(item.productId);
@@ -88,16 +81,7 @@ export async function createOrderFromData(data: {
   totalInCents: number;
   stripeCheckoutSessionId?: string | null;
   stripePaymentIntentId?: string | null;
-  lineItems: Array<{
-    productId: number;
-    productName: string;
-    quantity: number;
-    pricingType: string;
-    unitPriceInCents: number;
-    unitLabel: string | null;
-    isGiblets: boolean;
-    lineTotalInCents: number;
-  }>;
+  lineItems: CartLineItem[];
 }) {
   const [order] = await db
     .insert(ordersTable)
@@ -189,7 +173,7 @@ router.post("/checkout/stripe", async (req, res): Promise<void> => {
     customerEmail,
     customerPhone,
     notes: notes ?? null,
-    cartSnapshot: orderData.lineItems as any,
+    cartSnapshot: orderData.lineItems,
     totalInCents: orderData.totalInCents,
   });
 
@@ -236,14 +220,25 @@ router.post("/checkout/cash", async (req, res): Promise<void> => {
     session.save((err: Error | null) => (err ? reject(err) : resolve()))
   );
 
+  if (session.customerId) {
+    await db
+      .delete(customerCartsTable)
+      .where(eq(customerCartsTable.customerId, session.customerId));
+  }
+
   const items = await db
     .select()
     .from(orderItemsTable)
     .where(eq(orderItemsTable.orderId, order.id));
 
   const baseUrl = process.env.STORE_BASE_URL ?? `https://${process.env.REPLIT_DEV_DOMAIN}/store`;
+  const isGuest = !session.customerId;
+  const emailParams = encodeURIComponent(customerEmail);
+  const accountClaimLine = isGuest
+    ? `\n  Track your order by creating an account: ${baseUrl}/auth/register?email=${emailParams}`
+    : `\n  Order detail: ${baseUrl}/account/orders/${order.id}`;
   console.log(
-    `[EMAIL STUB] Order confirmation for ${customerEmail}:\n  Order #${String(order.id).padStart(6, "0")}\n  Total: $${(orderData.totalInCents / 100).toFixed(2)}\n  Payment: Cash at Pickup\n  Order detail: ${baseUrl}/account/orders/${order.id}`
+    `[EMAIL STUB] Order confirmation for ${customerEmail}:\n  Order #${String(order.id).padStart(6, "0")}\n  Total: $${(orderData.totalInCents / 100).toFixed(2)}\n  Payment: Cash at Pickup${accountClaimLine}`
   );
 
   res.status(201).json({ ...order, items });

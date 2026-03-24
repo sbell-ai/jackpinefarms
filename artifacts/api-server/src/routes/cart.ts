@@ -1,10 +1,21 @@
 import "../types/session.d.ts";
 import { Router, type IRouter } from "express";
 import { inArray, eq } from "drizzle-orm";
-import { db, productsTable } from "@workspace/db";
+import { db, productsTable, customerCartsTable } from "@workspace/db";
 import { AddCartItemBody, RemoveCartItemParams } from "@workspace/api-zod";
 
 const router: IRouter = Router();
+
+async function persistCartForCustomer(
+  customerId: number | undefined,
+  cart: Array<{ productId: number; quantity: number; addGiblets: boolean }>
+) {
+  if (!customerId) return;
+  await db
+    .insert(customerCartsTable)
+    .values({ customerId, items: cart })
+    .onConflictDoUpdate({ target: customerCartsTable.customerId, set: { items: cart, updatedAt: new Date() } });
+}
 
 async function buildCartResponse(sessionCart: Array<{ productId: number; quantity: number; addGiblets: boolean }>) {
   if (sessionCart.length === 0) {
@@ -105,6 +116,8 @@ router.post("/cart/items", async (req, res): Promise<void> => {
     session.save((err: Error | null) => (err ? reject(err) : resolve()))
   );
 
+  await persistCartForCustomer(session.customerId, session.cart);
+
   const response = await buildCartResponse(session.cart);
   res.json(response);
 });
@@ -127,6 +140,8 @@ router.delete("/cart/items/:productId", async (req, res): Promise<void> => {
     session.save((err: Error | null) => (err ? reject(err) : resolve()))
   );
 
+  await persistCartForCustomer(session.customerId, session.cart ?? []);
+
   const response = await buildCartResponse(session.cart ?? []);
   res.json(response);
 });
@@ -139,6 +154,8 @@ router.delete("/cart", async (req, res): Promise<void> => {
     session.save((err: Error | null) => (err ? reject(err) : resolve()))
   );
 
+  await persistCartForCustomer(session.customerId, []);
+
   res.json({ items: [], subtotalInCents: 0, itemCount: 0 });
 });
 
@@ -149,6 +166,8 @@ router.post("/cart/clear", async (req, res): Promise<void> => {
   await new Promise<void>((resolve, reject) =>
     session.save((err: Error | null) => (err ? reject(err) : resolve()))
   );
+
+  await persistCartForCustomer(session.customerId, []);
 
   res.json({ items: [], subtotalInCents: 0, itemCount: 0 });
 });

@@ -2,7 +2,7 @@ import "../types/session.d.ts";
 import { Router, type IRouter } from "express";
 import bcrypt from "bcryptjs";
 import { eq } from "drizzle-orm";
-import { db, customersTable } from "@workspace/db";
+import { db, customersTable, customerCartsTable } from "@workspace/db";
 import {
   AuthRegisterBody,
   AuthLoginBody,
@@ -60,6 +60,8 @@ router.post("/auth/register", authLimiter, async (req, res): Promise<void> => {
 
   const passwordHash = await bcrypt.hash(password, 12);
 
+  const verificationToken = crypto.randomBytes(32).toString("hex");
+
   const [customer] = await db
     .insert(customersTable)
     .values({
@@ -67,6 +69,7 @@ router.post("/auth/register", authLimiter, async (req, res): Promise<void> => {
       passwordHash,
       name,
       phone: phone ?? null,
+      verificationToken,
     })
     .returning();
 
@@ -75,7 +78,10 @@ router.post("/auth/register", authLimiter, async (req, res): Promise<void> => {
     req.session.save((err) => (err ? reject(err) : resolve()))
   );
 
-  console.log(`[EMAIL STUB] Welcome email to ${customer.email}: Account created for ${customer.name}`);
+  const baseUrl = process.env.STORE_BASE_URL ?? `https://${process.env.REPLIT_DEV_DOMAIN}/store`;
+  console.log(
+    `[EMAIL STUB] Welcome to Jack Pine Farm, ${customer.name}!\n  Please verify your email: ${baseUrl}/auth/verify-email?token=${verificationToken}`
+  );
 
   res.status(201).json(toCustomerSession(customer));
 });
@@ -101,6 +107,29 @@ router.post("/auth/login", authLimiter, async (req, res): Promise<void> => {
   }
 
   req.session.customerId = customer.id;
+
+  const [dbCart] = await db
+    .select()
+    .from(customerCartsTable)
+    .where(eq(customerCartsTable.customerId, customer.id))
+    .limit(1);
+
+  if (dbCart && dbCart.items.length > 0) {
+    const sessionCart: Array<{ productId: number; quantity: number; addGiblets: boolean }> =
+      req.session.cart ?? [];
+    const merged = [...dbCart.items];
+    for (const si of sessionCart) {
+      const existing = merged.find((m) => m.productId === si.productId);
+      if (existing) {
+        existing.quantity = Math.max(existing.quantity, si.quantity);
+        if (si.addGiblets) existing.addGiblets = true;
+      } else {
+        merged.push(si);
+      }
+    }
+    req.session.cart = merged;
+  }
+
   await new Promise<void>((resolve, reject) =>
     req.session.save((err) => (err ? reject(err) : resolve()))
   );
@@ -160,6 +189,35 @@ router.patch("/auth/profile", async (req, res): Promise<void> => {
     .returning();
 
   res.json(toCustomerSession(updated));
+});
+
+router.post("/auth/verify-email", async (req, res): Promise<void> => {
+  const { token } = req.body;
+
+  if (!token || typeof token !== "string") {
+    res.status(400).json({ error: "Verification token is required" });
+    return;
+  }
+
+  const [customer] = await db
+    .select({ id: customersTable.id, emailVerified: customersTable.emailVerified })
+    .from(customersTable)
+    .where(eq(customersTable.verificationToken, token))
+    .limit(1);
+
+  if (!customer) {
+    res.status(400).json({ error: "Invalid verification token" });
+    return;
+  }
+
+  if (!customer.emailVerified) {
+    await db
+      .update(customersTable)
+      .set({ emailVerified: true, verificationToken: null })
+      .where(eq(customersTable.id, customer.id));
+  }
+
+  res.json({ message: "Email verified successfully." });
 });
 
 router.post("/auth/forgot-password", resetLimiter, async (req, res): Promise<void> => {

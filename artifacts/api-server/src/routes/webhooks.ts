@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
 import { eq } from "drizzle-orm";
-import { db, ordersTable, stripePendingCheckoutsTable } from "@workspace/db";
+import { db, ordersTable, stripePendingCheckoutsTable, customerCartsTable } from "@workspace/db";
 import { createOrderFromData } from "./checkout.js";
 
 const router: IRouter = Router();
@@ -78,7 +78,19 @@ router.post("/webhooks/stripe", async (req, res): Promise<void> => {
         .delete(stripePendingCheckoutsTable)
         .where(eq(stripePendingCheckoutsTable.stripeSessionId, stripeSessionId));
 
-      console.log(`[EMAIL STUB] Stripe payment confirmed for ${pending.customerEmail}:\n  Order #${String(order.id).padStart(6, "0")} (deposit paid)`);
+      if (pending.customerId) {
+        await db
+          .delete(customerCartsTable)
+          .where(eq(customerCartsTable.customerId, pending.customerId));
+      }
+
+      const baseUrl = process.env.STORE_BASE_URL ?? `https://${process.env.REPLIT_DEV_DOMAIN}/store`;
+      const isGuest = !pending.customerId;
+      const emailParams = encodeURIComponent(pending.customerEmail);
+      const accountClaimLine = isGuest
+        ? `\n  Track your order by creating an account: ${baseUrl}/auth/register?email=${emailParams}`
+        : `\n  Order detail: ${baseUrl}/account/orders/${order.id}`;
+      console.log(`[EMAIL STUB] Stripe payment confirmed for ${pending.customerEmail}:\n  Order #${String(order.id).padStart(6, "0")} (deposit paid)${accountClaimLine}`);
       console.log(`Order ${order.id} created from Stripe session ${stripeSessionId}`);
     } else {
       console.warn(`No pending checkout found for Stripe session ${stripeSessionId}`);
