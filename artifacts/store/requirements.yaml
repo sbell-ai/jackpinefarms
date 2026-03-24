@@ -1,0 +1,21 @@
+packages:
+  "framer-motion": "For page transitions and smooth UI animations"
+  "react-hook-form": "For form state management"
+  "@hookform/resolvers": "For zod validation in forms"
+  "clsx": "Utility for constructing className strings conditionally"
+  "tailwind-merge": "Utility to merge tailwind classes"
+
+images:
+  - path: "artifacts/store/public/images/hero-bg.png"
+    description: "Warm earthy farmstead landscape, sunrise over a pasture, rustic but clean, soft golden hour lighting"
+    aspect_ratio: "16:9"
+  - path: "artifacts/store/public/images/logo.png"
+    description: "Minimal rustic logo mark for Jack Pine Farm, featuring a simple pine tree, earthy green and brown colors, transparent background"
+    aspect_ratio: "1:1"
+  - path: "artifacts/store/public/images/texture-bg.png"
+    description: "Subtle natural paper texture, warm off-white, very light earthy grain"
+    aspect_ratio: "16:9"
+
+notes:
+  - "Using @workspace/api-client-react for all API hooks"
+  - "Building public pages and admin catalog management as specified in PRD Phase 1"

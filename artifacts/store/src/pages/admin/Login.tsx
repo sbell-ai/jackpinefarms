@@ -1,0 +1,72 @@
+import { useState } from "react";
+import { useLocation } from "wouter";
+import { useAdminLogin } from "@workspace/api-client-react";
+import { Store, Loader2, Lock } from "lucide-react";
+
+export default function AdminLogin() {
+  const [, setLocation] = useLocation();
+  const [password, setPassword] = useState("");
+  const loginMutation = useAdminLogin();
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!password) return;
+    
+    try {
+      await loginMutation.mutateAsync({
+        data: { password }
+      });
+      setLocation("/admin/products");
+    } catch (err) {
+      // Handled by mutation UI state
+    }
+  };
+
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-muted px-4 relative overflow-hidden">
+      <div className="absolute inset-0 opacity-[0.03] bg-[url('/images/texture-bg.png')] mix-blend-overlay"></div>
+      
+      <div className="w-full max-w-md relative z-10">
+        <div className="text-center mb-8 flex flex-col items-center">
+          <div className="w-16 h-16 rounded-2xl bg-primary text-white flex items-center justify-center mb-6 shadow-lg border-4 border-white">
+            <Store className="w-8 h-8" />
+          </div>
+          <h1 className="text-3xl font-serif font-bold text-foreground">FarmOps Admin</h1>
+          <p className="text-muted-foreground mt-2">Manage Jack Pine Farm catalog</p>
+        </div>
+
+        <div className="bg-card border border-border p-8 rounded-3xl shadow-xl">
+          <form onSubmit={handleSubmit} className="space-y-6">
+            <div className="space-y-2">
+              <label className="text-sm font-bold text-foreground">Admin Password</label>
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-muted-foreground">
+                  <Lock className="w-5 h-5" />
+                </div>
+                <input 
+                  type="password" 
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="w-full pl-12 pr-4 py-3 rounded-xl bg-background border border-border focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all text-foreground"
+                  placeholder="••••••••"
+                  autoFocus
+                />
+              </div>
+              {loginMutation.isError && (
+                <p className="text-destructive text-sm font-medium mt-2">Invalid credentials</p>
+              )}
+            </div>
+
+            <button 
+              type="submit"
+              disabled={loginMutation.isPending || !password}
+              className="w-full flex justify-center items-center gap-2 py-3 rounded-xl bg-primary text-white font-bold hover:bg-primary/90 transition-all shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {loginMutation.isPending ? <Loader2 className="w-5 h-5 animate-spin" /> : "Sign In"}
+            </button>
+          </form>
+        </div>
+      </div>
+    </div>
+  );
+}
