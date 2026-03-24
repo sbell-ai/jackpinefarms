@@ -17,10 +17,10 @@ export default function About() {
         <div className="bg-card p-10 rounded-3xl border border-border shadow-sm mb-12">
           <h2 className="text-3xl mt-0">Roots in the Soil</h2>
           <p>
-            When we acquired our 70 acres, we saw an opportunity to step away from the industrial food system and build something resilient. We focus exclusively on pastured poultry—duck and chicken eggs, alongside meat chickens and turkeys—because we believe birds are meant to be outdoors, foraging in the sun.
+            When we leased our farm, we saw an opportunity to step away from the industrial food system and build something resilient. We focus exclusively on pastured poultry—duck and chicken eggs, meat chickens and heritage turkeys—because we believe birds are meant to be outdoors, foraging in the sun.
           </p>
           <p>
-            The name "Jack Pine Farm" represents resilience and growth. Just as the Jack Pine tree thrives in challenging environments, we are building an agricultural model that regenerates the land rather than depleting it.
+            The name "Jack Pine Farm" represents Michigan, resilience and growth. Just as the Jack Pine tree thrives in challenging environments, we are building an agricultural model that regenerates the land rather than depleting it.
           </p>
         </div>
 
@@ -34,7 +34,7 @@ export default function About() {
           <div className="bg-accent/5 p-8 rounded-2xl border border-accent/10">
             <h3 className="text-2xl mt-0 text-accent">Real Food</h3>
             <p className="text-base">
-              No shortcuts. Our birds get non-GMO feed, fresh air, and regular moves to new pasture. It's more work, but the result is a superior product you can feel good about feeding your family.
+              No shortcuts. Our birds get non-GMO feed, fresh air, and freedom to roam. It's more work, but the result is a superior product you can feel good about eating and feeding to your family.
             </p>
           </div>
         </div>

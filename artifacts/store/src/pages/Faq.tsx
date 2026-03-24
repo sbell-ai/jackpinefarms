@@ -46,7 +46,7 @@ export default function Faq() {
             <AccordionItem value="item-4">
               <AccordionTrigger className="text-left font-medium text-lg">What does "pasture raised" mean to you?</AccordionTrigger>
               <AccordionContent className="text-muted-foreground text-base leading-relaxed">
-                It means our birds live outside on our 70 acres of pasture. They are moved regularly to fresh grass where they can forage for bugs, seeds, and greens in the sunshine.
+                It means our birds live outside in the open, free to roam in the pasture. They can forage for bugs, seeds, and greens in the sunshine. They get to peck at small stones and gravel to fill their gizzards, which helps their digestion. This is the natural way poultry should live.
               </AccordionContent>
             </AccordionItem>
             <AccordionItem value="item-5">

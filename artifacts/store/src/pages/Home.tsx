@@ -30,7 +30,7 @@ export default function Home() {
               Farm-fresh goods, raised the right way.
             </h1>
             <p className="text-lg md:text-xl mb-10 text-white/90 leading-relaxed font-medium max-w-xl drop-shadow">
-              Welcome to Jack Pine Farm. We raise pastured poultry on 70 acres of fresh green grass, ensuring the highest quality meat and eggs for your family.
+              Poultry raised on fresh, open pasture = the highest quality.
             </p>
             <div className="flex flex-col sm:flex-row gap-4">
               <Link 
