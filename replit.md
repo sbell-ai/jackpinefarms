@@ -40,6 +40,7 @@ artifacts-monorepo/
 - **Fail explicitly.** No silent fallbacks. If a required config is missing, throw or log an error — don't silently degrade.
 - **Stripe-first, then mark success.** When an external call (Stripe refund, invoice, charge) must precede a DB state change, do the external call first. Only update the DB after the external call succeeds.
 - **Look at all angles before acting.** Before adding a library or making a change that touches production, check how it behaves end-to-end: Does it do runtime file I/O that will break in an esbuild bundle? Does it need peer deps that aren't directly installed? Does it behave differently in prod vs dev? Catching this before deployment prevents duplicate fixes and wasted deploys. For `connect-pg-simple` specifically: the `createTableIfMissing` option reads a `table.sql` from the package directory — this breaks when bundled. Always create the `session` table via direct SQL and omit that option.
+- **Always set `app.set("trust proxy", 1)` in Express when behind a reverse proxy.** In Replit's production environment (and most cloud platforms), Node.js runs behind a reverse proxy that terminates TLS. Without `trust proxy`, `req.secure` is always `false`, and express-session with `secure: true` silently refuses to set the `Set-Cookie` header — the browser never receives the session cookie and every request appears unauthenticated. This single missing line caused the admin login redirect loop.
 
 ## TypeScript & Composite Projects
 

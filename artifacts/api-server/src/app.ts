@@ -11,6 +11,12 @@ const PgSession = connectPgSimple(session);
 
 const app: Express = express();
 
+// Trust the first proxy hop (Replit's production reverse proxy).
+// Without this, req.secure is false (the Node.js process receives plain HTTP
+// from the proxy), and express-session with secure:true will refuse to set
+// the Set-Cookie header — the browser never gets the session cookie.
+app.set("trust proxy", 1);
+
 app.use(
   pinoHttp({
     logger,
