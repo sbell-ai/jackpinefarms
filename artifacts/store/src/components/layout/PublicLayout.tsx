@@ -53,11 +53,11 @@ export function PublicLayout({ children }: { children: ReactNode }) {
           <div className="flex justify-between items-center">
             {/* Logo */}
             <Link href="/" className="flex items-center gap-3 group">
-              <div className="w-10 h-10 rounded-full overflow-hidden bg-primary/10 flex items-center justify-center border border-primary/20 group-hover:scale-105 transition-transform">
+              <div className="w-10 h-10 flex items-center justify-center group-hover:scale-105 transition-transform">
                 <img 
                   src={`${import.meta.env.BASE_URL}images/logo.png`} 
                   alt="Jack Pine Farm Logo" 
-                  className="w-full h-full object-cover"
+                  className="w-full h-full object-contain"
                 />
               </div>
               <span className="font-serif text-xl font-bold text-primary tracking-tight hidden sm:block">
@@ -188,7 +188,11 @@ export function PublicLayout({ children }: { children: ReactNode }) {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-12 mb-12">
             <div>
               <div className="flex items-center gap-3 mb-6">
-                <Leaf className="w-6 h-6 text-accent" />
+                <img 
+                  src={`${import.meta.env.BASE_URL}images/logo.png`} 
+                  alt="Jack Pine Farm Logo" 
+                  className="w-10 h-10 object-contain brightness-0 invert"
+                />
                 <span className="font-serif text-2xl font-bold">Jack Pine Farm</span>
               </div>
               <p className="text-primary-foreground/80 max-w-sm leading-relaxed">
