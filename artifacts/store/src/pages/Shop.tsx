@@ -20,9 +20,9 @@ export default function Shop() {
       {/* Header */}
       <div className="bg-primary/5 border-b border-border">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 md:py-24">
-          <h1 className="text-4xl md:text-6xl font-serif font-bold text-primary mb-4">Farm Store</h1>
+          <h1 className="text-4xl md:text-6xl font-serif font-bold text-primary mb-4">Jack Pine Farm Store</h1>
           <p className="text-lg text-muted-foreground max-w-2xl leading-relaxed">
-            Reserve your holiday turkey, place a deposit for our next batch of pastured chicken, or grab some fresh eggs. All orders are for local pickup at Jack Pine Farm.
+            Grab some fresh eggs, reserve your holiday turkey, or place a deposit for our next batch of pastured chicken. All orders are for local pickup either at Jack Pine Farm or at a prearranged local pickup location.
           </p>
         </div>
       </div>

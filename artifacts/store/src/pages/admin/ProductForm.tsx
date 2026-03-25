@@ -194,7 +194,7 @@ export default function ProductForm() {
               <input
                 ref={fileInputRef}
                 type="file"
-                accept="image/*"
+                accept="image/jpeg,image/png,image/webp,image/gif"
                 className="hidden"
                 onChange={async (e) => {
                   const file = e.target.files?.[0];
@@ -206,7 +206,7 @@ export default function ProductForm() {
               <input type="hidden" {...register("imageUrl")} />
 
               <p className="text-xs text-muted-foreground">
-                Accepted: JPG, PNG, WebP, GIF. You can also paste a URL below.
+                Accepted: JPG, PNG, WebP. iPhone photos will be converted automatically.
               </p>
 
               <input
