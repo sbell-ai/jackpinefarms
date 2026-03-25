@@ -13,12 +13,12 @@ export default function Home() {
       <section className="relative min-h-[85vh] flex items-center justify-center overflow-hidden">
         <div className="absolute inset-0 z-0">
           <img 
-            src={`${import.meta.env.BASE_URL}images/hero-bg.png`}
-            alt="Warm earthy farmstead landscape, sunrise over a pasture"
+            src={`${import.meta.env.BASE_URL}images/hero-bg.jpg`}
+            alt="Turkeys on pasture at sunset, Jack Pine Farm"
             className="w-full h-full object-cover"
           />
-          {/* Warm gradient overlay */}
-          <div className="absolute inset-0 bg-gradient-to-r from-black/60 via-black/40 to-black/10"></div>
+          {/* Light transparent overlay */}
+          <div className="absolute inset-0 bg-gradient-to-r from-black/30 via-black/15 to-transparent"></div>
         </div>
         
         <div className="relative z-10 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
