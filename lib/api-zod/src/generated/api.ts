@@ -255,6 +255,9 @@ export const AdminListOrdersResponseItem = zod.object({
   paymentMethod: zod.enum(["stripe", "cash"]),
   totalInCents: zod.number(),
   createdAt: zod.date(),
+  refundedGiblets: zod.boolean(),
+  batchId: zod.number().nullable(),
+  pickupEventId: zod.number().nullable(),
 });
 export const AdminListOrdersResponse = zod.array(AdminListOrdersResponseItem);
 
@@ -295,10 +298,12 @@ export const AdminGetOrderResponse = zod.object({
       pricingType: zod.enum(["unit", "deposit"]),
       unitPriceInCents: zod.number(),
       unitLabel: zod.string().nullable(),
+      variantLabel: zod.string().nullable(),
       isGiblets: zod.boolean(),
       lineTotalInCents: zod.number(),
     }),
   ),
+  finalWeightLbs: zod.number().nullable(),
   createdAt: zod.date(),
   updatedAt: zod.date(),
 });
@@ -531,6 +536,9 @@ export const ListMyOrdersResponseItem = zod.object({
   paymentMethod: zod.enum(["stripe", "cash"]),
   totalInCents: zod.number(),
   createdAt: zod.date(),
+  refundedGiblets: zod.boolean(),
+  batchId: zod.number().nullable(),
+  pickupEventId: zod.number().nullable(),
 });
 export const ListMyOrdersResponse = zod.array(ListMyOrdersResponseItem);
 
@@ -571,10 +579,12 @@ export const GetMyOrderResponse = zod.object({
       pricingType: zod.enum(["unit", "deposit"]),
       unitPriceInCents: zod.number(),
       unitLabel: zod.string().nullable(),
+      variantLabel: zod.string().nullable(),
       isGiblets: zod.boolean(),
       lineTotalInCents: zod.number(),
     }),
   ),
+  finalWeightLbs: zod.number().nullable(),
   createdAt: zod.date(),
   updatedAt: zod.date(),
 });
@@ -604,6 +614,9 @@ export const ClaimOrderResponse = zod.object({
   paymentMethod: zod.enum(["stripe", "cash"]),
   totalInCents: zod.number(),
   createdAt: zod.date(),
+  refundedGiblets: zod.boolean(),
+  batchId: zod.number().nullable(),
+  pickupEventId: zod.number().nullable(),
 });
 
 /**
@@ -726,16 +739,97 @@ export const AdminGetPickupEventParams = zod.object({
   id: zod.coerce.number(),
 });
 
-export const AdminGetPickupEventResponse = zod.object({
-  id: zod.number(),
-  name: zod.string(),
-  scheduledAt: zod.date(),
-  locationNotes: zod.string().nullable(),
-  status: zod.enum(["scheduled", "completed", "cancelled"]),
-  assignedOrderCount: zod.number(),
-  createdAt: zod.date(),
-  updatedAt: zod.date(),
-});
+export const AdminGetPickupEventResponse = zod
+  .object({
+    id: zod.number(),
+    name: zod.string(),
+    scheduledAt: zod.date(),
+    locationNotes: zod.string().nullable(),
+    status: zod.enum(["scheduled", "completed", "cancelled"]),
+    assignedOrderCount: zod.number(),
+    createdAt: zod.date(),
+    updatedAt: zod.date(),
+  })
+  .and(
+    zod.object({
+      orders: zod.array(
+        zod.object({
+          id: zod.number(),
+          customerName: zod.string(),
+          customerEmail: zod.string(),
+          status: zod.enum([
+            "pending_payment",
+            "deposit_paid",
+            "cash_pending",
+            "pickup_assigned",
+            "weights_entered",
+            "invoice_sent",
+            "fulfilled",
+            "cancelled",
+            "no_show",
+          ]),
+          paymentMethod: zod.enum(["stripe", "cash"]),
+          totalInCents: zod.number(),
+          finalWeightLbs: zod.number().nullish(),
+          stripeInvoiceId: zod.string().nullish(),
+          batchId: zod.number().nullable(),
+          createdAt: zod.date(),
+          items: zod.array(
+            zod.object({
+              id: zod.number(),
+              productId: zod.number().nullable(),
+              productName: zod.string(),
+              quantity: zod.number(),
+              pricingType: zod.enum(["unit", "deposit"]),
+              unitPriceInCents: zod.number(),
+              unitLabel: zod.string().nullable(),
+              variantLabel: zod.string().nullable(),
+              isGiblets: zod.boolean(),
+              lineTotalInCents: zod.number(),
+            }),
+          ),
+        }),
+      ),
+      unassignedOrders: zod.array(
+        zod.object({
+          id: zod.number(),
+          customerName: zod.string(),
+          customerEmail: zod.string(),
+          status: zod.enum([
+            "pending_payment",
+            "deposit_paid",
+            "cash_pending",
+            "pickup_assigned",
+            "weights_entered",
+            "invoice_sent",
+            "fulfilled",
+            "cancelled",
+            "no_show",
+          ]),
+          paymentMethod: zod.enum(["stripe", "cash"]),
+          totalInCents: zod.number(),
+          finalWeightLbs: zod.number().nullish(),
+          stripeInvoiceId: zod.string().nullish(),
+          batchId: zod.number().nullable(),
+          createdAt: zod.date(),
+          items: zod.array(
+            zod.object({
+              id: zod.number(),
+              productId: zod.number().nullable(),
+              productName: zod.string(),
+              quantity: zod.number(),
+              pricingType: zod.enum(["unit", "deposit"]),
+              unitPriceInCents: zod.number(),
+              unitLabel: zod.string().nullable(),
+              variantLabel: zod.string().nullable(),
+              isGiblets: zod.boolean(),
+              lineTotalInCents: zod.number(),
+            }),
+          ),
+        }),
+      ),
+    }),
+  );
 
 /**
  * @summary Update a pickup event (admin)
@@ -778,6 +872,21 @@ export const AdminAssignOrderToPickupEventResponse = zod.object({
 });
 
 /**
+ * @summary Assign a single order item to a pickup event (admin)
+ */
+export const AdminAssignItemToPickupEventParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const AdminAssignItemToPickupEventBody = zod.object({
+  orderItemId: zod.number(),
+});
+
+export const AdminAssignItemToPickupEventResponse = zod.object({
+  message: zod.string(),
+});
+
+/**
  * @summary Enter weights and send final balance invoices for a pickup event (admin)
  */
 export const AdminSendPickupInvoicesParams = zod.object({
@@ -789,12 +898,21 @@ export const AdminSendPickupInvoicesBody = zod.object({
     zod.object({
       orderId: zod.number(),
       weightLbs: zod.number(),
+      variant: zod.enum(["whole", "half", "quarter"]).optional(),
     }),
   ),
 });
 
 export const AdminSendPickupInvoicesResponse = zod.object({
   message: zod.string(),
+  results: zod.array(
+    zod.object({
+      orderId: zod.number(),
+      status: zod.enum(["invoiced", "stub", "error", "deposit_covers_balance"]),
+      remainingCents: zod.number(),
+      invoiceId: zod.string().optional(),
+    }),
+  ),
 });
 
 /**
@@ -849,10 +967,12 @@ export const AdminUpdateOrderStatusResponse = zod.object({
       pricingType: zod.enum(["unit", "deposit"]),
       unitPriceInCents: zod.number(),
       unitLabel: zod.string().nullable(),
+      variantLabel: zod.string().nullable(),
       isGiblets: zod.boolean(),
       lineTotalInCents: zod.number(),
     }),
   ),
+  finalWeightLbs: zod.number().nullable(),
   createdAt: zod.date(),
   updatedAt: zod.date(),
 });
@@ -945,10 +1065,12 @@ export const AdminAssignOrderBatchResponse = zod.object({
       pricingType: zod.enum(["unit", "deposit"]),
       unitPriceInCents: zod.number(),
       unitLabel: zod.string().nullable(),
+      variantLabel: zod.string().nullable(),
       isGiblets: zod.boolean(),
       lineTotalInCents: zod.number(),
     }),
   ),
+  finalWeightLbs: zod.number().nullable(),
   createdAt: zod.date(),
   updatedAt: zod.date(),
 });
@@ -1009,6 +1131,9 @@ export const AdminGetCustomerResponse = zod.object({
       paymentMethod: zod.enum(["stripe", "cash"]),
       totalInCents: zod.number(),
       createdAt: zod.date(),
+      refundedGiblets: zod.boolean(),
+      batchId: zod.number().nullable(),
+      pickupEventId: zod.number().nullable(),
     }),
   ),
   createdAt: zod.date(),
@@ -1050,4 +1175,26 @@ export const ProcessResubscribeBody = zod.object({
 
 export const ProcessResubscribeResponse = zod.object({
   message: zod.string(),
+});
+
+/**
+ * @summary Request a presigned URL for file upload
+ */
+
+export const RequestUploadUrlBody = zod.object({
+  name: zod.string().min(1),
+  size: zod.number().min(1),
+  contentType: zod.string().min(1),
+});
+
+export const RequestUploadUrlResponse = zod.object({
+  uploadURL: zod.string().url(),
+  objectPath: zod.string(),
+});
+
+/**
+ * @summary Serve an object entity from PRIVATE_OBJECT_DIR
+ */
+export const GetStorageObjectParams = zod.object({
+  objectPath: zod.coerce.string(),
 });

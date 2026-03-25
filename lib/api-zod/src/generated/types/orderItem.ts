@@ -17,6 +17,8 @@ export interface OrderItem {
   unitPriceInCents: number;
   /** @nullable */
   unitLabel: string | null;
+  /** @nullable */
+  variantLabel: string | null;
   isGiblets: boolean;
   lineTotalInCents: number;
 }

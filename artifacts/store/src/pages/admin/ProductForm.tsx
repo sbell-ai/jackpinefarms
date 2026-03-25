@@ -1,13 +1,13 @@
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { useRoute, useLocation, Link } from "wouter";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { useGetProduct, useCreateProduct, useUpdateProduct, getGetProductQueryKey } from "@workspace/api-client-react";
-import { ArrowLeft, Loader2, Save } from "lucide-react";
+import { useUpload } from "@workspace/object-storage-web";
+import { ArrowLeft, Loader2, Save, Upload, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-// Mirroring the API Types
 const formSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters"),
   description: z.string().min(10, "Description must be at least 10 characters"),
@@ -17,7 +17,7 @@ const formSchema = z.object({
   unitLabel: z.string().optional(),
   depositDescription: z.string().optional(),
   availability: z.enum(["taking_orders", "preorder", "sold_out", "disabled"]),
-  imageUrl: z.string().url("Must be a valid URL").optional().or(z.literal("")),
+  imageUrl: z.string().optional().or(z.literal("")),
   displayOrder: z.coerce.number().int().default(0),
 });
 
@@ -28,6 +28,7 @@ export default function ProductForm() {
   const isEditing = !!match;
   const id = isEditing ? parseInt(params!.id, 10) : 0;
   const [, setLocation] = useLocation();
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const { data: product, isLoading: isLoadingProduct } = useGetProduct(id, {
     query: { queryKey: getGetProductQueryKey(id), enabled: isEditing }
@@ -36,7 +37,7 @@ export default function ProductForm() {
   const createMutation = useCreateProduct();
   const updateMutation = useUpdateProduct();
 
-  const { register, handleSubmit, formState: { errors }, reset, watch } = useForm<FormValues>({
+  const { register, handleSubmit, formState: { errors }, reset, watch, setValue } = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       productType: "eggs_chicken",
@@ -44,6 +45,12 @@ export default function ProductForm() {
       availability: "taking_orders",
       displayOrder: 0,
     }
+  });
+
+  const { uploadFile, isUploading } = useUpload({
+    onSuccess: (response) => {
+      setValue("imageUrl", `/api/storage${response.objectPath}`, { shouldValidate: true });
+    },
   });
 
   useEffect(() => {
@@ -64,6 +71,7 @@ export default function ProductForm() {
   }, [isEditing, product, reset]);
 
   const pricingType = watch("pricingType");
+  const imageUrl = watch("imageUrl");
 
   const onSubmit = async (data: FormValues) => {
     const payload = {
@@ -87,7 +95,6 @@ export default function ProductForm() {
       }
       setLocation("/admin/products");
     } catch (err) {
-      // Error is caught, might want to show toast
       console.error(err);
     }
   };
@@ -150,10 +157,64 @@ export default function ProductForm() {
                 {errors.availability && <p className="text-destructive text-sm">{errors.availability.message}</p>}
               </div>
             </div>
-            
+
             <div className="space-y-2">
-              <label className="text-sm font-bold text-foreground">Image URL (Optional)</label>
-              <input {...register("imageUrl")} placeholder="https://..." className="w-full px-4 py-2.5 rounded-lg bg-background border border-border focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all" />
+              <label className="text-sm font-bold text-foreground">Product Image</label>
+
+              {imageUrl ? (
+                <div className="relative w-40 h-40 rounded-xl overflow-hidden border border-border bg-muted">
+                  <img src={imageUrl} alt="Product" className="w-full h-full object-cover" />
+                  <button
+                    type="button"
+                    onClick={() => setValue("imageUrl", "", { shouldValidate: true })}
+                    className="absolute top-1.5 right-1.5 w-6 h-6 bg-black/60 hover:bg-black/80 text-white rounded-full flex items-center justify-center transition-colors"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              ) : (
+                <div
+                  onClick={() => !isUploading && fileInputRef.current?.click()}
+                  className={cn(
+                    "w-40 h-40 rounded-xl border-2 border-dashed border-border flex flex-col items-center justify-center gap-2 cursor-pointer hover:border-primary/50 hover:bg-muted/50 transition-all",
+                    isUploading && "opacity-60 cursor-not-allowed"
+                  )}
+                >
+                  {isUploading ? (
+                    <Loader2 className="w-6 h-6 animate-spin text-primary" />
+                  ) : (
+                    <Upload className="w-6 h-6 text-muted-foreground" />
+                  )}
+                  <span className="text-xs text-muted-foreground text-center px-2">
+                    {isUploading ? "Uploading…" : "Click to upload"}
+                  </span>
+                </div>
+              )}
+
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={async (e) => {
+                  const file = e.target.files?.[0];
+                  if (file) await uploadFile(file);
+                  e.target.value = "";
+                }}
+              />
+
+              <input type="hidden" {...register("imageUrl")} />
+
+              <p className="text-xs text-muted-foreground">
+                Accepted: JPG, PNG, WebP, GIF. You can also paste a URL below.
+              </p>
+
+              <input
+                placeholder="Or paste an image URL…"
+                value={imageUrl ?? ""}
+                onChange={(e) => setValue("imageUrl", e.target.value, { shouldValidate: true })}
+                className="w-full px-4 py-2.5 rounded-lg bg-background border border-border focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all text-sm"
+              />
               {errors.imageUrl && <p className="text-destructive text-sm">{errors.imageUrl.message}</p>}
             </div>
           </div>
@@ -204,7 +265,7 @@ export default function ProductForm() {
           </Link>
           <button 
             type="submit" 
-            disabled={isPending}
+            disabled={isPending || isUploading}
             className="flex items-center gap-2 px-8 py-3 rounded-xl bg-primary text-white font-bold hover:bg-primary/90 transition-all shadow-md disabled:opacity-50"
           >
             {isPending ? <Loader2 className="w-5 h-5 animate-spin" /> : <Save className="w-5 h-5" />}

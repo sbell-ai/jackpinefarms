@@ -5,8 +5,10 @@
  * Jack Pine Farm Store API
  * OpenAPI spec version: 0.1.0
  */
+import type { SendInvoicesBodyWeightsItemVariant } from "./sendInvoicesBodyWeightsItemVariant";
 
 export type SendInvoicesBodyWeightsItem = {
   orderId: number;
   weightLbs: number;
+  variant?: SendInvoicesBodyWeightsItemVariant;
 };

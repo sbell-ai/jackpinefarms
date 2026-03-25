@@ -9,23 +9,19 @@ import type { OrderItem } from "./orderItem";
 import type { OrderStatus } from "./orderStatus";
 import type { PaymentMethod } from "./paymentMethod";
 
-export interface OrderDetail {
+export interface PickupEventOrderSummary {
   id: number;
-  /** @nullable */
-  customerId: number | null;
   customerName: string;
   customerEmail: string;
-  customerPhone: string;
   status: OrderStatus;
   paymentMethod: PaymentMethod;
-  /** @nullable */
-  stripeCheckoutSessionId: string | null;
   totalInCents: number;
   /** @nullable */
-  notes: string | null;
-  items: OrderItem[];
+  finalWeightLbs?: number | null;
   /** @nullable */
-  finalWeightLbs: number | null;
+  stripeInvoiceId?: string | null;
+  /** @nullable */
+  batchId: number | null;
   createdAt: Date;
-  updatedAt: Date;
+  items: OrderItem[];
 }

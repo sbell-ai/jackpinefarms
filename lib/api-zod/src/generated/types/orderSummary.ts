@@ -16,4 +16,9 @@ export interface OrderSummary {
   paymentMethod: PaymentMethod;
   totalInCents: number;
   createdAt: Date;
+  refundedGiblets: boolean;
+  /** @nullable */
+  batchId: number | null;
+  /** @nullable */
+  pickupEventId: number | null;
 }

@@ -26,6 +26,7 @@ import type {
   AdminLoginBody,
   AdminMeResponse,
   AssignBatchBody,
+  AssignItemBody,
   AssignOrderBody,
   Cart,
   CheckoutContactBody,
@@ -34,6 +35,7 @@ import type {
   CreatePickupEventBody,
   CreateProductBody,
   CustomerSession,
+  ErrorEnvelope,
   ErrorResponse,
   GetUnsubscribePreferencesParams,
   HealthStatus,
@@ -44,10 +46,12 @@ import type {
   OrderEvent,
   OrderSummary,
   PickupEvent,
+  PickupEventDetail,
   PreorderBatch,
   Product,
   RegisterBody,
   SendInvoicesBody,
+  SendInvoicesResponse,
   StripeCheckoutResponse,
   SuccessResponse,
   UnsubscribeBody,
@@ -57,6 +61,8 @@ import type {
   UpdatePickupEventBody,
   UpdateProductBody,
   UpdateProfileBody,
+  UploadUrlRequest,
+  UploadUrlResponse,
 } from "./api.schemas";
 
 import { customFetch } from "../custom-fetch";
@@ -2646,8 +2652,8 @@ export const getAdminGetPickupEventUrl = (id: number) => {
 export const adminGetPickupEvent = async (
   id: number,
   options?: RequestInit,
-): Promise<PickupEvent> => {
-  return customFetch<PickupEvent>(getAdminGetPickupEventUrl(id), {
+): Promise<PickupEventDetail> => {
+  return customFetch<PickupEventDetail>(getAdminGetPickupEventUrl(id), {
     ...options,
     method: "GET",
   });
@@ -2901,6 +2907,94 @@ export const useAdminAssignOrderToPickupEvent = <
 };
 
 /**
+ * @summary Assign a single order item to a pickup event (admin)
+ */
+export const getAdminAssignItemToPickupEventUrl = (id: number) => {
+  return `/api/admin/pickup-events/${id}/assign-item`;
+};
+
+export const adminAssignItemToPickupEvent = async (
+  id: number,
+  assignItemBody: AssignItemBody,
+  options?: RequestInit,
+): Promise<SuccessResponse> => {
+  return customFetch<SuccessResponse>(getAdminAssignItemToPickupEventUrl(id), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(assignItemBody),
+  });
+};
+
+export const getAdminAssignItemToPickupEventMutationOptions = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof adminAssignItemToPickupEvent>>,
+    TError,
+    { id: number; data: BodyType<AssignItemBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof adminAssignItemToPickupEvent>>,
+  TError,
+  { id: number; data: BodyType<AssignItemBody> },
+  TContext
+> => {
+  const mutationKey = ["adminAssignItemToPickupEvent"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof adminAssignItemToPickupEvent>>,
+    { id: number; data: BodyType<AssignItemBody> }
+  > = (props) => {
+    const { id, data } = props ?? {};
+
+    return adminAssignItemToPickupEvent(id, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type AdminAssignItemToPickupEventMutationResult = NonNullable<
+  Awaited<ReturnType<typeof adminAssignItemToPickupEvent>>
+>;
+export type AdminAssignItemToPickupEventMutationBody = BodyType<AssignItemBody>;
+export type AdminAssignItemToPickupEventMutationError =
+  ErrorType<ErrorResponse>;
+
+/**
+ * @summary Assign a single order item to a pickup event (admin)
+ */
+export const useAdminAssignItemToPickupEvent = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof adminAssignItemToPickupEvent>>,
+    TError,
+    { id: number; data: BodyType<AssignItemBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof adminAssignItemToPickupEvent>>,
+  TError,
+  { id: number; data: BodyType<AssignItemBody> },
+  TContext
+> => {
+  return useMutation(getAdminAssignItemToPickupEventMutationOptions(options));
+};
+
+/**
  * @summary Enter weights and send final balance invoices for a pickup event (admin)
  */
 export const getAdminSendPickupInvoicesUrl = (id: number) => {
@@ -2911,8 +3005,8 @@ export const adminSendPickupInvoices = async (
   id: number,
   sendInvoicesBody: SendInvoicesBody,
   options?: RequestInit,
-): Promise<SuccessResponse> => {
-  return customFetch<SuccessResponse>(getAdminSendPickupInvoicesUrl(id), {
+): Promise<SendInvoicesResponse> => {
+  return customFetch<SendInvoicesResponse>(getAdminSendPickupInvoicesUrl(id), {
     ...options,
     method: "POST",
     headers: { "Content-Type": "application/json", ...options?.headers },
@@ -3881,3 +3975,178 @@ export const useProcessResubscribe = <
 > => {
   return useMutation(getProcessResubscribeMutationOptions(options));
 };
+
+/**
+ * @summary Request a presigned URL for file upload
+ */
+export const getRequestUploadUrlUrl = () => {
+  return `/api/storage/uploads/request-url`;
+};
+
+export const requestUploadUrl = async (
+  uploadUrlRequest: UploadUrlRequest,
+  options?: RequestInit,
+): Promise<UploadUrlResponse> => {
+  return customFetch<UploadUrlResponse>(getRequestUploadUrlUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(uploadUrlRequest),
+  });
+};
+
+export const getRequestUploadUrlMutationOptions = <
+  TError = ErrorType<ErrorEnvelope>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof requestUploadUrl>>,
+    TError,
+    { data: BodyType<UploadUrlRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof requestUploadUrl>>,
+  TError,
+  { data: BodyType<UploadUrlRequest> },
+  TContext
+> => {
+  const mutationKey = ["requestUploadUrl"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof requestUploadUrl>>,
+    { data: BodyType<UploadUrlRequest> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return requestUploadUrl(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type RequestUploadUrlMutationResult = NonNullable<
+  Awaited<ReturnType<typeof requestUploadUrl>>
+>;
+export type RequestUploadUrlMutationBody = BodyType<UploadUrlRequest>;
+export type RequestUploadUrlMutationError = ErrorType<ErrorEnvelope>;
+
+/**
+ * @summary Request a presigned URL for file upload
+ */
+export const useRequestUploadUrl = <
+  TError = ErrorType<ErrorEnvelope>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof requestUploadUrl>>,
+    TError,
+    { data: BodyType<UploadUrlRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof requestUploadUrl>>,
+  TError,
+  { data: BodyType<UploadUrlRequest> },
+  TContext
+> => {
+  return useMutation(getRequestUploadUrlMutationOptions(options));
+};
+
+/**
+ * @summary Serve an object entity from PRIVATE_OBJECT_DIR
+ */
+export const getGetStorageObjectUrl = (objectPath: string) => {
+  return `/api/storage/objects/${objectPath}`;
+};
+
+export const getStorageObject = async (
+  objectPath: string,
+  options?: RequestInit,
+): Promise<Blob> => {
+  return customFetch<Blob>(getGetStorageObjectUrl(objectPath), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetStorageObjectQueryKey = (objectPath: string) => {
+  return [`/api/storage/objects/${objectPath}`] as const;
+};
+
+export const getGetStorageObjectQueryOptions = <
+  TData = Awaited<ReturnType<typeof getStorageObject>>,
+  TError = ErrorType<ErrorEnvelope>,
+>(
+  objectPath: string,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getStorageObject>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getGetStorageObjectQueryKey(objectPath);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getStorageObject>>
+  > = ({ signal }) =>
+    getStorageObject(objectPath, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: !!objectPath,
+    ...queryOptions,
+  } as UseQueryOptions<
+    Awaited<ReturnType<typeof getStorageObject>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetStorageObjectQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getStorageObject>>
+>;
+export type GetStorageObjectQueryError = ErrorType<ErrorEnvelope>;
+
+/**
+ * @summary Serve an object entity from PRIVATE_OBJECT_DIR
+ */
+
+export function useGetStorageObject<
+  TData = Awaited<ReturnType<typeof getStorageObject>>,
+  TError = ErrorType<ErrorEnvelope>,
+>(
+  objectPath: string,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getStorageObject>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetStorageObjectQueryOptions(objectPath, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}

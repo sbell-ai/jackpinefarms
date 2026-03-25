@@ -12,6 +12,7 @@ import pickupEventsRouter from "./pickup-events.js";
 import adminCustomersRouter from "./admin-customers.js";
 import notifyMeRouter from "./notify-me.js";
 import webhooksRouter from "./webhooks.js";
+import storageRouter from "./storage.js";
 
 const router: IRouter = Router();
 
@@ -28,5 +29,6 @@ router.use(pickupEventsRouter);
 router.use(adminCustomersRouter);
 router.use(notifyMeRouter);
 router.use(webhooksRouter);
+router.use(storageRouter);
 
 export default router;

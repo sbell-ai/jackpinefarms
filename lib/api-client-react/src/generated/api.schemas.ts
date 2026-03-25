@@ -212,6 +212,8 @@ export interface OrderItem {
   unitPriceInCents: number;
   /** @nullable */
   unitLabel: string | null;
+  /** @nullable */
+  variantLabel: string | null;
   isGiblets: boolean;
   lineTotalInCents: number;
 }
@@ -224,6 +226,11 @@ export interface OrderSummary {
   paymentMethod: PaymentMethod;
   totalInCents: number;
   createdAt: string;
+  refundedGiblets: boolean;
+  /** @nullable */
+  batchId: number | null;
+  /** @nullable */
+  pickupEventId: number | null;
 }
 
 export interface OrderDetail {
@@ -241,6 +248,8 @@ export interface OrderDetail {
   /** @nullable */
   notes: string | null;
   items: OrderItem[];
+  /** @nullable */
+  finalWeightLbs: number | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -336,14 +345,72 @@ export interface AssignOrderBody {
   orderId: number;
 }
 
+export type SendInvoicesBodyWeightsItemVariant =
+  (typeof SendInvoicesBodyWeightsItemVariant)[keyof typeof SendInvoicesBodyWeightsItemVariant];
+
+export const SendInvoicesBodyWeightsItemVariant = {
+  whole: "whole",
+  half: "half",
+  quarter: "quarter",
+} as const;
+
 export type SendInvoicesBodyWeightsItem = {
   orderId: number;
   weightLbs: number;
+  variant?: SendInvoicesBodyWeightsItemVariant;
 };
 
 export interface SendInvoicesBody {
   weights: SendInvoicesBodyWeightsItem[];
 }
+
+export type SendInvoicesResponseResultsItemStatus =
+  (typeof SendInvoicesResponseResultsItemStatus)[keyof typeof SendInvoicesResponseResultsItemStatus];
+
+export const SendInvoicesResponseResultsItemStatus = {
+  invoiced: "invoiced",
+  stub: "stub",
+  error: "error",
+  deposit_covers_balance: "deposit_covers_balance",
+} as const;
+
+export type SendInvoicesResponseResultsItem = {
+  orderId: number;
+  status: SendInvoicesResponseResultsItemStatus;
+  remainingCents: number;
+  invoiceId?: string;
+};
+
+export interface SendInvoicesResponse {
+  message: string;
+  results: SendInvoicesResponseResultsItem[];
+}
+
+export interface AssignItemBody {
+  orderItemId: number;
+}
+
+export interface PickupEventOrderSummary {
+  id: number;
+  customerName: string;
+  customerEmail: string;
+  status: OrderStatus;
+  paymentMethod: PaymentMethod;
+  totalInCents: number;
+  /** @nullable */
+  finalWeightLbs?: number | null;
+  /** @nullable */
+  stripeInvoiceId?: string | null;
+  /** @nullable */
+  batchId: number | null;
+  createdAt: string;
+  items: OrderItem[];
+}
+
+export type PickupEventDetail = PickupEvent & {
+  orders: PickupEventOrderSummary[];
+  unassignedOrders: PickupEventOrderSummary[];
+};
 
 export interface UpdateOrderStatusBody {
   status: OrderStatus;
@@ -412,6 +479,24 @@ export interface UnsubscribePreferences {
 export interface UnsubscribeBody {
   token: string;
   globalUnsubscribe?: boolean;
+}
+
+export interface UploadUrlRequest {
+  /** @minLength 1 */
+  name: string;
+  /** @minimum 1 */
+  size: number;
+  /** @minLength 1 */
+  contentType: string;
+}
+
+export interface UploadUrlResponse {
+  uploadURL: string;
+  objectPath: string;
+}
+
+export interface ErrorEnvelope {
+  error: string;
 }
 
 export type ListProductsParams = {
