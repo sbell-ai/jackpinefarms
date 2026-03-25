@@ -18,9 +18,9 @@ export default function AdminLogin() {
       await loginMutation.mutateAsync({
         data: { password }
       });
-      // Clear any stale "unauthenticated" cache before navigating so AdminLayout
-      // always waits for a fresh /admin/me response rather than bouncing on stale data.
-      await queryClient.invalidateQueries({ queryKey: getAdminMeQueryKey() });
+      // Write authenticated:true directly into the cache so AdminLayout sees it
+      // immediately on render — no refetch race, no stale-data bounce to login.
+      queryClient.setQueryData(getAdminMeQueryKey(), { authenticated: true });
       setLocation("/admin/products");
     } catch (err) {
       // Handled by mutation UI state
