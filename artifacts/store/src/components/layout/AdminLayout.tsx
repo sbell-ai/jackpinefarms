@@ -1,7 +1,7 @@
 import { ReactNode, useEffect } from "react";
 import { Link, useLocation } from "wouter";
 import { useAdminMe, useAdminLogout, getAdminMeQueryKey } from "@workspace/api-client-react";
-import { Store, Package, LogOut, Loader2, Home, ShoppingBag, Layers, CalendarDays, Users, LayoutDashboard, Egg, Bird } from "lucide-react";
+import { Store, Package, LogOut, Loader2, Home, ShoppingBag, Layers, CalendarDays, Users, LayoutDashboard, Egg, Bird, Rabbit } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export function AdminLayout({ children }: { children: ReactNode }) {
@@ -50,6 +50,7 @@ export function AdminLayout({ children }: { children: ReactNode }) {
     { href: "/admin/customers", label: "Customers", icon: Users },
     { href: "/admin/eggs", label: "Egg Inventory", icon: Egg },
     { href: "/admin/flocks", label: "Flocks", icon: Bird },
+    { href: "/admin/animals", label: "Animals", icon: Rabbit },
   ];
 
   return (

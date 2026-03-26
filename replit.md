@@ -168,7 +168,7 @@ When calling hooks with query options in React Query v5, always pass `queryKey` 
 
 - Password: set via `ADMIN_PASSWORD` env var (dev default: `jackpine2026`)
 - Session: express-session with `SESSION_SECRET` env var
-- Admin UI at `/admin` (dashboard), `/admin/orders`, `/admin/products`, `/admin/batches`, `/admin/pickup-events`, `/admin/customers`, `/admin/eggs` (egg inventory), `/admin/flocks`
+- Admin UI at `/admin` (dashboard), `/admin/orders`, `/admin/products`, `/admin/batches`, `/admin/pickup-events`, `/admin/customers`, `/admin/eggs` (egg inventory), `/admin/flocks`, `/admin/animals`
 
 ## Egg & Flock Accounting
 

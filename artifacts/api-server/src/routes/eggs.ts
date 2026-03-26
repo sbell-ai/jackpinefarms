@@ -5,6 +5,8 @@ import { z } from "zod";
 import { db } from "@workspace/db";
 import {
   flocksTable,
+  flockEventsTable,
+  animalsTable,
   eggTypesTable,
   dailyEggCollectionTable,
   eggInventoryLotsTable,
@@ -14,6 +16,8 @@ import {
   orderItemsTable,
   productsTable,
   insertFlockSchema,
+  insertFlockEventSchema,
+  insertAnimalSchema,
   insertEggTypeSchema,
   insertDailyEggCollectionSchema,
   insertEggInventoryAdjustmentSchema,
@@ -48,6 +52,55 @@ router.post("/admin/flocks", requireAdmin, async (req, res): Promise<void> => {
   }
   const [flock] = await db.insert(flocksTable).values(parsed.data).returning();
   res.status(201).json(flock);
+});
+
+// ─── Flock Events ─────────────────────────────────────────────────────────────
+
+router.get(
+  "/admin/flocks/:id/events",
+  requireAdmin,
+  async (req, res): Promise<void> => {
+    const flockId = parseInt(String(req.params.id), 10);
+    if (isNaN(flockId)) { res.status(400).json({ error: "Invalid flock id" }); return; }
+    const events = await db
+      .select()
+      .from(flockEventsTable)
+      .where(eq(flockEventsTable.flockId, flockId))
+      .orderBy(asc(flockEventsTable.eventDate));
+    res.json(events);
+  },
+);
+
+router.post(
+  "/admin/flocks/:id/events",
+  requireAdmin,
+  async (req, res): Promise<void> => {
+    const flockId = parseInt(String(req.params.id), 10);
+    if (isNaN(flockId)) { res.status(400).json({ error: "Invalid flock id" }); return; }
+    const parsed = insertFlockEventSchema.safeParse({ ...req.body, flockId });
+    if (!parsed.success) { res.status(400).json({ error: parsed.error.message }); return; }
+    const [event] = await db.insert(flockEventsTable).values(parsed.data).returning();
+    res.status(201).json(event);
+  },
+);
+
+// ─── Animals ──────────────────────────────────────────────────────────────────
+
+router.get("/admin/animals", requireAdmin, async (req, res): Promise<void> => {
+  const flockIdParam = req.query.flockId ? parseInt(String(req.query.flockId), 10) : undefined;
+  const rows = await db
+    .select()
+    .from(animalsTable)
+    .where(flockIdParam ? eq(animalsTable.flockId, flockIdParam) : undefined)
+    .orderBy(asc(animalsTable.createdAt));
+  res.json(rows);
+});
+
+router.post("/admin/animals", requireAdmin, async (req, res): Promise<void> => {
+  const parsed = insertAnimalSchema.safeParse(req.body);
+  if (!parsed.success) { res.status(400).json({ error: parsed.error.message }); return; }
+  const [animal] = await db.insert(animalsTable).values(parsed.data).returning();
+  res.status(201).json(animal);
 });
 
 // ─── Egg Types ────────────────────────────────────────────────────────────────

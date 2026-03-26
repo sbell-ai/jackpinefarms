@@ -40,10 +40,18 @@ export const eggInventoryLotStatusEnum = pgEnum("egg_inventory_lot_status", [
 
 // ─── Tables ───────────────────────────────────────────────────────────────────
 
+export const sexEnum = pgEnum("sex_enum", ["hen", "rooster", "unknown"]);
+export const animalStatusEnum = pgEnum("animal_status_enum", [
+  "active",
+  "sold",
+  "deceased",
+]);
+
 export const flocksTable = pgTable("flocks", {
   id: serial("id").primaryKey(),
   name: text("name").notNull(),
   species: flockSpeciesEnum("species").notNull(),
+  breed: text("breed"),
   acquiredDate: date("acquired_date"),
   hatchDate: date("hatch_date"),
   ageMonths: integer("age_months"),
@@ -67,6 +75,20 @@ export const flockEventsTable = pgTable(
   },
   (t) => [check("flock_events_count_positive", sql`${t.count} > 0`)],
 );
+
+export const animalsTable = pgTable("animals", {
+  id: serial("id").primaryKey(),
+  name: text("name"),
+  species: flockSpeciesEnum("species").notNull(),
+  breed: text("breed"),
+  sex: sexEnum("sex").notNull().default("unknown"),
+  birthDate: date("birth_date"),
+  acquiredDate: date("acquired_date"),
+  status: animalStatusEnum("status").notNull().default("active"),
+  flockId: integer("flock_id").references(() => flocksTable.id),
+  notes: text("notes"),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});
 
 export const eggTypesTable = pgTable("egg_types", {
   id: serial("id").primaryKey(),
@@ -176,6 +198,10 @@ export const inventoryAllocationsTable = pgTable(
 export const insertFlockSchema = createInsertSchema(flocksTable).omit({
   id: true,
 });
+export const insertAnimalSchema = createInsertSchema(animalsTable).omit({
+  id: true,
+  createdAt: true,
+});
 export const insertFlockEventSchema = createInsertSchema(flockEventsTable).omit(
   { id: true },
 );
@@ -199,6 +225,9 @@ export const insertInventoryAllocationSchema = createInsertSchema(
 
 export type InsertFlock = z.infer<typeof insertFlockSchema>;
 export type Flock = typeof flocksTable.$inferSelect;
+
+export type InsertAnimal = z.infer<typeof insertAnimalSchema>;
+export type Animal = typeof animalsTable.$inferSelect;
 
 export type InsertFlockEvent = z.infer<typeof insertFlockEventSchema>;
 export type FlockEvent = typeof flockEventsTable.$inferSelect;
