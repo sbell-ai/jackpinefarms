@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { differenceInMonths, differenceInYears, parseISO } from "date-fns";
+import { differenceInMonths, parseISO } from "date-fns";
 import {
   useAdminListFlocks,
   useAdminCreateFlock,
@@ -24,15 +24,17 @@ const STATUS_COLORS: Record<string, string> = {
   retired: "bg-gray-100 text-gray-600",
 };
 
-function flockAge(hatchDate: string | null | undefined): string {
-  if (!hatchDate) return "—";
-  const today = new Date();
-  const hatched = parseISO(hatchDate);
-  const years = differenceInYears(today, hatched);
-  const months = differenceInMonths(today, hatched) % 12;
-  if (years === 0) return months === 1 ? "1 mo" : `${months} mo`;
-  if (months === 0) return years === 1 ? "1 yr" : `${years} yr`;
-  return `${years} yr ${months} mo`;
+function formatAge(months: number | null | undefined): string {
+  if (months == null) return "—";
+  if (months < 12) return months === 1 ? "1 mo" : `${months} mo`;
+  const yrs = Math.floor(months / 12);
+  const mo = months % 12;
+  if (mo === 0) return yrs === 1 ? "1 yr" : `${yrs} yr`;
+  return `${yrs} yr ${mo} mo`;
+}
+
+function monthsFromHatchDate(hatchDate: string): number {
+  return differenceInMonths(new Date(), parseISO(hatchDate));
 }
 
 export default function AdminFlocks() {
@@ -48,6 +50,7 @@ export default function AdminFlocks() {
     species: "" as "chicken" | "duck" | "turkey" | "",
     acquiredDate: "",
     hatchDate: "",
+    ageMonths: "",
     henCount: "",
     roosterCount: "",
     notes: "",
@@ -55,11 +58,16 @@ export default function AdminFlocks() {
 
   const [showForm, setShowForm] = useState(false);
 
+  const handleHatchDateChange = (value: string) => {
+    const computed = value ? String(monthsFromHatchDate(value)) : "";
+    setForm((f) => ({ ...f, hatchDate: value, ageMonths: computed }));
+  };
+
   const createFlock = useAdminCreateFlock({
     mutation: {
       onSuccess: () => {
         toast({ title: "Flock added" });
-        setForm({ name: "", species: "", acquiredDate: "", hatchDate: "", henCount: "", roosterCount: "", notes: "" });
+        setForm({ name: "", species: "", acquiredDate: "", hatchDate: "", ageMonths: "", henCount: "", roosterCount: "", notes: "" });
         setShowForm(false);
         qc.invalidateQueries({ queryKey: getAdminListFlocksQueryKey() });
       },
@@ -80,18 +88,17 @@ export default function AdminFlocks() {
         species: form.species as "chicken" | "duck" | "turkey",
         acquiredDate: form.acquiredDate || undefined,
         hatchDate: form.hatchDate || undefined,
-        henCount: form.henCount ? Number(form.henCount) : undefined,
-        roosterCount: form.roosterCount ? Number(form.roosterCount) : undefined,
+        ageMonths: form.ageMonths !== "" ? Number(form.ageMonths) : undefined,
+        henCount: form.henCount !== "" ? Number(form.henCount) : undefined,
+        roosterCount: form.roosterCount !== "" ? Number(form.roosterCount) : undefined,
         notes: form.notes || undefined,
       } as any,
     });
   };
 
-  const totalBirds = (flock: any) => {
-    const h = flock.henCount ?? 0;
-    const r = flock.roosterCount ?? 0;
-    if (!flock.henCount && !flock.roosterCount) return "—";
-    return h + r;
+  const resolveAge = (flock: any): number | null => {
+    if (flock.hatchDate) return monthsFromHatchDate(flock.hatchDate);
+    return flock.ageMonths ?? null;
   };
 
   const compositionLabel = (flock: any) => {
@@ -99,6 +106,11 @@ export default function AdminFlocks() {
     if (flock.henCount != null) parts.push(`${flock.henCount} hen${flock.henCount !== 1 ? "s" : ""}`);
     if (flock.roosterCount != null) parts.push(`${flock.roosterCount} rooster${flock.roosterCount !== 1 ? "s" : ""}`);
     return parts.length ? parts.join(", ") : "—";
+  };
+
+  const totalBirds = (flock: any) => {
+    if (flock.henCount == null && flock.roosterCount == null) return "—";
+    return (flock.henCount ?? 0) + (flock.roosterCount ?? 0);
   };
 
   return (
@@ -138,11 +150,21 @@ export default function AdminFlocks() {
               </SelectContent>
             </Select>
             <div className="space-y-1">
-              <label className="text-xs text-muted-foreground">Hatch date (for age)</label>
+              <label className="text-xs text-muted-foreground">Hatch date (auto-fills age)</label>
               <Input
                 type="date"
                 value={form.hatchDate}
-                onChange={(e) => setForm((f) => ({ ...f, hatchDate: e.target.value }))}
+                onChange={(e) => handleHatchDateChange(e.target.value)}
+              />
+            </div>
+            <div className="space-y-1">
+              <label className="text-xs text-muted-foreground">Age (months)</label>
+              <Input
+                type="number"
+                min={0}
+                placeholder="e.g. 18"
+                value={form.ageMonths}
+                onChange={(e) => setForm((f) => ({ ...f, ageMonths: e.target.value }))}
               />
             </div>
             <div className="space-y-1">
@@ -217,9 +239,9 @@ export default function AdminFlocks() {
                 <th className="text-left px-4 py-2 font-medium text-muted-foreground">Name</th>
                 <th className="text-left px-4 py-2 font-medium text-muted-foreground">Species</th>
                 <th className="text-left px-4 py-2 font-medium text-muted-foreground">Status</th>
+                <th className="text-left px-4 py-2 font-medium text-muted-foreground">Age</th>
                 <th className="text-left px-4 py-2 font-medium text-muted-foreground">Composition</th>
                 <th className="text-left px-4 py-2 font-medium text-muted-foreground">Total</th>
-                <th className="text-left px-4 py-2 font-medium text-muted-foreground">Age</th>
                 <th className="text-left px-4 py-2 font-medium text-muted-foreground">Acquired</th>
                 <th className="text-left px-4 py-2 font-medium text-muted-foreground">Notes</th>
               </tr>
@@ -234,9 +256,9 @@ export default function AdminFlocks() {
                       {flock.status}
                     </span>
                   </td>
+                  <td className="px-4 py-3 text-muted-foreground">{formatAge(resolveAge(flock))}</td>
                   <td className="px-4 py-3 text-muted-foreground text-xs">{compositionLabel(flock)}</td>
                   <td className="px-4 py-3 text-foreground font-medium">{totalBirds(flock)}</td>
-                  <td className="px-4 py-3 text-muted-foreground">{flockAge(flock.hatchDate)}</td>
                   <td className="px-4 py-3 text-muted-foreground">{flock.acquiredDate ?? "—"}</td>
                   <td className="px-4 py-3 text-muted-foreground text-xs">{flock.notes ?? "—"}</td>
                 </tr>
