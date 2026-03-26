@@ -6,7 +6,7 @@ import {
   getAdminListFlocksQueryKey,
 } from "@workspace/api-client-react";
 import { useQueryClient, useQuery, useMutation } from "@tanstack/react-query";
-import { Plus, Bird, ChevronDown, ChevronRight } from "lucide-react";
+import { Plus, Bird, ChevronDown, ChevronRight, Pencil, X, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -183,6 +183,48 @@ export default function AdminFlocks() {
   });
 
   const [expandedFlockId, setExpandedFlockId] = useState<number | null>(null);
+  const [editingFlock, setEditingFlock] = useState<any | null>(null);
+
+  const saveFlock = useMutation({
+    mutationFn: async ({ id, data }: { id: number; data: Record<string, unknown> }) => {
+      const res = await fetch(`/api/admin/flocks/${id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify(data),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error((err as any).error ?? "Failed to save");
+      }
+      return res.json();
+    },
+    onSuccess: () => {
+      toast({ title: "Flock updated" });
+      setEditingFlock(null);
+      qc.invalidateQueries({ queryKey: getAdminListFlocksQueryKey() });
+    },
+    onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
+  });
+
+  const handleSaveEdit = () => {
+    if (!editingFlock) return;
+    saveFlock.mutate({
+      id: editingFlock.id,
+      data: {
+        name: editingFlock.name,
+        species: editingFlock.species,
+        breed: editingFlock.breed || null,
+        acquiredDate: editingFlock.acquiredDate || null,
+        hatchDate: editingFlock.hatchDate || null,
+        ageMonths: editingFlock.ageMonths !== "" && editingFlock.ageMonths != null ? Number(editingFlock.ageMonths) : null,
+        henCount: editingFlock.henCount !== "" && editingFlock.henCount != null ? Number(editingFlock.henCount) : null,
+        roosterCount: editingFlock.roosterCount !== "" && editingFlock.roosterCount != null ? Number(editingFlock.roosterCount) : null,
+        status: editingFlock.status,
+        notes: editingFlock.notes || null,
+      },
+    });
+  };
 
   const [form, setForm] = useState({
     name: "",
@@ -348,7 +390,7 @@ export default function AdminFlocks() {
       ) : (
         <div className="rounded-lg border border-border overflow-hidden divide-y divide-border">
           {/* Header */}
-          <div className="bg-muted/40 grid grid-cols-[24px_1fr_1fr_1fr_80px_120px_80px_80px_80px] gap-x-4 px-4 py-2 text-xs font-medium text-muted-foreground">
+          <div className="bg-muted/40 grid grid-cols-[24px_1fr_1fr_1fr_80px_120px_80px_80px_80px_32px] gap-x-3 px-4 py-2 text-xs font-medium text-muted-foreground">
             <span />
             <span>Name</span>
             <span>Species / Breed</span>
@@ -358,11 +400,12 @@ export default function AdminFlocks() {
             <span>Total</span>
             <span>Acquired</span>
             <span>Notes</span>
+            <span />
           </div>
           {(flocks as any[]).map((flock: any) => (
             <div key={flock.id}>
               <div
-                className="grid grid-cols-[24px_1fr_1fr_1fr_80px_120px_80px_80px_80px] gap-x-4 px-4 py-3 hover:bg-muted/20 cursor-pointer items-center text-sm"
+                className="grid grid-cols-[24px_1fr_1fr_1fr_80px_120px_80px_80px_80px_32px] gap-x-3 px-4 py-3 hover:bg-muted/20 cursor-pointer items-center text-sm"
                 onClick={() => setExpandedFlockId(expandedFlockId === flock.id ? null : flock.id)}
               >
                 <span className="text-muted-foreground">
@@ -384,7 +427,101 @@ export default function AdminFlocks() {
                 <span className="text-foreground font-medium">{totalBirds(flock)}</span>
                 <span className="text-muted-foreground text-xs">{flock.acquiredDate ?? "—"}</span>
                 <span className="text-muted-foreground text-xs truncate">{flock.notes ?? "—"}</span>
+                <span onClick={(e) => e.stopPropagation()}>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-6 w-6 text-muted-foreground hover:text-foreground"
+                    onClick={() => setEditingFlock(editingFlock?.id === flock.id ? null : {
+                      id: flock.id,
+                      name: flock.name ?? "",
+                      species: flock.species ?? "",
+                      breed: flock.breed ?? "",
+                      acquiredDate: flock.acquiredDate ?? "",
+                      hatchDate: flock.hatchDate ?? "",
+                      ageMonths: flock.ageMonths != null ? String(flock.ageMonths) : "",
+                      henCount: flock.henCount != null ? String(flock.henCount) : "",
+                      roosterCount: flock.roosterCount != null ? String(flock.roosterCount) : "",
+                      status: flock.status ?? "active",
+                      notes: flock.notes ?? "",
+                    })}
+                  >
+                    {editingFlock?.id === flock.id ? <X className="w-3.5 h-3.5" /> : <Pencil className="w-3.5 h-3.5" />}
+                  </Button>
+                </span>
               </div>
+
+              {/* Edit panel */}
+              {editingFlock?.id === flock.id && (
+                <div className="border-t border-border bg-amber-50/50 dark:bg-amber-950/10 px-6 py-4 space-y-3">
+                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Edit Flock</p>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+                    <Input
+                      placeholder="Name"
+                      value={editingFlock.name}
+                      onChange={(e) => setEditingFlock((f: any) => ({ ...f, name: e.target.value }))}
+                    />
+                    <Select value={editingFlock.species} onValueChange={(v) => setEditingFlock((f: any) => ({ ...f, species: v }))}>
+                      <SelectTrigger><SelectValue placeholder="Species" /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="chicken">Chicken</SelectItem>
+                        <SelectItem value="duck">Duck</SelectItem>
+                        <SelectItem value="turkey">Turkey</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <Input
+                      placeholder="Breed"
+                      value={editingFlock.breed}
+                      onChange={(e) => setEditingFlock((f: any) => ({ ...f, breed: e.target.value }))}
+                    />
+                    <Select value={editingFlock.status} onValueChange={(v) => setEditingFlock((f: any) => ({ ...f, status: v }))}>
+                      <SelectTrigger><SelectValue placeholder="Status" /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="active">Active</SelectItem>
+                        <SelectItem value="retired">Retired</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <div className="space-y-1">
+                      <label className="text-xs text-muted-foreground">Hatch date</label>
+                      <Input type="date" value={editingFlock.hatchDate} onChange={(e) => setEditingFlock((f: any) => ({ ...f, hatchDate: e.target.value }))} />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-xs text-muted-foreground">Age (months)</label>
+                      <Input type="number" min={0} value={editingFlock.ageMonths} onChange={(e) => setEditingFlock((f: any) => ({ ...f, ageMonths: e.target.value }))} />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-xs text-muted-foreground">Acquired date</label>
+                      <Input type="date" value={editingFlock.acquiredDate} onChange={(e) => setEditingFlock((f: any) => ({ ...f, acquiredDate: e.target.value }))} />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-xs text-muted-foreground">Hens</label>
+                      <Input type="number" min={0} value={editingFlock.henCount} onChange={(e) => setEditingFlock((f: any) => ({ ...f, henCount: e.target.value }))} />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-xs text-muted-foreground">Roosters</label>
+                      <Input type="number" min={0} value={editingFlock.roosterCount} onChange={(e) => setEditingFlock((f: any) => ({ ...f, roosterCount: e.target.value }))} />
+                    </div>
+                    <div className="sm:col-span-2 lg:col-span-3">
+                      <Textarea
+                        placeholder="Notes…"
+                        rows={2}
+                        className="text-sm"
+                        value={editingFlock.notes}
+                        onChange={(e) => setEditingFlock((f: any) => ({ ...f, notes: e.target.value }))}
+                      />
+                    </div>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button size="sm" disabled={!editingFlock.name || !editingFlock.species || saveFlock.isPending} onClick={handleSaveEdit}>
+                      <Check className="w-3.5 h-3.5 mr-1" />
+                      {saveFlock.isPending ? "Saving…" : "Save"}
+                    </Button>
+                    <Button size="sm" variant="ghost" onClick={() => setEditingFlock(null)}>Cancel</Button>
+                  </div>
+                </div>
+              )}
+
+              {/* Events panel */}
               {expandedFlockId === flock.id && (
                 <FlockEventsPanel flockId={flock.id} />
               )}

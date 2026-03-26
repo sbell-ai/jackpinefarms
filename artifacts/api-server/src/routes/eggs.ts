@@ -54,6 +54,20 @@ router.post("/admin/flocks", requireAdmin, async (req, res): Promise<void> => {
   res.status(201).json(flock);
 });
 
+router.put("/admin/flocks/:id", requireAdmin, async (req, res): Promise<void> => {
+  const id = parseInt(String(req.params.id), 10);
+  if (isNaN(id)) { res.status(400).json({ error: "Invalid flock id" }); return; }
+  const parsed = insertFlockSchema.partial().safeParse(req.body);
+  if (!parsed.success) { res.status(400).json({ error: parsed.error.message }); return; }
+  const [updated] = await db
+    .update(flocksTable)
+    .set(parsed.data)
+    .where(eq(flocksTable.id, id))
+    .returning();
+  if (!updated) { res.status(404).json({ error: "Flock not found" }); return; }
+  res.json(updated);
+});
+
 // ─── Flock Events ─────────────────────────────────────────────────────────────
 
 router.get(
