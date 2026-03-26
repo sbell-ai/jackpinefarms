@@ -3,16 +3,18 @@ import { format } from "date-fns";
 import {
   useAdminGetEggInventoryOnHand,
   useAdminListEggTypes,
+  useAdminCreateEggType,
   useAdminListEggCollection,
   useAdminCreateEggCollection,
   useAdminListEggAdjustments,
   useAdminCreateEggAdjustment,
   getAdminGetEggInventoryOnHandQueryKey,
+  getAdminListEggTypesQueryKey,
   getAdminListEggCollectionQueryKey,
   getAdminListEggAdjustmentsQueryKey,
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
-import { Egg, TrendingDown, TrendingUp, Plus } from "lucide-react";
+import { Egg, TrendingDown, Plus, Settings } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -34,7 +36,9 @@ export default function AdminEggInventory() {
       query: { queryKey: getAdminGetEggInventoryOnHandQueryKey() },
     });
 
-  const { data: eggTypes = [] } = useAdminListEggTypes({});
+  const { data: eggTypes = [] } = useAdminListEggTypes({
+    query: { queryKey: getAdminListEggTypesQueryKey() },
+  });
 
   const { data: collections = [] } = useAdminListEggCollection(
     {},
@@ -59,11 +63,32 @@ export default function AdminEggInventory() {
     reason: "",
   });
 
+  const [newEggTypeName, setNewEggTypeName] = useState("");
+  const [showEggTypeForm, setShowEggTypeForm] = useState(false);
+
   const invalidateAll = () => {
     qc.invalidateQueries({ queryKey: getAdminGetEggInventoryOnHandQueryKey() });
+    qc.invalidateQueries({ queryKey: getAdminListEggTypesQueryKey() });
     qc.invalidateQueries({ queryKey: getAdminListEggCollectionQueryKey({}) });
     qc.invalidateQueries({ queryKey: getAdminListEggAdjustmentsQueryKey({}) });
   };
+
+  const createEggType = useAdminCreateEggType({
+    mutation: {
+      onSuccess: () => {
+        toast({ title: "Egg type added" });
+        setNewEggTypeName("");
+        setShowEggTypeForm(false);
+        invalidateAll();
+      },
+      onError: (e: any) =>
+        toast({
+          title: "Error",
+          description: e.response?.data?.error ?? e.message,
+          variant: "destructive",
+        }),
+    },
+  });
 
   const createCollection = useAdminCreateEggCollection({
     mutation: {
@@ -139,6 +164,70 @@ export default function AdminEggInventory() {
           Track egg collection, on-hand counts, and adjustments.
         </p>
       </div>
+
+      {/* Egg Types Setup */}
+      <section>
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
+            <Settings className="w-3.5 h-3.5" /> Egg Types
+          </h2>
+          <Button size="sm" variant="ghost" onClick={() => setShowEggTypeForm((v) => !v)}>
+            <Plus className="w-4 h-4 mr-1" /> Add Type
+          </Button>
+        </div>
+
+        {showEggTypeForm && (
+          <div className="rounded-lg border border-border bg-card p-4 mb-3 space-y-3">
+            <div className="text-sm font-semibold text-foreground">New Egg Type</div>
+            <div className="flex gap-2">
+              <Input
+                placeholder="e.g. Chicken Eggs, Duck Eggs…"
+                value={newEggTypeName}
+                onChange={(e) => setNewEggTypeName(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && newEggTypeName.trim() && createEggType.mutate({ data: { name: newEggTypeName.trim() } as any })}
+                className="flex-1"
+              />
+              <Button
+                size="sm"
+                disabled={!newEggTypeName.trim() || createEggType.isPending}
+                onClick={() => createEggType.mutate({ data: { name: newEggTypeName.trim() } as any })}
+              >
+                {createEggType.isPending ? "Saving…" : "Add"}
+              </Button>
+              <Button size="sm" variant="ghost" onClick={() => setShowEggTypeForm(false)}>
+                Cancel
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {(eggTypes as any[]).length === 0 ? (
+          <div className="rounded-lg border border-dashed border-border p-6 text-center">
+            <Egg className="w-8 h-8 text-muted-foreground mx-auto mb-2" />
+            <p className="text-sm text-muted-foreground mb-3">
+              No egg types yet. Add your first egg type to start tracking inventory.
+            </p>
+            <Button size="sm" onClick={() => setShowEggTypeForm(true)}>
+              <Plus className="w-4 h-4 mr-1" /> Add Egg Type
+            </Button>
+          </div>
+        ) : (
+          <div className="flex flex-wrap gap-2">
+            {(eggTypes as any[]).map((et: any) => (
+              <span
+                key={et.id}
+                className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full border border-border bg-card text-sm text-foreground"
+              >
+                <Egg className="w-3.5 h-3.5 text-muted-foreground" />
+                {et.name}
+                {!et.active && (
+                  <span className="text-xs text-muted-foreground">(inactive)</span>
+                )}
+              </span>
+            ))}
+          </div>
+        )}
+      </section>
 
       {/* On-Hand Summary */}
       <section>
