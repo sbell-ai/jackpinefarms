@@ -499,6 +499,160 @@ export interface ErrorEnvelope {
   error: string;
 }
 
+export type FlockSpecies = (typeof FlockSpecies)[keyof typeof FlockSpecies];
+
+export const FlockSpecies = {
+  chicken: "chicken",
+  duck: "duck",
+  turkey: "turkey",
+} as const;
+
+export type FlockStatus = (typeof FlockStatus)[keyof typeof FlockStatus];
+
+export const FlockStatus = {
+  active: "active",
+  retired: "retired",
+} as const;
+
+export interface Flock {
+  id: number;
+  name: string;
+  species: FlockSpecies;
+  /** @nullable */
+  acquiredDate?: string | null;
+  status: FlockStatus;
+  /** @nullable */
+  notes?: string | null;
+}
+
+export type CreateFlockBodySpecies =
+  (typeof CreateFlockBodySpecies)[keyof typeof CreateFlockBodySpecies];
+
+export const CreateFlockBodySpecies = {
+  chicken: "chicken",
+  duck: "duck",
+  turkey: "turkey",
+} as const;
+
+export type CreateFlockBodyStatus =
+  (typeof CreateFlockBodyStatus)[keyof typeof CreateFlockBodyStatus];
+
+export const CreateFlockBodyStatus = {
+  active: "active",
+  retired: "retired",
+} as const;
+
+export interface CreateFlockBody {
+  /** @minLength 1 */
+  name: string;
+  species: CreateFlockBodySpecies;
+  acquiredDate?: string;
+  status?: CreateFlockBodyStatus;
+  notes?: string;
+}
+
+export interface EggType {
+  id: number;
+  name: string;
+  /** @nullable */
+  flockId?: number | null;
+  active: boolean;
+}
+
+export interface CreateEggTypeBody {
+  /** @minLength 1 */
+  name: string;
+  flockId?: number;
+  active?: boolean;
+}
+
+export interface DailyEggCollection {
+  id: number;
+  eggTypeId: number;
+  /** @nullable */
+  flockId?: number | null;
+  collectionDate: string;
+  countEach: number;
+  /** @nullable */
+  notes?: string | null;
+}
+
+export interface CreateEggCollectionBody {
+  eggTypeId: number;
+  flockId?: number;
+  collectionDate: string;
+  /** @minimum 0 */
+  countEach: number;
+  notes?: string;
+}
+
+export type EggInventoryLotStatus =
+  (typeof EggInventoryLotStatus)[keyof typeof EggInventoryLotStatus];
+
+export const EggInventoryLotStatus = {
+  open: "open",
+  depleted: "depleted",
+} as const;
+
+export interface EggInventoryLot {
+  id: number;
+  eggTypeId: number;
+  /** @nullable */
+  sourceCollectionId?: number | null;
+  lotDate: string;
+  initialQtyEach: number;
+  remainingQtyEach: number;
+  status: EggInventoryLotStatus;
+}
+
+export interface CreateEggCollectionResponse {
+  collection: DailyEggCollection;
+  lot: EggInventoryLot;
+}
+
+export interface EggInventoryAdjustment {
+  id: number;
+  eggTypeId: number;
+  /** @nullable */
+  lotId?: number | null;
+  qtyEach: number;
+  reason: string;
+  createdAt: string;
+}
+
+export interface CreateEggAdjustmentBody {
+  eggTypeId: number;
+  lotId?: number;
+  qtyEach: number;
+  /** @minLength 1 */
+  reason: string;
+}
+
+export interface EggInventoryOnHand {
+  eggTypeId: number;
+  eggTypeName: string;
+  onHandEach: number;
+}
+
+export interface EggAllocationDetail {
+  id: number;
+  orderItemId: number;
+  lotId: number;
+  allocatedQtyEach: number;
+  allocatedAt: string;
+  lotDate: string;
+  eggTypeName: string;
+}
+
+export interface AllocateEggsResponse {
+  allocations: EggAllocationDetail[];
+}
+
+export interface AllocateEggsAlreadyAllocated {
+  message: string;
+  allocations: EggAllocationDetail[];
+}
+
 export type ListProductsParams = {
   /**
    * When true (admin only), include disabled products
@@ -522,4 +676,16 @@ export type AdminListCustomersParams = {
 
 export type GetUnsubscribePreferencesParams = {
   token: string;
+};
+
+export type AdminListEggCollectionParams = {
+  eggTypeId?: number;
+  fromDate?: string;
+  toDate?: string;
+};
+
+export type AdminListEggAdjustmentsParams = {
+  eggTypeId?: number;
+  fromDate?: string;
+  toDate?: string;
 };

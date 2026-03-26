@@ -26,7 +26,7 @@ export default function Home() {
             <span className="inline-block py-1 px-3 rounded-full bg-accent/90 text-white text-sm font-semibold tracking-wider mb-6 shadow-sm">
               Pasture Raised • Local Pickup
             </span>
-            <h1 className="text-5xl md:text-7xl font-serif font-bold leading-tight mb-6 drop-shadow-md">
+            <h1 className="text-white text-5xl md:text-7xl font-serif font-bold leading-tight mb-6 drop-shadow-md">
               Farm-fresh goods, raised the right way.
             </h1>
             <p className="text-lg md:text-xl mb-10 text-white/90 leading-relaxed font-medium max-w-xl drop-shadow">

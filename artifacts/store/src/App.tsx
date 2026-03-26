@@ -42,6 +42,8 @@ import AdminPickupEvents from "./pages/admin/PickupEvents";
 import AdminPickupEventDetail from "./pages/admin/PickupEventDetail";
 import AdminCustomerList from "./pages/admin/CustomerList";
 import AdminCustomerDetail from "./pages/admin/CustomerDetail";
+import AdminEggInventory from "./pages/admin/EggInventory";
+import AdminFlocks from "./pages/admin/Flocks";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -88,6 +90,12 @@ function Router() {
       </Route>
       <Route path="/admin/customers">
         <AdminLayout><AdminCustomerList /></AdminLayout>
+      </Route>
+      <Route path="/admin/eggs">
+        <AdminLayout><AdminEggInventory /></AdminLayout>
+      </Route>
+      <Route path="/admin/flocks">
+        <AdminLayout><AdminFlocks /></AdminLayout>
       </Route>
       <Route path="/admin">
         <AdminLayout><AdminDashboard /></AdminLayout>

@@ -11,9 +11,12 @@ import {
   useAdminAddOrderNote,
   useAdminListBatches,
   useAdminAssignOrderBatch,
+  useAdminAllocateEggs,
+  useAdminGetEggAllocations,
+  getAdminGetEggAllocationsQueryKey,
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, RefreshCw, FileText, CheckCircle, XCircle, MessageSquare, Package } from "lucide-react";
+import { ArrowLeft, RefreshCw, FileText, CheckCircle, XCircle, MessageSquare, Package, Egg } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -124,6 +127,30 @@ export default function AdminOrderDetail() {
         invalidate();
       },
       onError: (e: any) => toast({ title: "Error", description: e.response?.data?.error ?? e.message, variant: "destructive" }),
+    },
+  });
+
+  const { data: eggAllocations = [], refetch: refetchAllocations } =
+    useAdminGetEggAllocations(orderId, {
+      query: { queryKey: getAdminGetEggAllocationsQueryKey(orderId) },
+    });
+
+  const allocateEggs = useAdminAllocateEggs({
+    mutation: {
+      onSuccess: () => {
+        toast({ title: "Eggs allocated" });
+        qc.invalidateQueries({
+          queryKey: getAdminGetEggAllocationsQueryKey(orderId),
+        });
+      },
+      onError: (e: any) => {
+        if (e.response?.status === 409) {
+          toast({ title: "Already allocated", description: "Egg inventory already allocated for this order." });
+          refetchAllocations();
+          return;
+        }
+        toast({ title: "Error", description: e.response?.data?.error ?? e.message, variant: "destructive" });
+      },
     },
   });
 
@@ -340,6 +367,60 @@ export default function AdminOrderDetail() {
               {assignBatch.isPending ? "Saving…" : "Assign Batch"}
             </Button>
           </div>
+        </div>
+      )}
+
+      {/* Egg Inventory Allocation */}
+      {(order as any).items?.some((i: any) =>
+        i.productType?.startsWith("eggs_") ||
+        i.productName?.toLowerCase().includes("egg"),
+      ) && (
+        <div className="rounded-lg border border-border bg-card p-4 space-y-3">
+          <div className="text-sm font-semibold text-foreground flex items-center gap-2">
+            <Egg className="w-4 h-4" /> Egg Inventory Allocation
+          </div>
+          {(eggAllocations as any[]).length > 0 ? (
+            <>
+              <div className="flex items-center gap-2 text-sm text-teal-700">
+                <CheckCircle className="w-4 h-4" />
+                Eggs allocated from inventory.
+              </div>
+              <div className="rounded border border-border overflow-hidden text-xs">
+                <table className="w-full">
+                  <thead className="bg-muted/40">
+                    <tr>
+                      <th className="text-left px-3 py-1.5 font-medium text-muted-foreground">Egg Type</th>
+                      <th className="text-left px-3 py-1.5 font-medium text-muted-foreground">Lot Date</th>
+                      <th className="text-right px-3 py-1.5 font-medium text-muted-foreground">Qty</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-border">
+                    {(eggAllocations as any[]).map((a: any) => (
+                      <tr key={a.id}>
+                        <td className="px-3 py-1.5 text-foreground">{a.eggTypeName}</td>
+                        <td className="px-3 py-1.5 text-muted-foreground">{a.lotDate}</td>
+                        <td className="px-3 py-1.5 text-right font-medium">{a.allocatedQtyEach}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </>
+          ) : (
+            <>
+              <p className="text-sm text-muted-foreground">
+                Allocate egg inventory from stock using FIFO lot order.
+              </p>
+              <Button
+                size="sm"
+                variant="outline"
+                disabled={allocateEggs.isPending}
+                onClick={() => allocateEggs.mutate({ orderId })}
+              >
+                {allocateEggs.isPending ? "Allocating…" : "Allocate Eggs"}
+              </Button>
+            </>
+          )}
         </div>
       )}
 

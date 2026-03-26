@@ -1198,3 +1198,174 @@ export const RequestUploadUrlResponse = zod.object({
 export const GetStorageObjectParams = zod.object({
   objectPath: zod.coerce.string(),
 });
+
+/**
+ * @summary List flocks (admin)
+ */
+export const AdminListFlocksResponseItem = zod.object({
+  id: zod.number(),
+  name: zod.string(),
+  species: zod.enum(["chicken", "duck", "turkey"]),
+  acquiredDate: zod.date().nullish(),
+  status: zod.enum(["active", "retired"]),
+  notes: zod.string().nullish(),
+});
+export const AdminListFlocksResponse = zod.array(AdminListFlocksResponseItem);
+
+/**
+ * @summary Create a flock (admin)
+ */
+
+export const AdminCreateFlockBody = zod.object({
+  name: zod.string().min(1),
+  species: zod.enum(["chicken", "duck", "turkey"]),
+  acquiredDate: zod.date().optional(),
+  status: zod.enum(["active", "retired"]).optional(),
+  notes: zod.string().optional(),
+});
+
+/**
+ * @summary List egg types (admin)
+ */
+export const AdminListEggTypesResponseItem = zod.object({
+  id: zod.number(),
+  name: zod.string(),
+  flockId: zod.number().nullish(),
+  active: zod.boolean(),
+});
+export const AdminListEggTypesResponse = zod.array(
+  AdminListEggTypesResponseItem,
+);
+
+/**
+ * @summary Create an egg type (admin)
+ */
+
+export const AdminCreateEggTypeBody = zod.object({
+  name: zod.string().min(1),
+  flockId: zod.number().optional(),
+  active: zod.boolean().optional(),
+});
+
+/**
+ * @summary List daily egg collection records (admin)
+ */
+export const AdminListEggCollectionQueryParams = zod.object({
+  eggTypeId: zod.coerce.number().optional(),
+  fromDate: zod.date().optional(),
+  toDate: zod.date().optional(),
+});
+
+export const AdminListEggCollectionResponseItem = zod.object({
+  id: zod.number(),
+  eggTypeId: zod.number(),
+  flockId: zod.number().nullish(),
+  collectionDate: zod.date(),
+  countEach: zod.number(),
+  notes: zod.string().nullish(),
+});
+export const AdminListEggCollectionResponse = zod.array(
+  AdminListEggCollectionResponseItem,
+);
+
+/**
+ * @summary Log a daily egg collection (admin)
+ */
+export const adminCreateEggCollectionBodyCountEachMin = 0;
+
+export const AdminCreateEggCollectionBody = zod.object({
+  eggTypeId: zod.number(),
+  flockId: zod.number().optional(),
+  collectionDate: zod.date(),
+  countEach: zod.number().min(adminCreateEggCollectionBodyCountEachMin),
+  notes: zod.string().optional(),
+});
+
+/**
+ * @summary List inventory adjustments (admin)
+ */
+export const AdminListEggAdjustmentsQueryParams = zod.object({
+  eggTypeId: zod.coerce.number().optional(),
+  fromDate: zod.date().optional(),
+  toDate: zod.date().optional(),
+});
+
+export const AdminListEggAdjustmentsResponseItem = zod.object({
+  id: zod.number(),
+  eggTypeId: zod.number(),
+  lotId: zod.number().nullish(),
+  qtyEach: zod.number(),
+  reason: zod.string(),
+  createdAt: zod.date(),
+});
+export const AdminListEggAdjustmentsResponse = zod.array(
+  AdminListEggAdjustmentsResponseItem,
+);
+
+/**
+ * @summary Create an inventory adjustment (admin)
+ */
+
+export const AdminCreateEggAdjustmentBody = zod.object({
+  eggTypeId: zod.number(),
+  lotId: zod.number().optional(),
+  qtyEach: zod.number(),
+  reason: zod.string().min(1),
+});
+
+/**
+ * Formula: onHandEach = sum(remaining_qty_each for non-depleted lots) + sum(qty_each for adjustments where lot_id is null), grouped by egg_type_id.
+
+ * @summary Get current on-hand inventory per egg type (admin)
+ */
+export const AdminGetEggInventoryOnHandResponseItem = zod.object({
+  eggTypeId: zod.number(),
+  eggTypeName: zod.string(),
+  onHandEach: zod.number(),
+});
+export const AdminGetEggInventoryOnHandResponse = zod.array(
+  AdminGetEggInventoryOnHandResponseItem,
+);
+
+/**
+ * Idempotent via 409: if allocations already exist for any item in this order, returns 409 with the existing allocation rows and does not re-run allocation.
+
+ * @summary FIFO-allocate egg inventory for all egg order items (admin)
+ */
+export const AdminAllocateEggsParams = zod.object({
+  orderId: zod.coerce.number(),
+});
+
+export const AdminAllocateEggsResponse = zod.object({
+  allocations: zod.array(
+    zod.object({
+      id: zod.number(),
+      orderItemId: zod.number(),
+      lotId: zod.number(),
+      allocatedQtyEach: zod.number(),
+      allocatedAt: zod.date(),
+      lotDate: zod.date(),
+      eggTypeName: zod.string(),
+    }),
+  ),
+});
+
+/**
+ * @summary Get egg inventory allocations for an order (admin)
+ */
+export const AdminGetEggAllocationsParams = zod.object({
+  orderId: zod.coerce.number(),
+});
+
+export const AdminGetEggAllocationsResponseItem = zod.object({
+  id: zod.number(),
+  orderItemId: zod.number(),
+  lotId: zod.number(),
+  allocatedQtyEach: zod.number(),
+  allocatedAt: zod.date(),
+  lotDate: zod.date(),
+  eggTypeName: zod.string(),
+});
+export const AdminGetEggAllocationsResponse = zod.array(
+  AdminGetEggAllocationsResponseItem,
+);

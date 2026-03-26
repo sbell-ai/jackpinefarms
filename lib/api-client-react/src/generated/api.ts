@@ -22,9 +22,13 @@ import type {
   AdminCustomerDetail,
   AdminCustomerSummary,
   AdminListCustomersParams,
+  AdminListEggAdjustmentsParams,
+  AdminListEggCollectionParams,
   AdminListOrdersParams,
   AdminLoginBody,
   AdminMeResponse,
+  AllocateEggsAlreadyAllocated,
+  AllocateEggsResponse,
   AssignBatchBody,
   AssignItemBody,
   AssignOrderBody,
@@ -32,11 +36,22 @@ import type {
   CheckoutContactBody,
   ClaimOrderBody,
   CreateBatchBody,
+  CreateEggAdjustmentBody,
+  CreateEggCollectionBody,
+  CreateEggCollectionResponse,
+  CreateEggTypeBody,
+  CreateFlockBody,
   CreatePickupEventBody,
   CreateProductBody,
   CustomerSession,
+  DailyEggCollection,
+  EggAllocationDetail,
+  EggInventoryAdjustment,
+  EggInventoryOnHand,
+  EggType,
   ErrorEnvelope,
   ErrorResponse,
+  Flock,
   GetUnsubscribePreferencesParams,
   HealthStatus,
   ListProductsParams,
@@ -4143,6 +4158,969 @@ export function useGetStorageObject<
   },
 ): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
   const queryOptions = getGetStorageObjectQueryOptions(objectPath, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary List flocks (admin)
+ */
+export const getAdminListFlocksUrl = () => {
+  return `/api/admin/flocks`;
+};
+
+export const adminListFlocks = async (
+  options?: RequestInit,
+): Promise<Flock[]> => {
+  return customFetch<Flock[]>(getAdminListFlocksUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getAdminListFlocksQueryKey = () => {
+  return [`/api/admin/flocks`] as const;
+};
+
+export const getAdminListFlocksQueryOptions = <
+  TData = Awaited<ReturnType<typeof adminListFlocks>>,
+  TError = ErrorType<ErrorResponse>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof adminListFlocks>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getAdminListFlocksQueryKey();
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof adminListFlocks>>> = ({
+    signal,
+  }) => adminListFlocks({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof adminListFlocks>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type AdminListFlocksQueryResult = NonNullable<
+  Awaited<ReturnType<typeof adminListFlocks>>
+>;
+export type AdminListFlocksQueryError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary List flocks (admin)
+ */
+
+export function useAdminListFlocks<
+  TData = Awaited<ReturnType<typeof adminListFlocks>>,
+  TError = ErrorType<ErrorResponse>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof adminListFlocks>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getAdminListFlocksQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Create a flock (admin)
+ */
+export const getAdminCreateFlockUrl = () => {
+  return `/api/admin/flocks`;
+};
+
+export const adminCreateFlock = async (
+  createFlockBody: CreateFlockBody,
+  options?: RequestInit,
+): Promise<Flock> => {
+  return customFetch<Flock>(getAdminCreateFlockUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(createFlockBody),
+  });
+};
+
+export const getAdminCreateFlockMutationOptions = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof adminCreateFlock>>,
+    TError,
+    { data: BodyType<CreateFlockBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof adminCreateFlock>>,
+  TError,
+  { data: BodyType<CreateFlockBody> },
+  TContext
+> => {
+  const mutationKey = ["adminCreateFlock"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof adminCreateFlock>>,
+    { data: BodyType<CreateFlockBody> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return adminCreateFlock(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type AdminCreateFlockMutationResult = NonNullable<
+  Awaited<ReturnType<typeof adminCreateFlock>>
+>;
+export type AdminCreateFlockMutationBody = BodyType<CreateFlockBody>;
+export type AdminCreateFlockMutationError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary Create a flock (admin)
+ */
+export const useAdminCreateFlock = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof adminCreateFlock>>,
+    TError,
+    { data: BodyType<CreateFlockBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof adminCreateFlock>>,
+  TError,
+  { data: BodyType<CreateFlockBody> },
+  TContext
+> => {
+  return useMutation(getAdminCreateFlockMutationOptions(options));
+};
+
+/**
+ * @summary List egg types (admin)
+ */
+export const getAdminListEggTypesUrl = () => {
+  return `/api/admin/egg-types`;
+};
+
+export const adminListEggTypes = async (
+  options?: RequestInit,
+): Promise<EggType[]> => {
+  return customFetch<EggType[]>(getAdminListEggTypesUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getAdminListEggTypesQueryKey = () => {
+  return [`/api/admin/egg-types`] as const;
+};
+
+export const getAdminListEggTypesQueryOptions = <
+  TData = Awaited<ReturnType<typeof adminListEggTypes>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof adminListEggTypes>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getAdminListEggTypesQueryKey();
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof adminListEggTypes>>
+  > = ({ signal }) => adminListEggTypes({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof adminListEggTypes>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type AdminListEggTypesQueryResult = NonNullable<
+  Awaited<ReturnType<typeof adminListEggTypes>>
+>;
+export type AdminListEggTypesQueryError = ErrorType<unknown>;
+
+/**
+ * @summary List egg types (admin)
+ */
+
+export function useAdminListEggTypes<
+  TData = Awaited<ReturnType<typeof adminListEggTypes>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof adminListEggTypes>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getAdminListEggTypesQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Create an egg type (admin)
+ */
+export const getAdminCreateEggTypeUrl = () => {
+  return `/api/admin/egg-types`;
+};
+
+export const adminCreateEggType = async (
+  createEggTypeBody: CreateEggTypeBody,
+  options?: RequestInit,
+): Promise<EggType> => {
+  return customFetch<EggType>(getAdminCreateEggTypeUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(createEggTypeBody),
+  });
+};
+
+export const getAdminCreateEggTypeMutationOptions = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof adminCreateEggType>>,
+    TError,
+    { data: BodyType<CreateEggTypeBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof adminCreateEggType>>,
+  TError,
+  { data: BodyType<CreateEggTypeBody> },
+  TContext
+> => {
+  const mutationKey = ["adminCreateEggType"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof adminCreateEggType>>,
+    { data: BodyType<CreateEggTypeBody> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return adminCreateEggType(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type AdminCreateEggTypeMutationResult = NonNullable<
+  Awaited<ReturnType<typeof adminCreateEggType>>
+>;
+export type AdminCreateEggTypeMutationBody = BodyType<CreateEggTypeBody>;
+export type AdminCreateEggTypeMutationError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary Create an egg type (admin)
+ */
+export const useAdminCreateEggType = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof adminCreateEggType>>,
+    TError,
+    { data: BodyType<CreateEggTypeBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof adminCreateEggType>>,
+  TError,
+  { data: BodyType<CreateEggTypeBody> },
+  TContext
+> => {
+  return useMutation(getAdminCreateEggTypeMutationOptions(options));
+};
+
+/**
+ * @summary List daily egg collection records (admin)
+ */
+export const getAdminListEggCollectionUrl = (
+  params?: AdminListEggCollectionParams,
+) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : value.toString());
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/admin/egg-collection?${stringifiedParams}`
+    : `/api/admin/egg-collection`;
+};
+
+export const adminListEggCollection = async (
+  params?: AdminListEggCollectionParams,
+  options?: RequestInit,
+): Promise<DailyEggCollection[]> => {
+  return customFetch<DailyEggCollection[]>(
+    getAdminListEggCollectionUrl(params),
+    {
+      ...options,
+      method: "GET",
+    },
+  );
+};
+
+export const getAdminListEggCollectionQueryKey = (
+  params?: AdminListEggCollectionParams,
+) => {
+  return [`/api/admin/egg-collection`, ...(params ? [params] : [])] as const;
+};
+
+export const getAdminListEggCollectionQueryOptions = <
+  TData = Awaited<ReturnType<typeof adminListEggCollection>>,
+  TError = ErrorType<unknown>,
+>(
+  params?: AdminListEggCollectionParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof adminListEggCollection>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getAdminListEggCollectionQueryKey(params);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof adminListEggCollection>>
+  > = ({ signal }) =>
+    adminListEggCollection(params, { signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof adminListEggCollection>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type AdminListEggCollectionQueryResult = NonNullable<
+  Awaited<ReturnType<typeof adminListEggCollection>>
+>;
+export type AdminListEggCollectionQueryError = ErrorType<unknown>;
+
+/**
+ * @summary List daily egg collection records (admin)
+ */
+
+export function useAdminListEggCollection<
+  TData = Awaited<ReturnType<typeof adminListEggCollection>>,
+  TError = ErrorType<unknown>,
+>(
+  params?: AdminListEggCollectionParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof adminListEggCollection>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getAdminListEggCollectionQueryOptions(params, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Log a daily egg collection (admin)
+ */
+export const getAdminCreateEggCollectionUrl = () => {
+  return `/api/admin/egg-collection`;
+};
+
+export const adminCreateEggCollection = async (
+  createEggCollectionBody: CreateEggCollectionBody,
+  options?: RequestInit,
+): Promise<CreateEggCollectionResponse> => {
+  return customFetch<CreateEggCollectionResponse>(
+    getAdminCreateEggCollectionUrl(),
+    {
+      ...options,
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...options?.headers },
+      body: JSON.stringify(createEggCollectionBody),
+    },
+  );
+};
+
+export const getAdminCreateEggCollectionMutationOptions = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof adminCreateEggCollection>>,
+    TError,
+    { data: BodyType<CreateEggCollectionBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof adminCreateEggCollection>>,
+  TError,
+  { data: BodyType<CreateEggCollectionBody> },
+  TContext
+> => {
+  const mutationKey = ["adminCreateEggCollection"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof adminCreateEggCollection>>,
+    { data: BodyType<CreateEggCollectionBody> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return adminCreateEggCollection(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type AdminCreateEggCollectionMutationResult = NonNullable<
+  Awaited<ReturnType<typeof adminCreateEggCollection>>
+>;
+export type AdminCreateEggCollectionMutationBody =
+  BodyType<CreateEggCollectionBody>;
+export type AdminCreateEggCollectionMutationError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary Log a daily egg collection (admin)
+ */
+export const useAdminCreateEggCollection = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof adminCreateEggCollection>>,
+    TError,
+    { data: BodyType<CreateEggCollectionBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof adminCreateEggCollection>>,
+  TError,
+  { data: BodyType<CreateEggCollectionBody> },
+  TContext
+> => {
+  return useMutation(getAdminCreateEggCollectionMutationOptions(options));
+};
+
+/**
+ * @summary List inventory adjustments (admin)
+ */
+export const getAdminListEggAdjustmentsUrl = (
+  params?: AdminListEggAdjustmentsParams,
+) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : value.toString());
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/admin/egg-adjustments?${stringifiedParams}`
+    : `/api/admin/egg-adjustments`;
+};
+
+export const adminListEggAdjustments = async (
+  params?: AdminListEggAdjustmentsParams,
+  options?: RequestInit,
+): Promise<EggInventoryAdjustment[]> => {
+  return customFetch<EggInventoryAdjustment[]>(
+    getAdminListEggAdjustmentsUrl(params),
+    {
+      ...options,
+      method: "GET",
+    },
+  );
+};
+
+export const getAdminListEggAdjustmentsQueryKey = (
+  params?: AdminListEggAdjustmentsParams,
+) => {
+  return [`/api/admin/egg-adjustments`, ...(params ? [params] : [])] as const;
+};
+
+export const getAdminListEggAdjustmentsQueryOptions = <
+  TData = Awaited<ReturnType<typeof adminListEggAdjustments>>,
+  TError = ErrorType<unknown>,
+>(
+  params?: AdminListEggAdjustmentsParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof adminListEggAdjustments>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getAdminListEggAdjustmentsQueryKey(params);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof adminListEggAdjustments>>
+  > = ({ signal }) =>
+    adminListEggAdjustments(params, { signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof adminListEggAdjustments>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type AdminListEggAdjustmentsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof adminListEggAdjustments>>
+>;
+export type AdminListEggAdjustmentsQueryError = ErrorType<unknown>;
+
+/**
+ * @summary List inventory adjustments (admin)
+ */
+
+export function useAdminListEggAdjustments<
+  TData = Awaited<ReturnType<typeof adminListEggAdjustments>>,
+  TError = ErrorType<unknown>,
+>(
+  params?: AdminListEggAdjustmentsParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof adminListEggAdjustments>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getAdminListEggAdjustmentsQueryOptions(params, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Create an inventory adjustment (admin)
+ */
+export const getAdminCreateEggAdjustmentUrl = () => {
+  return `/api/admin/egg-adjustments`;
+};
+
+export const adminCreateEggAdjustment = async (
+  createEggAdjustmentBody: CreateEggAdjustmentBody,
+  options?: RequestInit,
+): Promise<EggInventoryAdjustment> => {
+  return customFetch<EggInventoryAdjustment>(getAdminCreateEggAdjustmentUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(createEggAdjustmentBody),
+  });
+};
+
+export const getAdminCreateEggAdjustmentMutationOptions = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof adminCreateEggAdjustment>>,
+    TError,
+    { data: BodyType<CreateEggAdjustmentBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof adminCreateEggAdjustment>>,
+  TError,
+  { data: BodyType<CreateEggAdjustmentBody> },
+  TContext
+> => {
+  const mutationKey = ["adminCreateEggAdjustment"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof adminCreateEggAdjustment>>,
+    { data: BodyType<CreateEggAdjustmentBody> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return adminCreateEggAdjustment(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type AdminCreateEggAdjustmentMutationResult = NonNullable<
+  Awaited<ReturnType<typeof adminCreateEggAdjustment>>
+>;
+export type AdminCreateEggAdjustmentMutationBody =
+  BodyType<CreateEggAdjustmentBody>;
+export type AdminCreateEggAdjustmentMutationError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary Create an inventory adjustment (admin)
+ */
+export const useAdminCreateEggAdjustment = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof adminCreateEggAdjustment>>,
+    TError,
+    { data: BodyType<CreateEggAdjustmentBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof adminCreateEggAdjustment>>,
+  TError,
+  { data: BodyType<CreateEggAdjustmentBody> },
+  TContext
+> => {
+  return useMutation(getAdminCreateEggAdjustmentMutationOptions(options));
+};
+
+/**
+ * Formula: onHandEach = sum(remaining_qty_each for non-depleted lots) + sum(qty_each for adjustments where lot_id is null), grouped by egg_type_id.
+
+ * @summary Get current on-hand inventory per egg type (admin)
+ */
+export const getAdminGetEggInventoryOnHandUrl = () => {
+  return `/api/admin/egg-inventory/on-hand`;
+};
+
+export const adminGetEggInventoryOnHand = async (
+  options?: RequestInit,
+): Promise<EggInventoryOnHand[]> => {
+  return customFetch<EggInventoryOnHand[]>(getAdminGetEggInventoryOnHandUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getAdminGetEggInventoryOnHandQueryKey = () => {
+  return [`/api/admin/egg-inventory/on-hand`] as const;
+};
+
+export const getAdminGetEggInventoryOnHandQueryOptions = <
+  TData = Awaited<ReturnType<typeof adminGetEggInventoryOnHand>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof adminGetEggInventoryOnHand>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getAdminGetEggInventoryOnHandQueryKey();
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof adminGetEggInventoryOnHand>>
+  > = ({ signal }) => adminGetEggInventoryOnHand({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof adminGetEggInventoryOnHand>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type AdminGetEggInventoryOnHandQueryResult = NonNullable<
+  Awaited<ReturnType<typeof adminGetEggInventoryOnHand>>
+>;
+export type AdminGetEggInventoryOnHandQueryError = ErrorType<unknown>;
+
+/**
+ * @summary Get current on-hand inventory per egg type (admin)
+ */
+
+export function useAdminGetEggInventoryOnHand<
+  TData = Awaited<ReturnType<typeof adminGetEggInventoryOnHand>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof adminGetEggInventoryOnHand>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getAdminGetEggInventoryOnHandQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * Idempotent via 409: if allocations already exist for any item in this order, returns 409 with the existing allocation rows and does not re-run allocation.
+
+ * @summary FIFO-allocate egg inventory for all egg order items (admin)
+ */
+export const getAdminAllocateEggsUrl = (orderId: number) => {
+  return `/api/admin/orders/${orderId}/allocate-eggs`;
+};
+
+export const adminAllocateEggs = async (
+  orderId: number,
+  options?: RequestInit,
+): Promise<AllocateEggsResponse> => {
+  return customFetch<AllocateEggsResponse>(getAdminAllocateEggsUrl(orderId), {
+    ...options,
+    method: "POST",
+  });
+};
+
+export const getAdminAllocateEggsMutationOptions = <
+  TError = ErrorType<ErrorResponse | AllocateEggsAlreadyAllocated>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof adminAllocateEggs>>,
+    TError,
+    { orderId: number },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof adminAllocateEggs>>,
+  TError,
+  { orderId: number },
+  TContext
+> => {
+  const mutationKey = ["adminAllocateEggs"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof adminAllocateEggs>>,
+    { orderId: number }
+  > = (props) => {
+    const { orderId } = props ?? {};
+
+    return adminAllocateEggs(orderId, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type AdminAllocateEggsMutationResult = NonNullable<
+  Awaited<ReturnType<typeof adminAllocateEggs>>
+>;
+
+export type AdminAllocateEggsMutationError = ErrorType<
+  ErrorResponse | AllocateEggsAlreadyAllocated
+>;
+
+/**
+ * @summary FIFO-allocate egg inventory for all egg order items (admin)
+ */
+export const useAdminAllocateEggs = <
+  TError = ErrorType<ErrorResponse | AllocateEggsAlreadyAllocated>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof adminAllocateEggs>>,
+    TError,
+    { orderId: number },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof adminAllocateEggs>>,
+  TError,
+  { orderId: number },
+  TContext
+> => {
+  return useMutation(getAdminAllocateEggsMutationOptions(options));
+};
+
+/**
+ * @summary Get egg inventory allocations for an order (admin)
+ */
+export const getAdminGetEggAllocationsUrl = (orderId: number) => {
+  return `/api/admin/orders/${orderId}/egg-allocations`;
+};
+
+export const adminGetEggAllocations = async (
+  orderId: number,
+  options?: RequestInit,
+): Promise<EggAllocationDetail[]> => {
+  return customFetch<EggAllocationDetail[]>(
+    getAdminGetEggAllocationsUrl(orderId),
+    {
+      ...options,
+      method: "GET",
+    },
+  );
+};
+
+export const getAdminGetEggAllocationsQueryKey = (orderId: number) => {
+  return [`/api/admin/orders/${orderId}/egg-allocations`] as const;
+};
+
+export const getAdminGetEggAllocationsQueryOptions = <
+  TData = Awaited<ReturnType<typeof adminGetEggAllocations>>,
+  TError = ErrorType<ErrorResponse>,
+>(
+  orderId: number,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof adminGetEggAllocations>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getAdminGetEggAllocationsQueryKey(orderId);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof adminGetEggAllocations>>
+  > = ({ signal }) =>
+    adminGetEggAllocations(orderId, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: !!orderId,
+    ...queryOptions,
+  } as UseQueryOptions<
+    Awaited<ReturnType<typeof adminGetEggAllocations>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type AdminGetEggAllocationsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof adminGetEggAllocations>>
+>;
+export type AdminGetEggAllocationsQueryError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary Get egg inventory allocations for an order (admin)
+ */
+
+export function useAdminGetEggAllocations<
+  TData = Awaited<ReturnType<typeof adminGetEggAllocations>>,
+  TError = ErrorType<ErrorResponse>,
+>(
+  orderId: number,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof adminGetEggAllocations>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getAdminGetEggAllocationsQueryOptions(orderId, options);
 
   const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
     queryKey: QueryKey;

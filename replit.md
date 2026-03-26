@@ -168,7 +168,28 @@ When calling hooks with query options in React Query v5, always pass `queryKey` 
 
 - Password: set via `ADMIN_PASSWORD` env var (dev default: `jackpine2026`)
 - Session: express-session with `SESSION_SECRET` env var
-- Admin UI at `/admin` (dashboard), `/admin/orders`, `/admin/products`, `/admin/batches`, `/admin/pickup-events`, `/admin/customers`
+- Admin UI at `/admin` (dashboard), `/admin/orders`, `/admin/products`, `/admin/batches`, `/admin/pickup-events`, `/admin/customers`, `/admin/eggs` (egg inventory), `/admin/flocks`
+
+## Egg & Flock Accounting
+
+7 tables in the DB: `flocks`, `flock_events`, `egg_types`, `daily_egg_collection`, `egg_inventory_lots`, `egg_inventory_adjustments`, `inventory_allocations`
+
+**Inventory model**: On-hand = sum(remaining_qty_each for non-depleted lots) + sum(qty_each for non-lot adjustments)
+
+**Lot lifecycle**: Each daily collection creates one inventory lot. Adjustments can be lot-targeted (mutate lot.remaining_qty_each) or free-standing (signed delta, lot_id IS NULL). Orders are allocated via FIFO from lots.
+
+**API endpoints** (all under `/api/admin/...`):
+- GET/POST `/admin/flocks` — flock management
+- GET/POST `/admin/egg-types` — egg type configuration
+- GET/POST `/admin/egg-collection` — daily collection records
+- GET/POST `/admin/egg-adjustments` — manual adjustments (breakage, donations, etc.)
+- GET `/admin/egg-inventory/on-hand` — current on-hand per egg type
+- POST `/admin/orders/:orderId/allocate-eggs` — FIFO allocation (idempotent, 409 if already allocated)
+- GET `/admin/orders/:orderId/egg-allocations` — view allocations for an order
+
+**Drizzle-zod schemas** used for body validation in route handlers (accept ISO date strings). Orval-generated schemas use `zod.date()` for `format: date` fields which rejects JSON strings — use drizzle-zod insert schemas instead.
+
+**FIFO allocation**: Single transaction with `FOR UPDATE` row lock on lots, ordered by `lot_date ASC`. Rollback + HTTP 400 on insufficient inventory. 409 if any allocation rows already exist for the order items.
 
 ## Business Rules
 

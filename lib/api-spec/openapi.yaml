@@ -1388,6 +1388,288 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
 
+  # ─── Egg & Flock Accounting ────────────────────────────────────────────────
+
+  /admin/flocks:
+    get:
+      operationId: adminListFlocks
+      tags: [admin]
+      summary: List flocks (admin)
+      responses:
+        "200":
+          description: List of flocks
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Flock"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    post:
+      operationId: adminCreateFlock
+      tags: [admin]
+      summary: Create a flock (admin)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateFlockBody"
+      responses:
+        "201":
+          description: Flock created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Flock"
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /admin/egg-types:
+    get:
+      operationId: adminListEggTypes
+      tags: [admin]
+      summary: List egg types (admin)
+      responses:
+        "200":
+          description: List of egg types
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/EggType"
+    post:
+      operationId: adminCreateEggType
+      tags: [admin]
+      summary: Create an egg type (admin)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateEggTypeBody"
+      responses:
+        "201":
+          description: Egg type created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EggType"
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /admin/egg-collection:
+    get:
+      operationId: adminListEggCollection
+      tags: [admin]
+      summary: List daily egg collection records (admin)
+      parameters:
+        - in: query
+          name: eggTypeId
+          schema:
+            type: integer
+        - in: query
+          name: fromDate
+          schema:
+            type: string
+            format: date
+        - in: query
+          name: toDate
+          schema:
+            type: string
+            format: date
+      responses:
+        "200":
+          description: List of collection records
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/DailyEggCollection"
+    post:
+      operationId: adminCreateEggCollection
+      tags: [admin]
+      summary: Log a daily egg collection (admin)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateEggCollectionBody"
+      responses:
+        "201":
+          description: Collection logged and inventory lot created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CreateEggCollectionResponse"
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "409":
+          description: Duplicate collection for this egg type / flock / date
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /admin/egg-adjustments:
+    get:
+      operationId: adminListEggAdjustments
+      tags: [admin]
+      summary: List inventory adjustments (admin)
+      parameters:
+        - in: query
+          name: eggTypeId
+          schema:
+            type: integer
+        - in: query
+          name: fromDate
+          schema:
+            type: string
+            format: date
+        - in: query
+          name: toDate
+          schema:
+            type: string
+            format: date
+      responses:
+        "200":
+          description: List of adjustments
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/EggInventoryAdjustment"
+    post:
+      operationId: adminCreateEggAdjustment
+      tags: [admin]
+      summary: Create an inventory adjustment (admin)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateEggAdjustmentBody"
+      responses:
+        "201":
+          description: Adjustment created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EggInventoryAdjustment"
+        "400":
+          description: Validation error (including missing reason)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /admin/egg-inventory/on-hand:
+    get:
+      operationId: adminGetEggInventoryOnHand
+      tags: [admin]
+      summary: Get current on-hand inventory per egg type (admin)
+      description: >
+        Formula: onHandEach = sum(remaining_qty_each for non-depleted lots)
+        + sum(qty_each for adjustments where lot_id is null), grouped by egg_type_id.
+      responses:
+        "200":
+          description: On-hand totals per egg type
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/EggInventoryOnHand"
+
+  /admin/orders/{orderId}/allocate-eggs:
+    post:
+      operationId: adminAllocateEggs
+      tags: [admin]
+      summary: FIFO-allocate egg inventory for all egg order items (admin)
+      description: >
+        Idempotent via 409: if allocations already exist for any item in this
+        order, returns 409 with the existing allocation rows and does not
+        re-run allocation.
+      parameters:
+        - in: path
+          name: orderId
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Allocations created (or already existed — see 409)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AllocateEggsResponse"
+        "400":
+          description: Insufficient inventory
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Order not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "409":
+          description: Already allocated — returns existing allocation rows
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AllocateEggsAlreadyAllocated"
+
+  /admin/orders/{orderId}/egg-allocations:
+    get:
+      operationId: adminGetEggAllocations
+      tags: [admin]
+      summary: Get egg inventory allocations for an order (admin)
+      parameters:
+        - in: path
+          name: orderId
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Allocation rows for the order
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/EggAllocationDetail"
+        "404":
+          description: Order not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
 components:
   schemas:
     HealthStatus:
@@ -2309,3 +2591,218 @@ components:
       properties:
         error:
           type: string
+
+    # ─── Egg & Flock Accounting Schemas ────────────────────────────────────────
+
+    Flock:
+      type: object
+      required: [id, name, species, status]
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        species:
+          type: string
+          enum: [chicken, duck, turkey]
+        acquiredDate:
+          type: ["string", "null"]
+          format: date
+        status:
+          type: string
+          enum: [active, retired]
+        notes:
+          type: ["string", "null"]
+
+    CreateFlockBody:
+      type: object
+      required: [name, species]
+      properties:
+        name:
+          type: string
+          minLength: 1
+        species:
+          type: string
+          enum: [chicken, duck, turkey]
+        acquiredDate:
+          type: string
+          format: date
+        status:
+          type: string
+          enum: [active, retired]
+        notes:
+          type: string
+
+    EggType:
+      type: object
+      required: [id, name, active]
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        flockId:
+          type: ["integer", "null"]
+        active:
+          type: boolean
+
+    CreateEggTypeBody:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+          minLength: 1
+        flockId:
+          type: integer
+        active:
+          type: boolean
+
+    DailyEggCollection:
+      type: object
+      required: [id, eggTypeId, collectionDate, countEach]
+      properties:
+        id:
+          type: integer
+        eggTypeId:
+          type: integer
+        flockId:
+          type: ["integer", "null"]
+        collectionDate:
+          type: string
+          format: date
+        countEach:
+          type: integer
+        notes:
+          type: ["string", "null"]
+
+    CreateEggCollectionBody:
+      type: object
+      required: [eggTypeId, collectionDate, countEach]
+      properties:
+        eggTypeId:
+          type: integer
+        flockId:
+          type: integer
+        collectionDate:
+          type: string
+          format: date
+        countEach:
+          type: integer
+          minimum: 0
+        notes:
+          type: string
+
+    EggInventoryLot:
+      type: object
+      required: [id, eggTypeId, lotDate, initialQtyEach, remainingQtyEach, status]
+      properties:
+        id:
+          type: integer
+        eggTypeId:
+          type: integer
+        sourceCollectionId:
+          type: ["integer", "null"]
+        lotDate:
+          type: string
+          format: date
+        initialQtyEach:
+          type: integer
+        remainingQtyEach:
+          type: integer
+        status:
+          type: string
+          enum: [open, depleted]
+
+    CreateEggCollectionResponse:
+      type: object
+      required: [collection, lot]
+      properties:
+        collection:
+          $ref: "#/components/schemas/DailyEggCollection"
+        lot:
+          $ref: "#/components/schemas/EggInventoryLot"
+
+    EggInventoryAdjustment:
+      type: object
+      required: [id, eggTypeId, qtyEach, reason, createdAt]
+      properties:
+        id:
+          type: integer
+        eggTypeId:
+          type: integer
+        lotId:
+          type: ["integer", "null"]
+        qtyEach:
+          type: integer
+        reason:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+
+    CreateEggAdjustmentBody:
+      type: object
+      required: [eggTypeId, qtyEach, reason]
+      properties:
+        eggTypeId:
+          type: integer
+        lotId:
+          type: integer
+        qtyEach:
+          type: integer
+        reason:
+          type: string
+          minLength: 1
+
+    EggInventoryOnHand:
+      type: object
+      required: [eggTypeId, eggTypeName, onHandEach]
+      properties:
+        eggTypeId:
+          type: integer
+        eggTypeName:
+          type: string
+        onHandEach:
+          type: integer
+
+    EggAllocationDetail:
+      type: object
+      required: [id, orderItemId, lotId, allocatedQtyEach, allocatedAt, lotDate, eggTypeName]
+      properties:
+        id:
+          type: integer
+        orderItemId:
+          type: integer
+        lotId:
+          type: integer
+        allocatedQtyEach:
+          type: integer
+        allocatedAt:
+          type: string
+          format: date-time
+        lotDate:
+          type: string
+          format: date
+        eggTypeName:
+          type: string
+
+    AllocateEggsResponse:
+      type: object
+      required: [allocations]
+      properties:
+        allocations:
+          type: array
+          items:
+            $ref: "#/components/schemas/EggAllocationDetail"
+
+    AllocateEggsAlreadyAllocated:
+      type: object
+      required: [message, allocations]
+      properties:
+        message:
+          type: string
+        allocations:
+          type: array
+          items:
+            $ref: "#/components/schemas/EggAllocationDetail"

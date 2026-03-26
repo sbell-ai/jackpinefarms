@@ -13,6 +13,7 @@ import adminCustomersRouter from "./admin-customers.js";
 import notifyMeRouter from "./notify-me.js";
 import webhooksRouter from "./webhooks.js";
 import storageRouter from "./storage.js";
+import eggsRouter from "./eggs.js";
 
 const router: IRouter = Router();
 
@@ -30,5 +31,6 @@ router.use(adminCustomersRouter);
 router.use(notifyMeRouter);
 router.use(webhooksRouter);
 router.use(storageRouter);
+router.use(eggsRouter);
 
 export default router;
