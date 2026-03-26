@@ -60,7 +60,7 @@ export function PublicLayout({ children }: { children: ReactNode }) {
                   className="w-full h-full object-contain"
                 />
               </div>
-              <span className="font-serif text-xl font-bold text-primary tracking-tight hidden sm:block">
+              <span className="font-sans text-xl text-primary tracking-tight hidden sm:block">
                 Jack Pine Farm
               </span>
             </Link>
