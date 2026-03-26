@@ -1,11 +1,12 @@
 import { useState } from "react";
+import { differenceInMonths, differenceInYears, parseISO } from "date-fns";
 import {
   useAdminListFlocks,
   useAdminCreateFlock,
   getAdminListFlocksQueryKey,
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
-import { Plus } from "lucide-react";
+import { Plus, Bird } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -23,6 +24,17 @@ const STATUS_COLORS: Record<string, string> = {
   retired: "bg-gray-100 text-gray-600",
 };
 
+function flockAge(hatchDate: string | null | undefined): string {
+  if (!hatchDate) return "—";
+  const today = new Date();
+  const hatched = parseISO(hatchDate);
+  const years = differenceInYears(today, hatched);
+  const months = differenceInMonths(today, hatched) % 12;
+  if (years === 0) return months === 1 ? "1 mo" : `${months} mo`;
+  if (months === 0) return years === 1 ? "1 yr" : `${years} yr`;
+  return `${years} yr ${months} mo`;
+}
+
 export default function AdminFlocks() {
   const qc = useQueryClient();
   const { toast } = useToast();
@@ -35,6 +47,9 @@ export default function AdminFlocks() {
     name: "",
     species: "" as "chicken" | "duck" | "turkey" | "",
     acquiredDate: "",
+    hatchDate: "",
+    henCount: "",
+    roosterCount: "",
     notes: "",
   });
 
@@ -44,14 +59,14 @@ export default function AdminFlocks() {
     mutation: {
       onSuccess: () => {
         toast({ title: "Flock added" });
-        setForm({ name: "", species: "", acquiredDate: "", notes: "" });
+        setForm({ name: "", species: "", acquiredDate: "", hatchDate: "", henCount: "", roosterCount: "", notes: "" });
         setShowForm(false);
         qc.invalidateQueries({ queryKey: getAdminListFlocksQueryKey() });
       },
       onError: (e: any) =>
         toast({
           title: "Error",
-          description: e.message,
+          description: e.response?.data?.error ?? e.message,
           variant: "destructive",
         }),
     },
@@ -64,9 +79,26 @@ export default function AdminFlocks() {
         name: form.name,
         species: form.species as "chicken" | "duck" | "turkey",
         acquiredDate: form.acquiredDate || undefined,
+        hatchDate: form.hatchDate || undefined,
+        henCount: form.henCount ? Number(form.henCount) : undefined,
+        roosterCount: form.roosterCount ? Number(form.roosterCount) : undefined,
         notes: form.notes || undefined,
       } as any,
     });
+  };
+
+  const totalBirds = (flock: any) => {
+    const h = flock.henCount ?? 0;
+    const r = flock.roosterCount ?? 0;
+    if (!flock.henCount && !flock.roosterCount) return "—";
+    return h + r;
+  };
+
+  const compositionLabel = (flock: any) => {
+    const parts: string[] = [];
+    if (flock.henCount != null) parts.push(`${flock.henCount} hen${flock.henCount !== 1 ? "s" : ""}`);
+    if (flock.roosterCount != null) parts.push(`${flock.roosterCount} rooster${flock.roosterCount !== 1 ? "s" : ""}`);
+    return parts.length ? parts.join(", ") : "—";
   };
 
   return (
@@ -86,7 +118,7 @@ export default function AdminFlocks() {
       {showForm && (
         <div className="rounded-lg border border-border bg-card p-4 space-y-4">
           <div className="text-sm font-semibold text-foreground">New Flock</div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
             <Input
               placeholder="Flock name…"
               value={form.name}
@@ -94,9 +126,7 @@ export default function AdminFlocks() {
             />
             <Select
               value={form.species}
-              onValueChange={(v) =>
-                setForm((f) => ({ ...f, species: v as any }))
-              }
+              onValueChange={(v) => setForm((f) => ({ ...f, species: v as any }))}
             >
               <SelectTrigger>
                 <SelectValue placeholder="Species…" />
@@ -107,23 +137,51 @@ export default function AdminFlocks() {
                 <SelectItem value="turkey">Turkey</SelectItem>
               </SelectContent>
             </Select>
-            <Input
-              type="date"
-              placeholder="Acquired date…"
-              value={form.acquiredDate}
-              onChange={(e) =>
-                setForm((f) => ({ ...f, acquiredDate: e.target.value }))
-              }
-            />
-            <Textarea
-              placeholder="Notes (optional)…"
-              value={form.notes}
-              onChange={(e) =>
-                setForm((f) => ({ ...f, notes: e.target.value }))
-              }
-              rows={1}
-              className="text-sm"
-            />
+            <div className="space-y-1">
+              <label className="text-xs text-muted-foreground">Hatch date (for age)</label>
+              <Input
+                type="date"
+                value={form.hatchDate}
+                onChange={(e) => setForm((f) => ({ ...f, hatchDate: e.target.value }))}
+              />
+            </div>
+            <div className="space-y-1">
+              <label className="text-xs text-muted-foreground">Acquired date</label>
+              <Input
+                type="date"
+                value={form.acquiredDate}
+                onChange={(e) => setForm((f) => ({ ...f, acquiredDate: e.target.value }))}
+              />
+            </div>
+            <div className="space-y-1">
+              <label className="text-xs text-muted-foreground">Hens</label>
+              <Input
+                type="number"
+                min={0}
+                placeholder="# of hens"
+                value={form.henCount}
+                onChange={(e) => setForm((f) => ({ ...f, henCount: e.target.value }))}
+              />
+            </div>
+            <div className="space-y-1">
+              <label className="text-xs text-muted-foreground">Roosters</label>
+              <Input
+                type="number"
+                min={0}
+                placeholder="# of roosters"
+                value={form.roosterCount}
+                onChange={(e) => setForm((f) => ({ ...f, roosterCount: e.target.value }))}
+              />
+            </div>
+            <div className="sm:col-span-2 lg:col-span-3">
+              <Textarea
+                placeholder="Notes (optional)…"
+                value={form.notes}
+                onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))}
+                rows={2}
+                className="text-sm"
+              />
+            </div>
           </div>
           <div className="flex gap-2">
             <Button
@@ -133,11 +191,7 @@ export default function AdminFlocks() {
             >
               {createFlock.isPending ? "Saving…" : "Add Flock"}
             </Button>
-            <Button
-              size="sm"
-              variant="ghost"
-              onClick={() => setShowForm(false)}
-            >
+            <Button size="sm" variant="ghost" onClick={() => setShowForm(false)}>
               Cancel
             </Button>
           </div>
@@ -149,8 +203,11 @@ export default function AdminFlocks() {
           <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary" />
         </div>
       ) : (flocks as any[]).length === 0 ? (
-        <div className="text-sm text-muted-foreground py-8 text-center">
-          No flocks yet. Add your first flock to get started.
+        <div className="rounded-lg border border-dashed border-border p-8 text-center">
+          <Bird className="w-8 h-8 text-muted-foreground mx-auto mb-2" />
+          <p className="text-sm text-muted-foreground">
+            No flocks yet. Add your first flock to get started.
+          </p>
         </div>
       ) : (
         <div className="rounded-lg border border-border overflow-hidden">
@@ -160,6 +217,9 @@ export default function AdminFlocks() {
                 <th className="text-left px-4 py-2 font-medium text-muted-foreground">Name</th>
                 <th className="text-left px-4 py-2 font-medium text-muted-foreground">Species</th>
                 <th className="text-left px-4 py-2 font-medium text-muted-foreground">Status</th>
+                <th className="text-left px-4 py-2 font-medium text-muted-foreground">Composition</th>
+                <th className="text-left px-4 py-2 font-medium text-muted-foreground">Total</th>
+                <th className="text-left px-4 py-2 font-medium text-muted-foreground">Age</th>
                 <th className="text-left px-4 py-2 font-medium text-muted-foreground">Acquired</th>
                 <th className="text-left px-4 py-2 font-medium text-muted-foreground">Notes</th>
               </tr>
@@ -174,12 +234,11 @@ export default function AdminFlocks() {
                       {flock.status}
                     </span>
                   </td>
-                  <td className="px-4 py-3 text-muted-foreground">
-                    {flock.acquiredDate ?? "—"}
-                  </td>
-                  <td className="px-4 py-3 text-muted-foreground text-xs">
-                    {flock.notes ?? "—"}
-                  </td>
+                  <td className="px-4 py-3 text-muted-foreground text-xs">{compositionLabel(flock)}</td>
+                  <td className="px-4 py-3 text-foreground font-medium">{totalBirds(flock)}</td>
+                  <td className="px-4 py-3 text-muted-foreground">{flockAge(flock.hatchDate)}</td>
+                  <td className="px-4 py-3 text-muted-foreground">{flock.acquiredDate ?? "—"}</td>
+                  <td className="px-4 py-3 text-muted-foreground text-xs">{flock.notes ?? "—"}</td>
                 </tr>
               ))}
             </tbody>

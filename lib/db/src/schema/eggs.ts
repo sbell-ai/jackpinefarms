@@ -45,6 +45,9 @@ export const flocksTable = pgTable("flocks", {
   name: text("name").notNull(),
   species: flockSpeciesEnum("species").notNull(),
   acquiredDate: date("acquired_date"),
+  hatchDate: date("hatch_date"),
+  henCount: integer("hen_count"),
+  roosterCount: integer("rooster_count"),
   status: flockStatusEnum("status").notNull().default("active"),
   notes: text("notes"),
 });
