@@ -388,9 +388,9 @@ export default function AdminFlocks() {
           <p className="text-sm text-muted-foreground">No flocks yet. Add your first flock to get started.</p>
         </div>
       ) : (
-        <div className="rounded-lg border border-border overflow-hidden divide-y divide-border">
+        <div className="rounded-lg border border-border overflow-hidden divide-y divide-border overflow-x-auto">
           {/* Header */}
-          <div className="bg-muted/40 grid grid-cols-[24px_1fr_1fr_1fr_80px_120px_80px_80px_80px_32px] gap-x-3 px-4 py-2 text-xs font-medium text-muted-foreground">
+          <div className="bg-muted/40 grid grid-cols-[24px_1fr_1fr_1fr_80px_120px_80px_80px_80px_32px] gap-x-3 px-4 py-2 text-xs font-medium text-muted-foreground min-w-[900px]">
             <span />
             <span>Name</span>
             <span>Species / Breed</span>
@@ -405,7 +405,7 @@ export default function AdminFlocks() {
           {(flocks as any[]).map((flock: any) => (
             <div key={flock.id}>
               <div
-                className="grid grid-cols-[24px_1fr_1fr_1fr_80px_120px_80px_80px_80px_32px] gap-x-3 px-4 py-3 hover:bg-muted/20 cursor-pointer items-center text-sm"
+                className="grid grid-cols-[24px_1fr_1fr_1fr_80px_120px_80px_80px_80px_32px] gap-x-3 px-4 py-3 hover:bg-muted/20 cursor-pointer items-center text-sm min-w-[900px]"
                 onClick={() => setExpandedFlockId(expandedFlockId === flock.id ? null : flock.id)}
               >
                 <span className="text-muted-foreground">

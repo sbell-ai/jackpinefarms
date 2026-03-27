@@ -332,8 +332,8 @@ export default function AdminEggInventory() {
             No collections recorded yet.
           </p>
         ) : (
-          <div className="rounded-lg border border-border overflow-hidden">
-            <table className="w-full text-sm">
+          <div className="rounded-lg border border-border overflow-hidden overflow-x-auto">
+            <table className="w-full text-sm min-w-[400px]">
               <thead className="bg-muted/40">
                 <tr>
                   <th className="text-left px-4 py-2 font-medium text-muted-foreground">
@@ -437,8 +437,8 @@ export default function AdminEggInventory() {
           <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground mb-3">
             Adjustment Log
           </h2>
-          <div className="rounded-lg border border-border overflow-hidden">
-            <table className="w-full text-sm">
+          <div className="rounded-lg border border-border overflow-hidden overflow-x-auto">
+            <table className="w-full text-sm min-w-[400px]">
               <thead className="bg-muted/40">
                 <tr>
                   <th className="text-left px-4 py-2 font-medium text-muted-foreground">
