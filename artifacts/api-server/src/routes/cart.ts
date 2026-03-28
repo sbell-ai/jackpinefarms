@@ -101,8 +101,7 @@ router.post("/cart/items", async (req, res): Promise<void> => {
   );
 
   if (existing) {
-    const newTotal = existing.quantity + normalizedQty;
-    existing.quantity = Math.ceil(newTotal / stepQty) * stepQty;
+    existing.quantity = existing.quantity + normalizedQty;
     if (addGiblets) existing.addGiblets = true;
   } else {
     session.cart.push({ productId, quantity: normalizedQty, addGiblets: addGiblets ?? false });
@@ -137,12 +136,6 @@ router.patch("/cart/items/:productId", async (req, res): Promise<void> => {
   if (quantity === 0) {
     session.cart = session.cart.filter((i: { productId: number }) => i.productId !== productId);
   } else {
-    const [product] = await db
-      .select({ productType: productsTable.productType })
-      .from(productsTable)
-      .where(eq(productsTable.id, productId))
-      .limit(1);
-
     const normalizedQty = Math.max(1, Math.round(quantity));
 
     const existing = session.cart.find((i: { productId: number }) => i.productId === productId);
