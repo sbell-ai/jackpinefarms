@@ -257,7 +257,7 @@ router.patch("/products/:id", requireAdmin, async (req, res): Promise<void> => {
         productId: product.id,
         objectKey: "",
         url: product.imageUrl,
-        sortOrder: 0,
+        sortOrder: 1,
         altText: null,
       })
       .returning();

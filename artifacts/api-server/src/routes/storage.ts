@@ -11,6 +11,8 @@ import { requireAdmin } from "../middlewares/require-admin.js";
 const router: IRouter = Router();
 const objectStorageService = new ObjectStorageService();
 
+const MAX_UPLOAD_SIZE_BYTES = 10 * 1024 * 1024; // 10 MB
+
 /**
  * POST /storage/uploads/request-url
  *
@@ -25,9 +27,16 @@ router.post("/storage/uploads/request-url", requireAdmin, async (req: Request, r
     return;
   }
 
-  try {
-    const { name, size, contentType } = parsed.data;
+  const { name, size, contentType } = parsed.data;
 
+  if (size > MAX_UPLOAD_SIZE_BYTES) {
+    res.status(400).json({
+      error: `File is too large. Maximum upload size is ${MAX_UPLOAD_SIZE_BYTES / (1024 * 1024)} MB.`,
+    });
+    return;
+  }
+
+  try {
     const uploadURL = await objectStorageService.getObjectEntityUploadURL();
     const objectPath = objectStorageService.normalizeObjectEntityPath(uploadURL);
 
