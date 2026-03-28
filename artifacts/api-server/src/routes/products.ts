@@ -106,10 +106,23 @@ router.get("/products", async (req, res): Promise<void> => {
     imagesByProductId.get(img.productId)!.push(img);
   }
 
-  const productsWithImages = products.map((p) => ({
-    ...p,
-    images: imagesByProductId.get(p.id) ?? [],
-  }));
+  const productsWithImages = products.map((p) => {
+    let images = imagesByProductId.get(p.id) ?? [];
+    if (images.length === 0 && p.imageUrl) {
+      images = [
+        {
+          id: 0,
+          productId: p.id,
+          objectKey: "",
+          url: p.imageUrl,
+          sortOrder: 0,
+          altText: null,
+          createdAt: p.createdAt,
+        },
+      ];
+    }
+    return { ...p, images };
+  });
 
   res.json(ListProductsResponse.parse(productsWithImages));
 });
@@ -152,11 +165,25 @@ router.get("/products/:id", async (req, res): Promise<void> => {
     return;
   }
 
-  const images = await db
+  let images = await db
     .select()
     .from(productImagesTable)
     .where(eq(productImagesTable.productId, params.data.id))
     .orderBy(asc(productImagesTable.sortOrder), asc(productImagesTable.id));
+
+  if (images.length === 0 && product.imageUrl) {
+    images = [
+      {
+        id: 0,
+        productId: product.id,
+        objectKey: "",
+        url: product.imageUrl,
+        sortOrder: 0,
+        altText: null,
+        createdAt: product.createdAt,
+      },
+    ];
+  }
 
   res.json(GetProductResponse.parse({ ...product, images }));
 });
@@ -217,13 +244,27 @@ router.patch("/products/:id", requireAdmin, async (req, res): Promise<void> => {
     );
   }
 
-  const images = await db
+  let patchImages = await db
     .select()
     .from(productImagesTable)
     .where(eq(productImagesTable.productId, params.data.id))
     .orderBy(asc(productImagesTable.sortOrder), asc(productImagesTable.id));
 
-  res.json(UpdateProductResponse.parse({ ...product, images }));
+  if (patchImages.length === 0 && product.imageUrl) {
+    patchImages = [
+      {
+        id: 0,
+        productId: product.id,
+        objectKey: "",
+        url: product.imageUrl,
+        sortOrder: 0,
+        altText: null,
+        createdAt: product.createdAt,
+      },
+    ];
+  }
+
+  res.json(UpdateProductResponse.parse({ ...product, images: patchImages }));
 });
 
 router.post("/products/:id/notify-me", async (req, res): Promise<void> => {

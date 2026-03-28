@@ -67,8 +67,8 @@ export default function Home() {
             {featuredProducts.map(product => (
               <Link key={product.id} href={`/shop/${product.id}`} className="group h-full flex flex-col bg-card rounded-2xl overflow-hidden border border-border shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300">
                 <div className="aspect-[4/3] bg-muted relative overflow-hidden">
-                  {(product.images?.[0]?.url ?? product.imageUrl) ? (
-                    <img src={product.images?.[0]?.url ?? product.imageUrl!} alt={product.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                  {product.images?.[0]?.url ? (
+                    <img src={product.images[0].url} alt={product.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
                   ) : (
                     <img src="https://images.unsplash.com/photo-1598965402089-897ce52e8355?w=600&q=80" alt={product.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
                   )}

@@ -11,6 +11,43 @@ import { deleteStorageObject } from "../lib/objectStorage.js";
 
 const router: IRouter = Router();
 
+const ALLOWED_IMAGE_EXTENSIONS = new Set([".jpg", ".jpeg", ".png", ".webp", ".gif"]);
+
+function hasAllowedImageExtension(objectPath: string): boolean {
+  const lower = objectPath.toLowerCase();
+  return Array.from(ALLOWED_IMAGE_EXTENSIONS).some((ext) => lower.endsWith(ext));
+}
+
+router.get(
+  "/admin/products/:productId/images",
+  requireAdmin,
+  async (req, res): Promise<void> => {
+    const productId = parseInt(req.params.productId, 10);
+    if (isNaN(productId)) {
+      res.status(400).json({ error: "Invalid product ID" });
+      return;
+    }
+
+    const [product] = await db
+      .select()
+      .from(productsTable)
+      .where(eq(productsTable.id, productId))
+      .limit(1);
+    if (!product) {
+      res.status(404).json({ error: "Product not found" });
+      return;
+    }
+
+    const images = await db
+      .select()
+      .from(productImagesTable)
+      .where(eq(productImagesTable.productId, productId))
+      .orderBy(asc(productImagesTable.sortOrder), asc(productImagesTable.id));
+
+    res.json(images);
+  }
+);
+
 router.post(
   "/admin/products/:productId/images",
   requireAdmin,
@@ -36,6 +73,13 @@ router.post(
     const parsed = AddProductImageBody.safeParse(req.body);
     if (!parsed.success) {
       res.status(400).json({ error: parsed.error.message });
+      return;
+    }
+
+    if (!hasAllowedImageExtension(parsed.data.objectPath)) {
+      res.status(400).json({
+        error: "Only JPG, PNG, WebP, and GIF images are allowed.",
+      });
       return;
     }
 

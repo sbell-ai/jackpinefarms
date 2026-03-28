@@ -109,8 +109,8 @@ export default function ProductDetail() {
         {/* Images */}
         <div className="rounded-3xl overflow-hidden bg-card border border-border shadow-md">
           <div className="aspect-[4/3] w-full relative">
-            {(product.images?.[0]?.url ?? product.imageUrl) ? (
-              <img src={product.images?.[0]?.url ?? product.imageUrl!} alt={product.name} className="w-full h-full object-cover" />
+            {product.images?.[0]?.url ? (
+              <img src={product.images[0].url} alt={product.name} className="w-full h-full object-cover" />
             ) : (
               <img src="https://images.unsplash.com/photo-1516684732162-798a0062be99?w=800&q=80" alt={product.name} className="w-full h-full object-cover" />
             )}

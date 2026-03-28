@@ -43,8 +43,8 @@ export default function Shop() {
                 className="group flex flex-col bg-card rounded-2xl overflow-hidden border border-border shadow-sm hover:shadow-xl hover:border-primary/20 hover:-translate-y-1 transition-all duration-300"
               >
                 <div className="aspect-[4/3] bg-muted relative overflow-hidden">
-                  {(product.images?.[0]?.url ?? product.imageUrl) ? (
-                    <img src={product.images?.[0]?.url ?? product.imageUrl!} alt={product.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                  {product.images?.[0]?.url ? (
+                    <img src={product.images[0].url} alt={product.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
                   ) : (
                     <img src="https://images.unsplash.com/photo-1587486913049-53fc88980cfc?w=600&q=80" alt={product.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
                   )}
