@@ -176,6 +176,26 @@ export async function runMigrations(): Promise<void> {
         ON product_images (product_id, sort_order);
     `);
 
+    // ── Expenses (Accounting) ────────────────────────────────────────────────
+    await db.execute(sql`
+      CREATE TABLE IF NOT EXISTS expenses (
+        id             SERIAL PRIMARY KEY,
+        date           DATE NOT NULL,
+        category       TEXT NOT NULL,
+        description    TEXT NOT NULL,
+        amount_cents   INTEGER NOT NULL CHECK (amount_cents >= 0),
+        vendor         TEXT,
+        payment_method TEXT,
+        notes          TEXT,
+        created_at     TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        updated_at     TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      );
+    `);
+
+    await db.execute(sql`
+      CREATE INDEX IF NOT EXISTS expenses_date_idx ON expenses (date DESC);
+    `);
+
     logger.info("Startup migrations complete.");
   } catch (err) {
     logger.error({ err }, "Startup migration failed — server will still start");

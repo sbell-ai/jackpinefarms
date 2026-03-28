@@ -101,7 +101,7 @@ Jack Pine Farm Store — React + Vite frontend.
   - CustomerDetail — customer info + full order history
 **Public utility page**: Unsubscribe — token-based email unsubscribe/global-unsubscribe (no login)
 
-- Layouts: PublicLayout (public nav + footer), AdminLayout (sidebar with 6 nav items, auth guard)
+- Layouts: PublicLayout (public nav + footer), AdminLayout (sidebar with nav items incl. Expenses, auth guard)
 - Router: wouter, base path from `BASE_URL` env var (set to `/`)
 - API client: `@workspace/api-client-react` (React Query hooks)
 - CSS: Tailwind v4, custom theme (farm green palette, serif display font)
@@ -122,6 +122,7 @@ Database layer using Drizzle ORM with PostgreSQL.
 - `notify_me` — restock subscriptions (email, productId, unsubscribeToken, globalUnsubscribe)
 - `customer_carts` — shopping cart
 - `stripe_pending` — Stripe payment intent tracking
+- `expenses` — farm operating expenses (date, category, amount, vendor, payment method)
 
 **Order status enum (9 values)**:
 `pending_payment | deposit_paid | cash_pending | pickup_assigned | weights_entered | invoice_sent | fulfilled | cancelled | no_show`
