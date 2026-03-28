@@ -17,6 +17,18 @@ import {
 import { requireAdmin } from "../middlewares/require-admin";
 import { generateUnsubscribeToken } from "./notify-me.js";
 import { sendEmail } from "../lib/email.js";
+import sanitizeHtml from "sanitize-html";
+
+const ALLOWED_HTML: sanitizeHtml.IOptions = {
+  allowedTags: ["p", "br", "strong", "em", "b", "i", "ul", "ol", "li", "h2", "h3"],
+  allowedAttributes: {},
+  allowedSchemes: [],
+};
+
+function sanitizeDescription(raw: string | null | undefined): string | null {
+  if (!raw) return null;
+  return sanitizeHtml(raw, ALLOWED_HTML).trim() || null;
+}
 
 const router: IRouter = Router();
 
@@ -87,7 +99,12 @@ router.post("/products", requireAdmin, async (req, res): Promise<void> => {
     return;
   }
 
-  const [product] = await db.insert(productsTable).values(parsed.data).returning();
+  const data = {
+    ...parsed.data,
+    description: sanitizeDescription(parsed.data.description) ?? parsed.data.description,
+  };
+
+  const [product] = await db.insert(productsTable).values(data).returning();
 
   res.status(201).json(GetProductResponse.parse(product));
 });
@@ -138,9 +155,17 @@ router.patch("/products/:id", requireAdmin, async (req, res): Promise<void> => {
     return;
   }
 
+  const updateData = {
+    ...parsed.data,
+    ...(parsed.data.description !== undefined && {
+      description: sanitizeDescription(parsed.data.description) ?? parsed.data.description,
+    }),
+    updatedAt: new Date(),
+  };
+
   const [product] = await db
     .update(productsTable)
-    .set({ ...parsed.data, updatedAt: new Date() })
+    .set(updateData)
     .where(eq(productsTable.id, params.data.id))
     .returning();
 

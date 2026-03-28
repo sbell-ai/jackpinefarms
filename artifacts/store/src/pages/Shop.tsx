@@ -1,6 +1,6 @@
 import { Link } from "wouter";
 import { useListProducts } from "@workspace/api-client-react";
-import { formatMoney } from "@/lib/utils";
+import { formatMoney, stripHtml } from "@/lib/utils";
 import { Loader2, ArrowRight } from "lucide-react";
 
 export default function Shop() {
@@ -69,7 +69,7 @@ export default function Shop() {
                     <h3 className="font-serif text-xl font-bold text-foreground group-hover:text-primary transition-colors">{product.name}</h3>
                   </div>
                   
-                  <p className="text-muted-foreground text-sm line-clamp-2 mb-6 flex-1">{product.description}</p>
+                  <p className="text-muted-foreground text-sm line-clamp-2 mb-6 flex-1">{stripHtml(product.description)}</p>
                   
                   <div className="flex items-center justify-between mt-auto pt-4 border-t border-border/50">
                     <div className="flex flex-col">

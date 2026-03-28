@@ -1,7 +1,7 @@
 import { Link } from "wouter";
 import { ArrowRight, CheckCircle2 } from "lucide-react";
 import { useListProducts } from "@workspace/api-client-react";
-import { formatMoney } from "@/lib/utils";
+import { formatMoney, stripHtml } from "@/lib/utils";
 
 export default function Home() {
   const { data: products } = useListProducts();
@@ -85,7 +85,7 @@ export default function Home() {
                 </div>
                 <div className="p-6 flex flex-col flex-1">
                   <h3 className="font-serif text-xl font-bold text-foreground mb-2 group-hover:text-primary transition-colors">{product.name}</h3>
-                  <p className="text-muted-foreground text-sm line-clamp-2 mb-4 flex-1">{product.description}</p>
+                  <p className="text-muted-foreground text-sm line-clamp-2 mb-4 flex-1">{stripHtml(product.description)}</p>
                   <div className="flex items-center justify-between mt-auto pt-4 border-t border-border/50">
                     <span className="font-bold text-lg text-primary">
                       {formatMoney(product.priceInCents)}

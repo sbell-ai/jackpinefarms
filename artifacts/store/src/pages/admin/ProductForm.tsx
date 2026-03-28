@@ -1,16 +1,17 @@
 import { useEffect, useRef } from "react";
 import { useRoute, useLocation, Link } from "wouter";
-import { useForm } from "react-hook-form";
+import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { useGetProduct, useCreateProduct, useUpdateProduct, getGetProductQueryKey } from "@workspace/api-client-react";
 import { useUpload } from "@workspace/object-storage-web";
 import { ArrowLeft, Loader2, Save, Upload, X } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { RichTextEditor } from "@/components/ui/RichTextEditor";
 
 const formSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters"),
-  description: z.string().min(10, "Description must be at least 10 characters"),
+  description: z.string().min(10, "Description must be at least 10 characters").max(5000, "Description is too long"),
   productType: z.enum(["eggs_chicken", "eggs_duck", "meat_chicken", "meat_turkey"]),
   pricingType: z.enum(["unit", "deposit"]),
   priceInDollars: z.coerce.number().min(0, "Price must be positive"),
@@ -37,7 +38,7 @@ export default function ProductForm() {
   const createMutation = useCreateProduct();
   const updateMutation = useUpdateProduct();
 
-  const { register, handleSubmit, formState: { errors }, reset, watch, setValue } = useForm<FormValues>({
+  const { register, handleSubmit, formState: { errors }, reset, watch, setValue, control } = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       productType: "eggs_chicken",
@@ -131,7 +132,19 @@ export default function ProductForm() {
 
             <div className="space-y-2">
               <label className="text-sm font-bold text-foreground">Description</label>
-              <textarea {...register("description")} rows={4} className="w-full px-4 py-2.5 rounded-lg bg-background border border-border focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all resize-y" />
+              <div className="relative">
+                <Controller
+                  name="description"
+                  control={control}
+                  render={({ field }) => (
+                    <RichTextEditor
+                      value={field.value ?? ""}
+                      onChange={field.onChange}
+                      error={!!errors.description}
+                    />
+                  )}
+                />
+              </div>
               {errors.description && <p className="text-destructive text-sm">{errors.description.message}</p>}
             </div>
 

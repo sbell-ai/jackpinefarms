@@ -136,9 +136,10 @@ export default function ProductDetail() {
             )}
           </div>
 
-          <div className="prose prose-p:text-muted-foreground prose-p:leading-relaxed mb-8">
-            <p>{product.description}</p>
-          </div>
+          <div
+            className="prose prose-sm max-w-none prose-p:text-muted-foreground prose-p:leading-relaxed prose-li:text-muted-foreground prose-strong:text-foreground mb-8"
+            dangerouslySetInnerHTML={{ __html: product.description }}
+          />
 
           {/* Deposit Info Box */}
           {product.pricingType === 'deposit' && (
