@@ -99,10 +99,13 @@ router.post("/products", requireAdmin, async (req, res): Promise<void> => {
     return;
   }
 
-  const data = {
-    ...parsed.data,
-    description: sanitizeDescription(parsed.data.description),
-  };
+  const cleanedDescription = sanitizeDescription(parsed.data.description);
+  if (!cleanedDescription) {
+    res.status(400).json({ error: "Description is required and must contain allowed content." });
+    return;
+  }
+
+  const data = { ...parsed.data, description: cleanedDescription };
 
   const [product] = await db.insert(productsTable).values(data).returning();
 
@@ -155,13 +158,16 @@ router.patch("/products/:id", requireAdmin, async (req, res): Promise<void> => {
     return;
   }
 
-  const updateData = {
-    ...parsed.data,
-    ...(parsed.data.description !== undefined && {
-      description: sanitizeDescription(parsed.data.description),
-    }),
-    updatedAt: new Date(),
-  };
+  if (parsed.data.description !== undefined) {
+    const cleanedDescription = sanitizeDescription(parsed.data.description);
+    if (!cleanedDescription) {
+      res.status(400).json({ error: "Description is required and must contain allowed content." });
+      return;
+    }
+    parsed.data.description = cleanedDescription;
+  }
+
+  const updateData = { ...parsed.data, updatedAt: new Date() };
 
   const [product] = await db
     .update(productsTable)
