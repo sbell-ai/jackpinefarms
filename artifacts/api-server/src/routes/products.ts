@@ -101,7 +101,7 @@ router.post("/products", requireAdmin, async (req, res): Promise<void> => {
 
   const data = {
     ...parsed.data,
-    description: sanitizeDescription(parsed.data.description) ?? parsed.data.description,
+    description: sanitizeDescription(parsed.data.description),
   };
 
   const [product] = await db.insert(productsTable).values(data).returning();
@@ -158,7 +158,7 @@ router.patch("/products/:id", requireAdmin, async (req, res): Promise<void> => {
   const updateData = {
     ...parsed.data,
     ...(parsed.data.description !== undefined && {
-      description: sanitizeDescription(parsed.data.description) ?? parsed.data.description,
+      description: sanitizeDescription(parsed.data.description),
     }),
     updatedAt: new Date(),
   };
