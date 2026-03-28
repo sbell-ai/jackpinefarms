@@ -142,12 +142,12 @@ export default function Cart() {
                     </div>
                     {item.unitLabel === "dozen" && (
                       <span className="text-xs text-muted-foreground">
-                        {item.quantity * 12} eggs total
+                        sold by the dozen (12 eggs each)
                       </span>
                     )}
                     {item.unitLabel === "half-dozen" && (
                       <span className="text-xs text-muted-foreground">
-                        {item.quantity * 6} eggs total
+                        sold by the half-dozen (6 eggs each)
                       </span>
                     )}
                   </div>
