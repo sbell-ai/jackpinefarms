@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
-import { eq, asc, ne, and } from "drizzle-orm";
-import { db, productsTable, notifyMeTable } from "@workspace/db";
+import { eq, asc, ne, and, inArray } from "drizzle-orm";
+import { db, productsTable, productImagesTable, notifyMeTable } from "@workspace/db";
 import {
   ListProductsResponse,
   CreateProductBody,
@@ -89,7 +89,29 @@ router.get("/products", async (req, res): Promise<void> => {
     .where(includeDisabled ? undefined : ne(productsTable.availability, "disabled"))
     .orderBy(asc(productsTable.displayOrder), asc(productsTable.id));
 
-  res.json(ListProductsResponse.parse(products));
+  const productIds = products.map((p) => p.id);
+  const allImages =
+    productIds.length > 0
+      ? await db
+          .select()
+          .from(productImagesTable)
+          .where(inArray(productImagesTable.productId, productIds))
+          .orderBy(asc(productImagesTable.sortOrder), asc(productImagesTable.id))
+      : [];
+
+  const imagesByProductId = new Map<number, typeof allImages>();
+  for (const img of allImages) {
+    if (!imagesByProductId.has(img.productId))
+      imagesByProductId.set(img.productId, []);
+    imagesByProductId.get(img.productId)!.push(img);
+  }
+
+  const productsWithImages = products.map((p) => ({
+    ...p,
+    images: imagesByProductId.get(p.id) ?? [],
+  }));
+
+  res.json(ListProductsResponse.parse(productsWithImages));
 });
 
 router.post("/products", requireAdmin, async (req, res): Promise<void> => {
@@ -109,7 +131,7 @@ router.post("/products", requireAdmin, async (req, res): Promise<void> => {
 
   const [product] = await db.insert(productsTable).values(data).returning();
 
-  res.status(201).json(GetProductResponse.parse(product));
+  res.status(201).json(GetProductResponse.parse({ ...product, images: [] }));
 });
 
 router.get("/products/:id", async (req, res): Promise<void> => {
@@ -130,7 +152,13 @@ router.get("/products/:id", async (req, res): Promise<void> => {
     return;
   }
 
-  res.json(GetProductResponse.parse(product));
+  const images = await db
+    .select()
+    .from(productImagesTable)
+    .where(eq(productImagesTable.productId, params.data.id))
+    .orderBy(asc(productImagesTable.sortOrder), asc(productImagesTable.id));
+
+  res.json(GetProductResponse.parse({ ...product, images }));
 });
 
 router.patch("/products/:id", requireAdmin, async (req, res): Promise<void> => {
@@ -189,7 +217,13 @@ router.patch("/products/:id", requireAdmin, async (req, res): Promise<void> => {
     );
   }
 
-  res.json(UpdateProductResponse.parse(product));
+  const images = await db
+    .select()
+    .from(productImagesTable)
+    .where(eq(productImagesTable.productId, params.data.id))
+    .orderBy(asc(productImagesTable.sortOrder), asc(productImagesTable.id));
+
+  res.json(UpdateProductResponse.parse({ ...product, images }));
 });
 
 router.post("/products/:id/notify-me", async (req, res): Promise<void> => {

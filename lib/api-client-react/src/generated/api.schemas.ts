@@ -68,6 +68,16 @@ export const PaymentMethod = {
   cash: "cash",
 } as const;
 
+export interface ProductImage {
+  id: number;
+  productId: number;
+  url: string;
+  sortOrder: number;
+  /** @nullable */
+  altText: string | null;
+  createdAt: string;
+}
+
 export interface Product {
   id: number;
   name: string;
@@ -92,6 +102,7 @@ export interface Product {
   displayOrder: number;
   createdAt: string;
   updatedAt: string;
+  images: ProductImage[];
 }
 
 export interface CreateProductBody {

@@ -158,6 +158,24 @@ export async function runMigrations(): Promise<void> {
       );
     `);
 
+    // ── product_images (Task #8) ─────────────────────────────────────────────
+    await db.execute(sql`
+      CREATE TABLE IF NOT EXISTS product_images (
+        id          SERIAL PRIMARY KEY,
+        product_id  INTEGER NOT NULL REFERENCES products(id) ON DELETE CASCADE,
+        object_key  TEXT NOT NULL,
+        url         TEXT NOT NULL,
+        sort_order  INTEGER NOT NULL DEFAULT 0,
+        alt_text    TEXT,
+        created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      );
+    `);
+
+    await db.execute(sql`
+      CREATE INDEX IF NOT EXISTS product_images_product_id_idx
+        ON product_images (product_id, sort_order);
+    `);
+
     logger.info("Startup migrations complete.");
   } catch (err) {
     logger.error({ err }, "Startup migration failed — server will still start");

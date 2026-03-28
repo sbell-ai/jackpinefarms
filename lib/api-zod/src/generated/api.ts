@@ -15,6 +15,24 @@ export const HealthCheckResponse = zod.object({
   status: zod.string(),
 });
 
+export const ProductImageSchema = zod.object({
+  id: zod.number(),
+  productId: zod.number(),
+  url: zod.string(),
+  sortOrder: zod.number(),
+  altText: zod.string().nullable(),
+  createdAt: zod.date(),
+});
+
+export const AddProductImageBody = zod.object({
+  objectPath: zod.string(),
+  altText: zod.string().optional(),
+});
+
+export const ReorderProductImagesBody = zod.object({
+  imageIds: zod.array(zod.number()),
+});
+
 /**
  * Returns all non-disabled products (public). Disabled products excluded.
  * @summary List products
@@ -55,6 +73,7 @@ export const ListProductsResponseItem = zod.object({
   displayOrder: zod.number(),
   createdAt: zod.date(),
   updatedAt: zod.date(),
+  images: zod.array(ProductImageSchema),
 });
 export const ListProductsResponse = zod.array(ListProductsResponseItem);
 
@@ -115,6 +134,7 @@ export const GetProductResponse = zod.object({
   displayOrder: zod.number(),
   createdAt: zod.date(),
   updatedAt: zod.date(),
+  images: zod.array(ProductImageSchema),
 });
 
 /**
@@ -170,6 +190,7 @@ export const UpdateProductResponse = zod.object({
   displayOrder: zod.number(),
   createdAt: zod.date(),
   updatedAt: zod.date(),
+  images: zod.array(ProductImageSchema),
 });
 
 /**

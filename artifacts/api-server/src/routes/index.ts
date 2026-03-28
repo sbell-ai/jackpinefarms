@@ -14,11 +14,13 @@ import notifyMeRouter from "./notify-me.js";
 import webhooksRouter from "./webhooks.js";
 import storageRouter from "./storage.js";
 import eggsRouter from "./eggs.js";
+import productImagesRouter from "./product-images.js";
 
 const router: IRouter = Router();
 
 router.use(healthRouter);
 router.use(productsRouter);
+router.use(productImagesRouter);
 router.use(adminRouter);
 router.use(authRouter);
 router.use(cartRouter);

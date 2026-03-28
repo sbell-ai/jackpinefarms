@@ -227,6 +227,21 @@ function parseObjectPath(path: string): {
   };
 }
 
+/**
+ * Delete an object from storage by its objectKey (the path stored in product_images.object_key).
+ * Silently succeeds if the object is already gone.
+ */
+export async function deleteStorageObject(objectKey: string): Promise<void> {
+  const { bucketName, objectName } = parseObjectPath(objectKey);
+  const bucket = objectStorageClient.bucket(bucketName);
+  try {
+    await bucket.file(objectName).delete();
+  } catch (err: unknown) {
+    const code = (err as { code?: number }).code;
+    if (code !== 404) throw err;
+  }
+}
+
 async function signObjectURL({
   bucketName,
   objectName,
