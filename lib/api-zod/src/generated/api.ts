@@ -26,6 +26,7 @@ export const ProductImageSchema = zod.object({
 
 export const AddProductImageBody = zod.object({
   objectPath: zod.string(),
+  contentType: zod.string().optional(),
   altText: zod.string().optional(),
 });
 

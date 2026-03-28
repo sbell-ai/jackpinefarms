@@ -229,10 +229,29 @@ function parseObjectPath(path: string): {
 
 /**
  * Delete an object from storage by its objectKey (the path stored in product_images.object_key).
- * Silently succeeds if the object is already gone.
+ * Handles both `/objects/...` entity paths (resolved via PRIVATE_OBJECT_DIR) and raw paths.
+ * Silently succeeds if the object is already gone or if no storage is configured.
  */
 export async function deleteStorageObject(objectKey: string): Promise<void> {
-  const { bucketName, objectName } = parseObjectPath(objectKey);
+  if (!objectKey) return;
+
+  let bucketName: string;
+  let objectName: string;
+
+  if (objectKey.startsWith("/objects/")) {
+    const privateObjectDir = process.env.PRIVATE_OBJECT_DIR || "";
+    if (!privateObjectDir) return;
+    // objectKey = "/objects/uploads/{uuid}" → entityId = "uploads/{uuid}"
+    const entityId = objectKey.slice("/objects/".length);
+    const dir = privateObjectDir.endsWith("/")
+      ? privateObjectDir
+      : `${privateObjectDir}/`;
+    const fullPath = `${dir}${entityId}`;
+    ({ bucketName, objectName } = parseObjectPath(fullPath));
+  } else {
+    ({ bucketName, objectName } = parseObjectPath(objectKey));
+  }
+
   const bucket = objectStorageClient.bucket(bucketName);
   try {
     await bucket.file(objectName).delete();

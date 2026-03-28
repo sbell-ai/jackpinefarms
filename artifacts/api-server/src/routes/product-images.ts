@@ -11,11 +11,15 @@ import { deleteStorageObject } from "../lib/objectStorage.js";
 
 const router: IRouter = Router();
 
-const ALLOWED_IMAGE_EXTENSIONS = new Set([".jpg", ".jpeg", ".png", ".webp", ".gif"]);
+const ALLOWED_MIME_TYPES = new Set([
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+]);
 
-function hasAllowedImageExtension(objectPath: string): boolean {
-  const lower = objectPath.toLowerCase();
-  return Array.from(ALLOWED_IMAGE_EXTENSIONS).some((ext) => lower.endsWith(ext));
+function isAllowedMimeType(contentType: string | undefined): boolean {
+  if (!contentType) return false;
+  return ALLOWED_MIME_TYPES.has(contentType.toLowerCase().split(";")[0].trim());
 }
 
 router.get(
@@ -76,9 +80,9 @@ router.post(
       return;
     }
 
-    if (!hasAllowedImageExtension(parsed.data.objectPath)) {
+    if (!isAllowedMimeType(parsed.data.contentType)) {
       res.status(400).json({
-        error: "Only JPG, PNG, WebP, and GIF images are allowed.",
+        error: "Only JPEG, PNG, and WebP images are allowed.",
       });
       return;
     }

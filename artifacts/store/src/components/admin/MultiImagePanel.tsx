@@ -25,7 +25,10 @@ export function MultiImagePanel({ productId, images, onImagesChange }: MultiImag
         const res = await fetch(`/api/admin/products/${productId}/images`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ objectPath: response.objectPath }),
+          body: JSON.stringify({
+            objectPath: response.objectPath,
+            contentType: response.metadata?.contentType,
+          }),
         });
         if (!res.ok) {
           const body = await res.json().catch(() => ({}));

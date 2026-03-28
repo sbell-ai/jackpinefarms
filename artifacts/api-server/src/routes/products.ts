@@ -251,17 +251,17 @@ router.patch("/products/:id", requireAdmin, async (req, res): Promise<void> => {
     .orderBy(asc(productImagesTable.sortOrder), asc(productImagesTable.id));
 
   if (patchImages.length === 0 && product.imageUrl) {
-    patchImages = [
-      {
-        id: 0,
+    const [migrated] = await db
+      .insert(productImagesTable)
+      .values({
         productId: product.id,
         objectKey: "",
         url: product.imageUrl,
         sortOrder: 0,
         altText: null,
-        createdAt: product.createdAt,
-      },
-    ];
+      })
+      .returning();
+    patchImages = [migrated];
   }
 
   res.json(UpdateProductResponse.parse({ ...product, images: patchImages }));
