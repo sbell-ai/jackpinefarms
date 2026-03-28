@@ -21,8 +21,8 @@ export default function Contact() {
               <div>
                 <h3 className="font-bold text-lg mb-1 text-foreground">Location</h3>
                 <p className="text-muted-foreground">Jack Pine Farm</p>
-                <p className="text-muted-foreground">Local Pickup Only</p>
-                <p className="text-sm text-accent mt-2 font-medium">Exact directions provided in order confirmation emails.</p>
+                <p className="text-muted-foreground">Local Pickup and Delivery Only</p>
+                <p className="text-sm text-accent mt-2 font-medium">Directions provided in order confirmation emails.</p>
               </div>
             </div>
 
@@ -32,7 +32,7 @@ export default function Contact() {
               </div>
               <div>
                 <h3 className="font-bold text-lg mb-1 text-foreground">Email</h3>
-                <a href="mailto:hello@jackpinefarm.test" className="text-muted-foreground hover:text-primary transition-colors">hello@jackpinefarm.test</a>
+                <a href="mailto:hello@jackpinefarm.test" className="text-muted-foreground hover:text-primary transition-colors">steph@jackpinefarms.farm</a>
               </div>
             </div>
 
@@ -41,8 +41,6 @@ export default function Contact() {
                 <Phone className="w-6 h-6" />
               </div>
               <div>
-                <h3 className="font-bold text-lg mb-1 text-foreground">Phone</h3>
-                <p className="text-muted-foreground">555-0199</p>
               </div>
             </div>
           </div>
