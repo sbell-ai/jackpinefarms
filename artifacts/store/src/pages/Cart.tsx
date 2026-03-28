@@ -21,11 +21,6 @@ type CartItem = {
   imageUrl?: string | null;
 };
 
-function eggStepFor(productType: string): number {
-  if (productType === "eggs_chicken") return 12;
-  if (productType === "eggs_duck") return 6;
-  return 1;
-}
 
 export default function Cart() {
   const [, setLocation] = useLocation();
@@ -125,33 +120,34 @@ export default function Cart() {
 
                 {item.pricingType !== "deposit" && (
                   <div className="flex items-center gap-4 mt-auto pt-4 border-t border-border/50">
-                    <span className="text-sm font-medium text-foreground">Quantity:</span>
+                    <span className="text-sm font-medium text-foreground">
+                      {item.unitLabel === "dozen" ? "Dozens:" : item.unitLabel === "half-dozen" ? "Half-dozens:" : "Quantity:"}
+                    </span>
                     <div className="flex items-center bg-background border border-border rounded-lg p-0.5">
-                      <button 
-                        onClick={() => {
-                          const step = eggStepFor(item.productType);
-                          handleUpdateQuantity(item.productId, Math.max(step, item.quantity - step), item.addGiblets);
-                        }}
-                        disabled={updatePending || item.quantity <= eggStepFor(item.productType)}
+                      <button
+                        onClick={() => handleUpdateQuantity(item.productId, Math.max(1, item.quantity - 1), item.addGiblets)}
+                        disabled={updatePending || item.quantity <= 1}
                         className="w-8 h-8 flex items-center justify-center rounded hover:bg-muted text-foreground transition-colors disabled:opacity-50"
                       >
                         <Minus className="w-3 h-3" />
                       </button>
                       <span className="w-10 text-center font-bold text-sm">{item.quantity}</span>
-                      <button 
-                        onClick={() => {
-                          const step = eggStepFor(item.productType);
-                          handleUpdateQuantity(item.productId, item.quantity + step, item.addGiblets);
-                        }}
+                      <button
+                        onClick={() => handleUpdateQuantity(item.productId, item.quantity + 1, item.addGiblets)}
                         disabled={updatePending}
                         className="w-8 h-8 flex items-center justify-center rounded hover:bg-muted text-foreground transition-colors disabled:opacity-50"
                       >
                         <Plus className="w-3 h-3" />
                       </button>
                     </div>
-                    {eggStepFor(item.productType) > 1 && (
+                    {item.unitLabel === "dozen" && (
                       <span className="text-xs text-muted-foreground">
-                        {item.productType === "eggs_chicken" ? "sold by the dozen" : "sold by the half-dozen"}
+                        {item.quantity * 12} eggs total
+                      </span>
+                    )}
+                    {item.unitLabel === "half-dozen" && (
+                      <span className="text-xs text-muted-foreground">
+                        {item.quantity * 6} eggs total
                       </span>
                     )}
                   </div>

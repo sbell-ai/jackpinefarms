@@ -91,11 +91,7 @@ router.post("/cart/items", async (req, res): Promise<void> => {
     return;
   }
 
-  const stepQty = product.productType === "eggs_chicken" ? 12
-    : product.productType === "eggs_duck" ? 6
-    : 1;
-  const minQty = stepQty;
-  const normalizedQty = Math.max(minQty, Math.ceil(quantity / stepQty) * stepQty);
+  const normalizedQty = Math.max(1, Math.round(quantity));
 
   const session = (req as any).session;
   if (!session.cart) session.cart = [];
@@ -147,10 +143,7 @@ router.patch("/cart/items/:productId", async (req, res): Promise<void> => {
       .where(eq(productsTable.id, productId))
       .limit(1);
 
-    const stepQty = product?.productType === "eggs_chicken" ? 12
-      : product?.productType === "eggs_duck" ? 6
-      : 1;
-    const normalizedQty = Math.max(stepQty, Math.ceil(quantity / stepQty) * stepQty);
+    const normalizedQty = Math.max(1, Math.round(quantity));
 
     const existing = session.cart.find((i: { productId: number }) => i.productId === productId);
     if (existing) {

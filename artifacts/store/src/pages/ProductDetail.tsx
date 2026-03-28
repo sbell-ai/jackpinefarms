@@ -25,25 +25,17 @@ export default function ProductDetail() {
   const [notifyEmail, setNotifyEmail] = useState("");
   const [notifySuccess, setNotifySuccess] = useState(false);
   
-  // Cart state — egg step sizes enforced client-side to match server rules
-  const eggStep =
-    product?.productType === "eggs_chicken" ? 12
-    : product?.productType === "eggs_duck" ? 6
-    : 1;
   const [quantity, setQuantity] = useState(1);
   const [addGiblets, setAddGiblets] = useState(false);
 
-  const isEgg = eggStep > 1;
+  const unitLabel = product?.unitLabel ?? null;
+  const isDozen = unitLabel === "dozen";
+  const isHalfDozen = unitLabel === "half-dozen";
 
-  // Reset quantity to minimum step when product type is known
+  // Reset quantity to 1 whenever product changes
   useEffect(() => {
-    if (product) {
-      const step = product.productType === "eggs_chicken" ? 12
-        : product.productType === "eggs_duck" ? 6
-        : 1;
-      setQuantity(step);
-    }
-  }, [product?.productType]);
+    if (product) setQuantity(1);
+  }, [product?.id]);
   
   const notifyMutation = useSubscribeNotifyMe();
   const addToCartMutation = useAddCartItem({
@@ -174,29 +166,34 @@ export default function ProductDetail() {
                 {product.pricingType === 'unit' && (
                   <div className="space-y-2">
                     <div className="flex items-center gap-4">
-                      <span className="font-medium text-foreground">Quantity:</span>
+                      <span className="font-medium text-foreground">
+                        {isDozen ? "Dozens:" : isHalfDozen ? "Half-dozens:" : "Quantity:"}
+                      </span>
                       <div className="flex items-center bg-background border border-border rounded-xl p-1">
-                        <button 
-                          onClick={() => setQuantity(Math.max(eggStep, quantity - eggStep))}
-                          disabled={quantity <= eggStep}
+                        <button
+                          onClick={() => setQuantity(Math.max(1, quantity - 1))}
+                          disabled={quantity <= 1}
                           className="w-10 h-10 flex items-center justify-center rounded-lg hover:bg-muted text-foreground transition-colors disabled:opacity-40"
                         >
                           <Minus className="w-4 h-4" />
                         </button>
                         <span className="w-12 text-center font-bold text-lg">{quantity}</span>
-                        <button 
-                          onClick={() => setQuantity(quantity + eggStep)}
+                        <button
+                          onClick={() => setQuantity(quantity + 1)}
                           className="w-10 h-10 flex items-center justify-center rounded-lg hover:bg-muted text-foreground transition-colors"
                         >
                           <Plus className="w-4 h-4" />
                         </button>
                       </div>
                     </div>
-                    {isEgg && (
+                    {isDozen && (
                       <p className="text-sm text-muted-foreground">
-                        {eggStep === 12
-                          ? "Sold by the dozen (12 eggs). Minimum 1 dozen."
-                          : "Sold by the half-dozen (6 eggs). Minimum 6 eggs."}
+                        Total eggs: {quantity * 12}. Minimum 1 dozen.
+                      </p>
+                    )}
+                    {isHalfDozen && (
+                      <p className="text-sm text-muted-foreground">
+                        Total eggs: {quantity * 6}. Minimum 1 half-dozen.
                       </p>
                     )}
                   </div>
