@@ -103,10 +103,16 @@ export function MultiImagePanel({ productId, images, onImagesChange }: MultiImag
         )}
       </div>
 
+      {!canAddMore && (
+        <p className="text-xs text-amber-600 font-medium">
+          Maximum of 5 images reached. Remove one to add another.
+        </p>
+      )}
+
       <input
         ref={fileInputRef}
         type="file"
-        accept="image/jpeg,image/png,image/webp,image/gif"
+        accept="image/jpeg,image/png,image/webp"
         className="hidden"
         onChange={async (e) => {
           const file = e.target.files?.[0];

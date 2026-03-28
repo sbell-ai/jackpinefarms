@@ -168,6 +168,18 @@ router.patch(
 
     const { imageIds } = parsed.data;
 
+    const existingImages = await db
+      .select({ id: productImagesTable.id })
+      .from(productImagesTable)
+      .where(eq(productImagesTable.productId, productId));
+
+    const ownedIds = new Set(existingImages.map((img) => img.id));
+    const allOwned = imageIds.every((id) => ownedIds.has(id));
+    if (!allOwned || imageIds.length !== ownedIds.size) {
+      res.status(400).json({ error: "Invalid image IDs for this product." });
+      return;
+    }
+
     await Promise.all(
       imageIds.map((id, index) =>
         db
