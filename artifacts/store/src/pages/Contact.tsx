@@ -37,8 +37,7 @@ export default function Contact() {
         body: JSON.stringify(data),
       });
       if (!res.ok) {
-        const body = await res.json().catch(() => ({}));
-        setServerError((body as any).error ?? "Something went wrong. Please try again.");
+        setServerError("Something went wrong. Please try again or email us directly.");
         return;
       }
       setSubmitted(true);
@@ -58,7 +57,6 @@ export default function Contact() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-16">
-        {/* Farm Details */}
         <div className="bg-card p-10 rounded-3xl border border-border shadow-sm">
           <h2 className="text-3xl font-serif font-bold text-foreground mb-8">Farm Details</h2>
           <div className="space-y-8">
@@ -92,7 +90,6 @@ export default function Contact() {
           </div>
         </div>
 
-        {/* Contact Form */}
         <div className="bg-card p-10 rounded-3xl border border-border shadow-sm">
           <h2 className="text-3xl font-serif font-bold text-foreground mb-8">Send a Message</h2>
 
@@ -112,7 +109,6 @@ export default function Contact() {
             </div>
           ) : (
             <form className="space-y-5" onSubmit={handleSubmit(onSubmit)} noValidate>
-              {/* Honeypot — invisible to real users, filled by bots */}
               <input
                 type="text"
                 {...register("company")}
@@ -122,7 +118,6 @@ export default function Contact() {
                 style={{ position: "absolute", left: "-9999px", width: "1px", height: "1px", overflow: "hidden" }}
               />
 
-              {/* Name */}
               <div className="space-y-1.5">
                 <label htmlFor="contact-name" className="block text-sm font-bold text-foreground">
                   Name
@@ -145,7 +140,6 @@ export default function Contact() {
                 )}
               </div>
 
-              {/* Email */}
               <div className="space-y-1.5">
                 <label htmlFor="contact-email" className="block text-sm font-bold text-foreground">
                   Email Address
@@ -168,7 +162,6 @@ export default function Contact() {
                 )}
               </div>
 
-              {/* Subject */}
               <div className="space-y-1.5">
                 <label htmlFor="contact-subject" className="block text-sm font-bold text-foreground">
                   Subject
@@ -190,7 +183,6 @@ export default function Contact() {
                 )}
               </div>
 
-              {/* Message */}
               <div className="space-y-1.5">
                 <label htmlFor="contact-message" className="block text-sm font-bold text-foreground">
                   Message
@@ -212,7 +204,6 @@ export default function Contact() {
                 )}
               </div>
 
-              {/* Server error */}
               {serverError && (
                 <div className="flex items-start gap-2 p-4 rounded-xl bg-destructive/10 border border-destructive/20 text-destructive text-sm">
                   <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />
@@ -220,7 +211,6 @@ export default function Contact() {
                 </div>
               )}
 
-              {/* Submit */}
               <button
                 type="submit"
                 disabled={isSubmitting}
@@ -229,7 +219,7 @@ export default function Contact() {
                 {isSubmitting ? (
                   <>
                     <Loader2 className="w-5 h-5 animate-spin" />
-                    Sending…
+                    Sending...
                   </>
                 ) : (
                   "Send Message"

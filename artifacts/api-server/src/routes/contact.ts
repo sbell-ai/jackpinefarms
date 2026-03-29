@@ -32,17 +32,31 @@ router.post("/contact", contactLimiter, async (req: Request, res: Response): Pro
 
   const { name, email, subject, message, company } = parsed.data;
 
-  if (company) {
-    res.json({ ok: true });
-    return;
-  }
-
   const ip = (() => {
     const forwarded = req.headers["x-forwarded-for"];
     const raw = Array.isArray(forwarded) ? forwarded[0] : (forwarded?.split(",")[0] ?? req.ip ?? "");
     return raw.trim();
   })();
   const userAgent = req.headers["user-agent"] ?? null;
+
+  if (company) {
+    try {
+      await db.insert(contactSubmissionsTable).values({
+        name,
+        email,
+        subject,
+        message,
+        ip: ip || null,
+        userAgent,
+        status: "honeypot",
+      });
+    } catch {
+      // ignore persistence errors for honeypot
+    }
+    res.json({ ok: true });
+    return;
+  }
+
   const contactTo = process.env.CONTACT_TO_EMAIL;
 
   let emailResult: { sent: boolean } = { sent: false };
