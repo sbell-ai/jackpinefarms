@@ -13,6 +13,7 @@ export interface EmailMessage {
   subject: string;
   text: string;
   html?: string;
+  replyTo?: string;
 }
 
 export interface SendEmailResult {
@@ -31,6 +32,7 @@ async function sendViaSendGrid(msg: EmailMessage, apiKey: string, from: string):
     body: JSON.stringify({
       personalizations: [{ to: [{ email: msg.to }] }],
       from: { email: from },
+      reply_to: msg.replyTo ? { email: msg.replyTo } : undefined,
       subject: msg.subject,
       content: [
         { type: "text/plain", value: msg.text },
@@ -62,7 +64,7 @@ async function sendViaSmtp(msg: EmailMessage, from: string): Promise<void> {
     auth: { user, pass },
   });
 
-  await transporter.sendMail({ from, to: msg.to, subject: msg.subject, text: msg.text, html: msg.html });
+  await transporter.sendMail({ from, to: msg.to, replyTo: msg.replyTo, subject: msg.subject, text: msg.text, html: msg.html });
 }
 
 /**

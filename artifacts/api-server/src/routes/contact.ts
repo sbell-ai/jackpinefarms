@@ -73,10 +73,11 @@ router.post("/contact", contactLimiter, async (req: Request, res: Response): Pro
       subject: `[Contact] ${subject}`,
       text,
       html,
+      replyTo: email,
     });
   }
 
-  const status = contactTo ? (emailResult.sent ? "sent" : "failed") : "no_recipient_configured";
+  const status = emailResult.sent ? "sent" : "failed";
 
   try {
     await db.insert(contactSubmissionsTable).values({
