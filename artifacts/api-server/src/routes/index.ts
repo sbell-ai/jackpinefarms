@@ -16,6 +16,7 @@ import storageRouter from "./storage.js";
 import eggsRouter from "./eggs.js";
 import productImagesRouter from "./product-images.js";
 import expensesRouter from "./expenses.js";
+import contactRouter from "./contact.js";
 
 const router: IRouter = Router();
 
@@ -36,5 +37,6 @@ router.use(webhooksRouter);
 router.use(storageRouter);
 router.use(eggsRouter);
 router.use(expensesRouter);
+router.use(contactRouter);
 
 export default router;

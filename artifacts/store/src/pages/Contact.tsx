@@ -80,11 +80,4 @@ export default function Contact() {
               type="button"
               className="w-full py-4 rounded-xl bg-primary text-primary-foreground font-bold text-lg hover:bg-primary/90 transition-all shadow-md hover:shadow-lg"
             >
-              Send Message
-            </button>
-          </form>
-        </div>
-      </div>
-    </div>
-  );
-}
+        yGTAvbDhcF!BN6D

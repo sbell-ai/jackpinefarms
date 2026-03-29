@@ -123,6 +123,7 @@ Database layer using Drizzle ORM with PostgreSQL.
 - `customer_carts` — shopping cart
 - `stripe_pending` — Stripe payment intent tracking
 - `expenses` — farm operating expenses (date, category, amount, vendor, payment method)
+- `contact_submissions` — contact form submissions (name, email, subject, message, ip, user_agent, status)
 
 **Order status enum (9 values)**:
 `pending_payment | deposit_paid | cash_pending | pickup_assigned | weights_entered | invoice_sent | fulfilled | cancelled | no_show`
@@ -168,6 +169,7 @@ When calling hooks with query options in React Query v5, always pass `queryKey` 
 ## Admin
 
 - Password: set via `ADMIN_PASSWORD` env var (dev default: `jackpine2026`)
+- Contact form email recipient: set `CONTACT_TO_EMAIL` secret to the farm owner's inbox (e.g. `steph@jackpinefarms.farm`). Without it, submissions are stored in DB but not emailed.
 - Session: express-session with `SESSION_SECRET` env var
 - Admin UI at `/admin` (dashboard), `/admin/orders`, `/admin/products`, `/admin/batches`, `/admin/pickup-events`, `/admin/customers`, `/admin/eggs` (egg inventory), `/admin/flocks`, `/admin/animals`
 
