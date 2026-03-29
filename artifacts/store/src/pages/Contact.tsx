@@ -25,7 +25,7 @@ export default function Contact() {
     reset,
   } = useForm<ContactFormValues>({
     resolver: zodResolver(contactSchema),
-    mode: "onBlur",
+    mode: "onChange",
     defaultValues: { name: "", email: "", subject: "", message: "", company: "" },
   });
 

@@ -61,6 +61,14 @@ router.post("/contact", contactLimiter, async (req: Request, res: Response): Pro
 
   let emailResult: { sent: boolean } = { sent: false };
 
+  if (!contactTo) {
+    console.log(
+      `[CONTACT STUB] CONTACT_TO_EMAIL not set — submission not delivered.\n` +
+      `  From: ${name} <${email}>\n` +
+      `  Subject: ${subject}`
+    );
+  }
+
   if (contactTo) {
     const text = [
       `New contact message from ${name} <${email}>`,
