@@ -48,7 +48,7 @@ router.post("/contact", contactLimiter, async (req: Request, res: Response): Pro
         message,
         ip: ip || null,
         userAgent,
-        status: "honeypot",
+        status: "failed",
       });
     } catch {
       // ignore persistence errors for honeypot
