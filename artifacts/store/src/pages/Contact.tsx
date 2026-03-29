@@ -32,19 +32,9 @@ export default function Contact() {
               </div>
               <div>
                 <h3 className="font-bold text-lg mb-1 text-foreground">Email</h3>
-                <a href="mailto:hello@jackpinefarm.test" className="text-muted-foreground hover:text-primary transition-colors">steph@jackpinefarms.farm</a>
+                <a href="mailto:steph@jackpinefarms.farm" className="text-muted-foreground hover:text-primary transition-colors">hello@jackpinefarms.farm</a>
               </div>
             </div>
-
-            <div className="flex items-start gap-4">
-              <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center text-primary shrink-0">
-                <Phone className="w-6 h-6" />
-              </div>
-              <div>
-              </div>
-            </div>
-          </div>
-        </div>
 
         {/* Contact Form UI (No backend wired yet per PRD) */}
         <div className="bg-background">
