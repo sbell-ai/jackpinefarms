@@ -52,6 +52,7 @@ export const ordersTable = pgTable("orders", {
   stripeRefundId: text("stripe_refund_id"),
   stripeInvoiceId: text("stripe_invoice_id"),
   finalWeightLbs: doublePrecision("final_weight_lbs"),
+  appliedCouponCode: text("applied_coupon_code"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true })
     .notNull()

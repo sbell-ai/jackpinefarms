@@ -103,7 +103,7 @@ router.post("/admin/coupons", requireAdmin, async (req, res): Promise<void> => {
 });
 
 router.patch("/admin/coupons/:id/toggle", requireAdmin, async (req, res): Promise<void> => {
-  const id = parseInt(req.params.id, 10);
+  const id = parseInt(req.params["id"] as string, 10);
   if (isNaN(id)) {
     res.status(400).json({ error: "Invalid coupon ID" });
     return;
@@ -164,7 +164,7 @@ router.patch("/admin/coupons/:id/toggle", requireAdmin, async (req, res): Promis
 });
 
 router.delete("/admin/coupons/:id", requireAdmin, async (req, res): Promise<void> => {
-  const id = parseInt(req.params.id, 10);
+  const id = parseInt(req.params["id"] as string, 10);
   if (isNaN(id)) {
     res.status(400).json({ error: "Invalid coupon ID" });
     return;

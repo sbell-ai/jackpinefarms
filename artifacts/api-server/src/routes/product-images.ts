@@ -26,7 +26,7 @@ router.get(
   "/admin/products/:productId/images",
   requireAdmin,
   async (req, res): Promise<void> => {
-    const productId = parseInt(req.params.productId, 10);
+    const productId = parseInt(req.params["productId"] as string, 10);
     if (isNaN(productId)) {
       res.status(400).json({ error: "Invalid product ID" });
       return;
@@ -57,7 +57,7 @@ router.post(
   requireAdmin,
   async (req, res): Promise<void> => {
     const params = GetProductParams.safeParse({
-      id: parseInt(req.params.productId, 10),
+      id: parseInt(req.params["productId"] as string, 10),
     });
     if (!params.success) {
       res.status(400).json({ error: "Invalid product ID" });
@@ -119,8 +119,8 @@ router.delete(
   "/admin/products/:productId/images/:imageId",
   requireAdmin,
   async (req, res): Promise<void> => {
-    const productId = parseInt(req.params.productId, 10);
-    const imageId = parseInt(req.params.imageId, 10);
+    const productId = parseInt(req.params["productId"] as string, 10);
+    const imageId = parseInt(req.params["imageId"] as string, 10);
 
     if (isNaN(productId) || isNaN(imageId)) {
       res.status(400).json({ error: "Invalid ID" });
@@ -154,7 +154,7 @@ router.patch(
   "/admin/products/:productId/images/reorder",
   requireAdmin,
   async (req, res): Promise<void> => {
-    const productId = parseInt(req.params.productId, 10);
+    const productId = parseInt(req.params["productId"] as string, 10);
     if (isNaN(productId)) {
       res.status(400).json({ error: "Invalid product ID" });
       return;

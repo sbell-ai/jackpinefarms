@@ -13,6 +13,7 @@ import {
   type CartLineItem,
 } from "@workspace/db";
 import { CreateStripeCheckoutBody, CreateCashOrderBody } from "@workspace/api-zod";
+import type Stripe from "stripe";
 
 const router: IRouter = Router();
 
@@ -116,6 +117,7 @@ export async function createOrderFromData(data: {
   lineItems: CartLineItem[];
   claimToken?: string | null;
   claimTokenExpiresAt?: Date | null;
+  appliedCouponCode?: string | null;
 }) {
   const [order] = await db
     .insert(ordersTable)
@@ -132,6 +134,7 @@ export async function createOrderFromData(data: {
       stripePaymentIntentId: data.stripePaymentIntentId ?? null,
       claimToken: data.claimToken ?? null,
       claimTokenExpiresAt: data.claimTokenExpiresAt ?? null,
+      appliedCouponCode: data.appliedCouponCode ?? null,
     })
     .returning();
 
@@ -198,7 +201,7 @@ router.post("/checkout/stripe", async (req, res): Promise<void> => {
 
   const totalAfterDiscount = Math.max(0, orderData.totalInCents - discountAmountCents);
 
-  if (totalAfterDiscount > 0 && totalAfterDiscount < 50) {
+  if (totalAfterDiscount < 50) {
     res.status(400).json({ error: "Order total after discount must be at least $0.50 for card payment. Use Cash at Pickup instead." });
     return;
   }
@@ -214,17 +217,12 @@ router.post("/checkout/stripe", async (req, res): Promise<void> => {
     quantity: li.quantity,
   }));
 
-  const sessionParams: any = {
-    payment_method_types: ["card"],
-    line_items: stripeLineItems,
-    mode: "payment",
-    customer_email: customerEmail,
-    success_url: `${baseUrl}/order-confirmation?stripe_session_id={CHECKOUT_SESSION_ID}`,
-    cancel_url: `${baseUrl}/checkout`,
-  };
+  let discountsParam: Stripe.Checkout.SessionCreateParams["discounts"] | undefined;
+  let allowPromoCodes = true;
 
   if (stripePromotionCodeId) {
-    sessionParams.discounts = [{ promotion_code: stripePromotionCodeId }];
+    discountsParam = [{ promotion_code: stripePromotionCodeId }];
+    allowPromoCodes = false;
   } else if (appliedCouponCode) {
     const [couponForStripe] = await db
       .select({ stripeCouponId: couponsTable.stripeCouponId })
@@ -232,13 +230,20 @@ router.post("/checkout/stripe", async (req, res): Promise<void> => {
       .where(eq(couponsTable.code, appliedCouponCode))
       .limit(1);
     if (couponForStripe?.stripeCouponId) {
-      sessionParams.discounts = [{ coupon: couponForStripe.stripeCouponId }];
-    } else {
-      sessionParams.allow_promotion_codes = true;
+      discountsParam = [{ coupon: couponForStripe.stripeCouponId }];
+      allowPromoCodes = false;
     }
-  } else {
-    sessionParams.allow_promotion_codes = true;
   }
+
+  const sessionParams: Stripe.Checkout.SessionCreateParams = {
+    payment_method_types: ["card"],
+    line_items: stripeLineItems,
+    mode: "payment",
+    customer_email: customerEmail,
+    success_url: `${baseUrl}/order-confirmation?stripe_session_id={CHECKOUT_SESSION_ID}`,
+    cancel_url: `${baseUrl}/checkout`,
+    ...(discountsParam ? { discounts: discountsParam } : { allow_promotion_codes: allowPromoCodes }),
+  };
 
   const checkoutSession = await stripe.checkout.sessions.create(sessionParams);
 
@@ -289,14 +294,14 @@ router.post("/checkout/cash", async (req, res): Promise<void> => {
   const { name: customerName, email: customerEmail, phone: customerPhone, notes } = parsed.data;
 
   let discountAmountCents = 0;
-  let appliedCouponId: number | null = null;
+  let cashCouponCode: string | null = null;
 
   const sessionCouponCodeCash: string | undefined = session.appliedCouponCode;
   if (sessionCouponCodeCash) {
     const couponResult = await validateCoupon(sessionCouponCodeCash, orderData.totalInCents);
     if (couponResult) {
       discountAmountCents = couponResult.discountAmountCents;
-      appliedCouponId = couponResult.coupon.id;
+      cashCouponCode = couponResult.coupon.code;
     }
   }
 
@@ -318,14 +323,9 @@ router.post("/checkout/cash", async (req, res): Promise<void> => {
     lineItems: orderData.lineItems,
     claimToken,
     claimTokenExpiresAt,
+    appliedCouponCode: cashCouponCode,
   });
-
-  if (appliedCouponId != null) {
-    db.update(couponsTable)
-      .set({ redemptionsCount: sql`${couponsTable.redemptionsCount} + 1` })
-      .where(eq(couponsTable.id, appliedCouponId))
-      .catch((err: any) => console.warn("[checkout/cash] Coupon redemption increment failed:", err.message));
-  }
+  // Note: cash coupon redemption is counted when admin marks the order fulfilled
 
   session.cart = [];
   session.appliedCouponCode = null;

@@ -1,9 +1,12 @@
 import { useState } from "react";
 import { Link, useLocation } from "wouter";
-import { 
-  useGetCart, getGetCartQueryKey, 
-  useRemoveCartItem, 
+import {
+  useGetCart, getGetCartQueryKey,
+  useRemoveCartItem,
+  useApplyCartCoupon,
+  useRemoveCartCoupon,
 } from "@workspace/api-client-react";
+import type { ApplyCartCouponResult, ApplyCartCouponError } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { formatMoney } from "@/lib/utils";
 import { Loader2, Trash2, ArrowRight, ShoppingBag, Plus, Minus, Tag, Check, X } from "lucide-react";
@@ -57,8 +60,29 @@ export default function Cart() {
   const [updatePending, setUpdatePending] = useState(false);
   const [couponInput, setCouponInput] = useState("");
   const [couponError, setCouponError] = useState<string | null>(null);
-  const [isApplying, setIsApplying] = useState(false);
-  const [isRemoving, setIsRemoving] = useState(false);
+
+  const applyMutation = useApplyCartCoupon({
+    mutation: {
+      onSuccess: (data: ApplyCartCouponResult | ApplyCartCouponError) => {
+        if (!data.valid) {
+          setCouponError(data.error ?? "Invalid or expired coupon code");
+          return;
+        }
+        setCouponInput("");
+        setCouponError(null);
+        queryClient.invalidateQueries({ queryKey: getGetCartQueryKey() });
+      },
+      onError: () => {
+        setCouponError("Failed to apply coupon. Please try again.");
+      },
+    },
+  });
+
+  const removeCouponMutation = useRemoveCartCoupon({
+    mutation: {
+      onSuccess: () => queryClient.invalidateQueries({ queryKey: getGetCartQueryKey() }),
+    },
+  });
 
   const handleUpdateQuantity = async (productId: number, newQty: number, addGiblets: boolean) => {
     if (newQty < 1) return;
@@ -80,41 +104,15 @@ export default function Cart() {
     removeMutation.mutate({ productId });
   };
 
-  const handleApplyCoupon = async () => {
+  const handleApplyCoupon = () => {
     const code = couponInput.trim().toUpperCase();
     if (!code) return;
     setCouponError(null);
-    setIsApplying(true);
-    try {
-      const res = await fetch("/api/cart/coupon", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({ code }),
-      });
-      const data = await res.json();
-      if (!res.ok || !data.valid) {
-        setCouponError(data.error ?? "Invalid or expired coupon code");
-        return;
-      }
-      setCouponInput("");
-      await queryClient.invalidateQueries({ queryKey: getGetCartQueryKey() });
-    } finally {
-      setIsApplying(false);
-    }
+    applyMutation.mutate({ data: { code } });
   };
 
-  const handleRemoveCoupon = async () => {
-    setIsRemoving(true);
-    try {
-      await fetch("/api/cart/coupon", {
-        method: "DELETE",
-        credentials: "include",
-      });
-      await queryClient.invalidateQueries({ queryKey: getGetCartQueryKey() });
-    } finally {
-      setIsRemoving(false);
-    }
+  const handleRemoveCoupon = () => {
+    removeCouponMutation.mutate();
   };
 
   if (isLoading) {
@@ -267,10 +265,10 @@ export default function Cart() {
                   <button
                     type="button"
                     onClick={handleRemoveCoupon}
-                    disabled={isRemoving}
+                    disabled={removeCouponMutation.isPending}
                     className="p-1 rounded hover:bg-green-100 dark:hover:bg-green-800 transition-colors disabled:opacity-50"
                   >
-                    {isRemoving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <X className="w-3.5 h-3.5" />}
+                    {removeCouponMutation.isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <X className="w-3.5 h-3.5" />}
                   </button>
                 </div>
               ) : (
@@ -291,10 +289,10 @@ export default function Cart() {
                     <button
                       type="button"
                       onClick={handleApplyCoupon}
-                      disabled={!couponInput.trim() || isApplying}
+                      disabled={!couponInput.trim() || applyMutation.isPending}
                       className="px-3 py-2 rounded-lg bg-muted hover:bg-muted/80 text-sm font-bold transition-colors disabled:opacity-40 shrink-0"
                     >
-                      {isApplying ? <Loader2 className="w-4 h-4 animate-spin" /> : "Apply"}
+                      {applyMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : "Apply"}
                     </button>
                   </div>
                   {couponError && (

@@ -77,6 +77,9 @@ router.post("/webhooks/stripe", async (req, res): Promise<void> => {
       const claimToken = isGuest ? generateClaimToken() : null;
       const claimTokenExpiresAt = claimToken ? new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) : null;
 
+      // Use Stripe's actual charged amount as source of truth (covers Stripe-entered codes too)
+      const actualTotalInCents = checkoutSession.amount_total ?? pending.totalInCents;
+
       const order = await createOrderFromData({
         customerId: pending.customerId ?? null,
         customerName: pending.customerName,
@@ -85,12 +88,13 @@ router.post("/webhooks/stripe", async (req, res): Promise<void> => {
         notes: pending.notes,
         paymentMethod: "stripe",
         status: "deposit_paid",
-        totalInCents: pending.totalInCents,
+        totalInCents: actualTotalInCents,
         stripeCheckoutSessionId: stripeSessionId,
         stripePaymentIntentId: checkoutSession.payment_intent ?? null,
         lineItems,
         claimToken,
         claimTokenExpiresAt,
+        appliedCouponCode: pending.appliedCouponCode ?? null,
       });
 
       await db
@@ -124,7 +128,7 @@ router.post("/webhooks/stripe", async (req, res): Promise<void> => {
 
       const baseUrl = process.env.STORE_BASE_URL ?? `https://${process.env.REPLIT_DEV_DOMAIN}/store`;
       const orderNum = `#${String(order.id).padStart(6, "0")}`;
-      const totalFormatted = `$${(pending.totalInCents / 100).toFixed(2)}`;
+      const totalFormatted = `$${(actualTotalInCents / 100).toFixed(2)}`;
       const claimUrl = claimToken
         ? `${baseUrl}/auth/claim-order?token=${claimToken}`
         : `${baseUrl}/account/orders/${order.id}`;

@@ -238,7 +238,29 @@ export interface Coupon {
   isActive: boolean;
   /** @nullable */
   stripeCouponId: string | null;
+  /** @nullable */
+  stripePromotionCodeId: string | null;
   createdAt: string;
+}
+
+export interface ApplyCartCouponBody {
+  code: string;
+}
+
+export interface ApplyCartCouponResult {
+  valid: true;
+  couponId: number;
+  code: string;
+  discountAmountCents: number;
+  totalAfterDiscountInCents: number;
+  description: string;
+  /** @nullable */
+  stripePromotionCodeId: string | null;
+}
+
+export interface ApplyCartCouponError {
+  valid: false;
+  error: string;
 }
 
 export interface CreateCouponBody {

@@ -1,22 +1,14 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Loader2, Plus, ToggleLeft, ToggleRight, Trash2, Tag, X } from "lucide-react";
 import { formatMoney } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
-
-interface Coupon {
-  id: number;
-  code: string;
-  description: string | null;
-  discountType: "percent" | "fixed_cents";
-  discountValue: number;
-  minOrderCents: number;
-  maxRedemptions: number | null;
-  redemptionsCount: number;
-  expiresAt: string | null;
-  isActive: boolean;
-  stripeCouponId: string | null;
-  createdAt: string;
-}
+import {
+  useAdminListCoupons,
+  useAdminCreateCoupon,
+  useAdminToggleCoupon,
+  useAdminDeleteCoupon,
+} from "@workspace/api-client-react";
+import type { Coupon, CreateCouponBody } from "@workspace/api-client-react";
 
 interface CreateForm {
   code: string;
@@ -39,29 +31,48 @@ const emptyForm: CreateForm = {
 };
 
 export default function Coupons() {
-  const [coupons, setCoupons] = useState<Coupon[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState<CreateForm>(emptyForm);
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
-  const [deletingId, setDeletingId] = useState<number | null>(null);
-  const [togglingId, setTogglingId] = useState<number | null>(null);
   const { toast } = useToast();
 
-  const fetchCoupons = async () => {
-    setIsLoading(true);
-    try {
-      const res = await fetch("/api/admin/coupons", { credentials: "include" });
-      if (res.ok) setCoupons(await res.json());
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  const { data: coupons = [], isLoading, refetch } = useAdminListCoupons();
 
-  useEffect(() => { fetchCoupons(); }, []);
+  const createMutation = useAdminCreateCoupon({
+    mutation: {
+      onSuccess: (coupon: Coupon) => {
+        toast({ title: "Coupon created", description: `Code: ${coupon.code}` });
+        setShowForm(false);
+        setForm(emptyForm);
+        refetch();
+      },
+      onError: (err: unknown) => {
+        const msg = (err as { response?: { data?: { error?: string } } })?.response?.data?.error ?? "Failed to create coupon";
+        setFormError(msg);
+      },
+    },
+  });
 
-  const handleCreate = async (e: React.FormEvent) => {
+  const toggleMutation = useAdminToggleCoupon({
+    mutation: {
+      onSuccess: () => { refetch(); },
+    },
+  });
+
+  const deleteMutation = useAdminDeleteCoupon({
+    mutation: {
+      onSuccess: () => {
+        toast({ title: "Coupon deleted" });
+        refetch();
+      },
+      onError: (err: unknown) => {
+        const msg = (err as { response?: { data?: { error?: string } } })?.response?.data?.error ?? "Cannot delete coupon";
+        toast({ title: "Cannot delete", description: msg, variant: "destructive" });
+      },
+    },
+  });
+
+  const handleCreate = (e: React.FormEvent) => {
     e.preventDefault();
     setFormError(null);
     const discountValue = parseFloat(form.discountValue);
@@ -74,76 +85,26 @@ export default function Coupons() {
       return;
     }
 
-    setIsSubmitting(true);
-    try {
-      const body: Record<string, unknown> = {
-        code: form.code.trim().toUpperCase(),
-        discountType: form.discountType,
-        discountValue: form.discountType === "percent"
-          ? Math.round(discountValue)
-          : Math.round(discountValue * 100),
-      };
-      if (form.description.trim()) body.description = form.description.trim();
-      if (form.minOrderDollars) body.minOrderCents = Math.round(parseFloat(form.minOrderDollars) * 100);
-      if (form.maxRedemptions) body.maxRedemptions = parseInt(form.maxRedemptions, 10);
-      if (form.expiresAt) body.expiresAt = new Date(form.expiresAt).toISOString();
+    const body: CreateCouponBody = {
+      code: form.code.trim().toUpperCase(),
+      discountType: form.discountType,
+      discountValue: form.discountType === "percent"
+        ? Math.round(discountValue)
+        : Math.round(discountValue * 100),
+    };
+    if (form.description.trim()) body.description = form.description.trim();
+    if (form.minOrderDollars) body.minOrderCents = Math.round(parseFloat(form.minOrderDollars) * 100);
+    if (form.maxRedemptions) body.maxRedemptions = parseInt(form.maxRedemptions, 10);
+    if (form.expiresAt) body.expiresAt = new Date(form.expiresAt).toISOString();
 
-      const res = await fetch("/api/admin/coupons", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify(body),
-      });
-
-      const data = await res.json();
-      if (!res.ok) {
-        setFormError(data.error ?? "Failed to create coupon");
-        return;
-      }
-
-      toast({ title: "Coupon created", description: `Code: ${data.code}` });
-      setShowForm(false);
-      setForm(emptyForm);
-      fetchCoupons();
-    } finally {
-      setIsSubmitting(false);
-    }
+    createMutation.mutate({ data: body });
   };
 
-  const handleToggle = async (id: number) => {
-    setTogglingId(id);
-    try {
-      const res = await fetch(`/api/admin/coupons/${id}/toggle`, {
-        method: "PATCH",
-        credentials: "include",
-      });
-      if (res.ok) {
-        const updated: Coupon = await res.json();
-        setCoupons(prev => prev.map(c => c.id === id ? updated : c));
-      }
-    } finally {
-      setTogglingId(null);
-    }
-  };
+  const handleToggle = (id: number) => toggleMutation.mutate({ id });
 
-  const handleDelete = async (id: number) => {
+  const handleDelete = (id: number) => {
     if (!confirm("Delete this coupon? This cannot be undone.")) return;
-    setDeletingId(id);
-    try {
-      const res = await fetch(`/api/admin/coupons/${id}`, {
-        method: "DELETE",
-        credentials: "include",
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        toast({ title: "Cannot delete", description: data.error, variant: "destructive" });
-        return;
-      }
-      setCoupons(prev => prev.filter(c => c.id !== id));
-      toast({ title: "Coupon deleted" });
-    } finally {
-      setDeletingId(null);
-    }
+    deleteMutation.mutate({ id });
   };
 
   const formatDiscount = (c: Coupon) =>
@@ -290,10 +251,10 @@ export default function Coupons() {
               </button>
               <button
                 type="submit"
-                disabled={isSubmitting}
+                disabled={createMutation.isPending}
                 className="flex items-center gap-2 px-6 py-2 bg-primary text-white rounded-lg font-bold hover:bg-primary/90 transition-all disabled:opacity-50"
               >
-                {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
+                {createMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
                 Create Coupon
               </button>
             </div>
@@ -374,11 +335,11 @@ export default function Coupons() {
                       <div className="flex items-center justify-end gap-1">
                         <button
                           onClick={() => handleToggle(coupon.id)}
-                          disabled={togglingId === coupon.id}
+                          disabled={toggleMutation.isPending && toggleMutation.variables?.id === coupon.id}
                           className="p-2 rounded-lg hover:bg-muted transition-colors text-muted-foreground hover:text-foreground disabled:opacity-50"
                           title={coupon.isActive ? "Deactivate" : "Activate"}
                         >
-                          {togglingId === coupon.id
+                          {toggleMutation.isPending && toggleMutation.variables?.id === coupon.id
                             ? <Loader2 className="w-4 h-4 animate-spin" />
                             : coupon.isActive
                               ? <ToggleRight className="w-4 h-4 text-green-600" />
@@ -386,11 +347,11 @@ export default function Coupons() {
                         </button>
                         <button
                           onClick={() => handleDelete(coupon.id)}
-                          disabled={deletingId === coupon.id || coupon.redemptionsCount > 0}
+                          disabled={(deleteMutation.isPending && deleteMutation.variables?.id === coupon.id) || coupon.redemptionsCount > 0}
                           className="p-2 rounded-lg hover:bg-destructive/10 transition-colors text-muted-foreground hover:text-destructive disabled:opacity-30 disabled:cursor-not-allowed"
                           title={coupon.redemptionsCount > 0 ? "Cannot delete a used coupon" : "Delete coupon"}
                         >
-                          {deletingId === coupon.id
+                          {deleteMutation.isPending && deleteMutation.variables?.id === coupon.id
                             ? <Loader2 className="w-4 h-4 animate-spin" />
                             : <Trash2 className="w-4 h-4" />}
                         </button>

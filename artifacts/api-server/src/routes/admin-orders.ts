@@ -1,7 +1,7 @@
 import "../types/session.d.ts";
 import { Router, type IRouter } from "express";
-import { desc, eq, and, SQL } from "drizzle-orm";
-import { db, ordersTable, orderEventsTable, orderItemsTable, preorderBatchesTable } from "@workspace/db";
+import { desc, eq, and, SQL, sql } from "drizzle-orm";
+import { db, ordersTable, orderEventsTable, orderItemsTable, preorderBatchesTable, couponsTable } from "@workspace/db";
 import { requireAdmin } from "../middlewares/require-admin.js";
 import { AdminListOrdersQueryParams, AdminGetOrderParams } from "@workspace/api-zod";
 import { getOrderWithItems } from "./orders.js";
@@ -93,6 +93,18 @@ router.patch("/admin/orders/:id/status", requireAdmin, async (req, res): Promise
   if (!existing) { res.status(404).json({ error: "Order not found" }); return; }
 
   await db.update(ordersTable).set({ status: parsed.data.status }).where(eq(ordersTable.id, id));
+
+  // Increment coupon redemption for cash orders when they reach fulfilled status
+  if (
+    parsed.data.status === "fulfilled" &&
+    existing.paymentMethod === "cash" &&
+    (existing as any).appliedCouponCode
+  ) {
+    db.update(couponsTable)
+      .set({ redemptionsCount: sql`${couponsTable.redemptionsCount} + 1` })
+      .where(eq(couponsTable.code, (existing as any).appliedCouponCode))
+      .catch((err: unknown) => console.warn("[admin-orders] Coupon redemption increment failed:", err));
+  }
 
   const noteBody = parsed.data.note
     ? `Status changed from ${existing.status} to ${parsed.data.status}. Note: ${parsed.data.note}`
