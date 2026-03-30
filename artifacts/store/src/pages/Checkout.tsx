@@ -6,6 +6,7 @@ import {
   useCreateStripeCheckout,
   useCreateCashOrder
 } from "@workspace/api-client-react";
+import type { Cart } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -23,21 +24,14 @@ const checkoutSchema = z.object({
 
 type CheckoutForm = z.infer<typeof checkoutSchema>;
 
-type AppliedCoupon = {
-  code: string;
-  discountAmountCents: number;
-  description: string;
-};
-
 export default function Checkout() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   
-  const { data: rawCart, isLoading: isCartLoading } = useGetCart({
+  const { data: cart, isLoading: isCartLoading } = useGetCart({
     query: { queryKey: getGetCartQueryKey() }
-  });
-  const cart = rawCart as (typeof rawCart & { appliedCoupon?: AppliedCoupon; totalAfterDiscountInCents?: number }) | undefined;
+  }) as { data: Cart | undefined; isLoading: boolean };
   
   const { data: session } = useAuthMe({
     query: { queryKey: getAuthMeQueryKey(), retry: false }
@@ -46,9 +40,7 @@ export default function Checkout() {
   const [paymentMethod, setPaymentMethod] = useState<'stripe' | 'cash'>('cash');
   const [gibletsUpdating, setGibletsUpdating] = useState<number | null>(null);
 
-  const hasDeposits = (cart?.items as any[] | undefined)?.some(
-    (item: any) => item.pricingType === "deposit"
-  ) ?? false;
+  const hasDeposits = cart?.items.some(item => item.pricingType === "deposit") ?? false;
 
   useEffect(() => {
     if (hasDeposits) setPaymentMethod('stripe');

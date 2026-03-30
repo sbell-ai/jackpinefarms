@@ -190,6 +190,8 @@ export interface CartItem {
   quantity: number;
   /** @nullable */
   unitLabel: string | null;
+  /** @nullable */
+  imageUrl?: string | null;
   unitPriceInCents: number;
   isOnSale: boolean;
   originalPriceInCents: number;
@@ -198,10 +200,19 @@ export interface CartItem {
   lineTotalInCents: number;
 }
 
+export interface AppliedCouponInfo {
+  code: string;
+  discountAmountCents: number;
+  description: string;
+  stripePromotionCodeId: string | null;
+}
+
 export interface Cart {
   items: CartItem[];
   subtotalInCents: number;
   itemCount: number;
+  appliedCoupon?: AppliedCouponInfo;
+  totalAfterDiscountInCents?: number;
 }
 
 export interface AddCartItemBody {

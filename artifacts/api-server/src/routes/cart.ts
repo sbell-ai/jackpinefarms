@@ -96,13 +96,21 @@ router.get("/cart", async (req, res): Promise<void> => {
       const label = coupon.discountType === "percent"
         ? `${coupon.discountValue}% off`
         : `$${(coupon.discountValue / 100).toFixed(2)} off`;
-      (response as any).appliedCoupon = {
-        code: coupon.code,
-        discountAmountCents,
-        description: coupon.description ? `${coupon.description} (${label})` : label,
-        stripePromotionCodeId: coupon.stripePromotionCodeId ?? null,
+      const fullResponse: typeof response & {
+        appliedCoupon: { code: string; discountAmountCents: number; description: string; stripePromotionCodeId: string | null };
+        totalAfterDiscountInCents: number;
+      } = {
+        ...response,
+        appliedCoupon: {
+          code: coupon.code,
+          discountAmountCents,
+          description: coupon.description ? `${coupon.description} (${label})` : label,
+          stripePromotionCodeId: coupon.stripePromotionCodeId ?? null,
+        },
+        totalAfterDiscountInCents: Math.max(0, response.subtotalInCents - discountAmountCents),
       };
-      (response as any).totalAfterDiscountInCents = Math.max(0, response.subtotalInCents - discountAmountCents);
+      res.json(fullResponse);
+      return;
     } else {
       session.appliedCouponCode = null;
       session.save(() => {});

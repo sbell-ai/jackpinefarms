@@ -6,50 +6,18 @@ import {
   useApplyCartCoupon,
   useRemoveCartCoupon,
 } from "@workspace/api-client-react";
-import type { ApplyCartCouponResult, ApplyCartCouponError } from "@workspace/api-client-react";
+import type { Cart, ApplyCartCouponResult, ApplyCartCouponError } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { formatMoney } from "@/lib/utils";
-import { Loader2, Trash2, ArrowRight, ShoppingBag, Plus, Minus, Tag, Check, X } from "lucide-react";
-
-type CartItem = {
-  productId: number;
-  productName: string;
-  productType: string;
-  pricingType: "unit" | "deposit";
-  unitPriceInCents: number;
-  isOnSale: boolean;
-  originalPriceInCents: number;
-  quantity: number;
-  addGiblets: boolean;
-  lineTotalInCents: number;
-  unitLabel: string | null;
-  imageUrl?: string | null;
-};
-
-type AppliedCoupon = {
-  code: string;
-  discountAmountCents: number;
-  description: string;
-  stripePromotionCodeId: string | null;
-};
-
-type CartData = {
-  items: CartItem[];
-  subtotalInCents: number;
-  itemCount: number;
-  appliedCoupon?: AppliedCoupon;
-  totalAfterDiscountInCents?: number;
-};
+import { Loader2, Trash2, ArrowRight, ShoppingBag, Plus, Minus, Tag, Check, X, ChevronDown } from "lucide-react";
 
 export default function Cart() {
   const [, setLocation] = useLocation();
   const queryClient = useQueryClient();
   
-  const { data: rawCart, isLoading } = useGetCart({
+  const { data: cart, isLoading } = useGetCart({
     query: { queryKey: getGetCartQueryKey() }
-  });
-
-  const cart = rawCart as CartData | undefined;
+  }) as { data: Cart | undefined; isLoading: boolean };
 
   const removeMutation = useRemoveCartItem({
     mutation: {
@@ -58,6 +26,7 @@ export default function Cart() {
   });
 
   const [updatePending, setUpdatePending] = useState(false);
+  const [showCouponInput, setShowCouponInput] = useState(false);
   const [couponInput, setCouponInput] = useState("");
   const [couponError, setCouponError] = useState<string | null>(null);
 
@@ -273,30 +242,40 @@ export default function Cart() {
                 </div>
               ) : (
                 <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-muted-foreground flex items-center gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => { setShowCouponInput(v => !v); setCouponError(null); }}
+                    className="flex items-center gap-1.5 text-xs font-bold text-muted-foreground hover:text-foreground transition-colors w-full"
+                  >
                     <Tag className="w-3.5 h-3.5" />
                     Have a coupon code?
-                  </label>
-                  <div className="flex gap-2">
-                    <input
-                      type="text"
-                      value={couponInput}
-                      onChange={e => { setCouponInput(e.target.value.toUpperCase()); setCouponError(null); }}
-                      onKeyDown={e => e.key === "Enter" && (e.preventDefault(), handleApplyCoupon())}
-                      placeholder="Enter code"
-                      className="flex-1 min-w-0 px-3 py-2 rounded-lg bg-background border border-border focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all text-sm font-mono uppercase placeholder:normal-case placeholder:font-sans"
-                    />
-                    <button
-                      type="button"
-                      onClick={handleApplyCoupon}
-                      disabled={!couponInput.trim() || applyMutation.isPending}
-                      className="px-3 py-2 rounded-lg bg-muted hover:bg-muted/80 text-sm font-bold transition-colors disabled:opacity-40 shrink-0"
-                    >
-                      {applyMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : "Apply"}
-                    </button>
-                  </div>
-                  {couponError && (
-                    <p className="text-destructive text-xs font-medium">{couponError}</p>
+                    <ChevronDown className={`w-3.5 h-3.5 ml-auto transition-transform ${showCouponInput ? "rotate-180" : ""}`} />
+                  </button>
+                  {showCouponInput && (
+                    <>
+                      <div className="flex gap-2">
+                        <input
+                          type="text"
+                          value={couponInput}
+                          onChange={e => { setCouponInput(e.target.value.toUpperCase()); setCouponError(null); }}
+                          onKeyDown={e => e.key === "Enter" && (e.preventDefault(), handleApplyCoupon())}
+                          placeholder="Enter code"
+                          autoFocus
+                          className="flex-1 min-w-0 px-3 py-2 rounded-lg bg-background border border-border focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all text-sm font-mono uppercase placeholder:normal-case placeholder:font-sans"
+                        />
+                        <button
+                          type="button"
+                          onClick={handleApplyCoupon}
+                          disabled={!couponInput.trim() || applyMutation.isPending}
+                          className="px-3 py-2 rounded-lg bg-muted hover:bg-muted/80 text-sm font-bold transition-colors disabled:opacity-40 shrink-0"
+                        >
+                          {applyMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : "Apply"}
+                        </button>
+                      </div>
+                      {couponError && (
+                        <p className="text-destructive text-xs font-medium">{couponError}</p>
+                      )}
+                    </>
                   )}
                 </div>
               )}
