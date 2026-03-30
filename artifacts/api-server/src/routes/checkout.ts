@@ -91,9 +91,10 @@ async function validateCoupon(code: string, subtotalInCents: number) {
     .limit(1);
 
   if (!coupon || !coupon.isActive) return null;
-  if (coupon.expiresAt && coupon.expiresAt < new Date()) return null;
+  const now = new Date();
+  if (coupon.startsAt && coupon.startsAt > now) return null;
+  if (coupon.endsAt && coupon.endsAt < now) return null;
   if (coupon.maxRedemptions != null && coupon.redemptionsCount >= coupon.maxRedemptions) return null;
-  if (subtotalInCents < coupon.minOrderCents) return null;
 
   const discountAmountCents =
     coupon.discountType === "percent"

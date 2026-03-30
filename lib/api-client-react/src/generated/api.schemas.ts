@@ -220,7 +220,7 @@ export interface CheckoutContactBody {
   couponCode?: string;
 }
 
-export type CouponDiscountType = "percent" | "fixed_cents";
+export type CouponDiscountType = "percent" | "amount";
 
 export interface Coupon {
   id: number;
@@ -229,12 +229,13 @@ export interface Coupon {
   description: string | null;
   discountType: CouponDiscountType;
   discountValue: number;
-  minOrderCents: number;
   /** @nullable */
   maxRedemptions: number | null;
   redemptionsCount: number;
   /** @nullable */
-  expiresAt: string | null;
+  startsAt: string | null;
+  /** @nullable */
+  endsAt: string | null;
   isActive: boolean;
   /** @nullable */
   stripeCouponId: string | null;
@@ -268,9 +269,9 @@ export interface CreateCouponBody {
   description?: string;
   discountType: CouponDiscountType;
   discountValue: number;
-  minOrderCents?: number;
   maxRedemptions?: number;
-  expiresAt?: string;
+  startsAt?: string;
+  endsAt?: string;
 }
 
 export interface CouponValidateResult {

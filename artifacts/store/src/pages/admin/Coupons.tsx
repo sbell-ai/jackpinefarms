@@ -13,11 +13,10 @@ import type { Coupon, CreateCouponBody } from "@workspace/api-client-react";
 interface CreateForm {
   code: string;
   description: string;
-  discountType: "percent" | "fixed_cents";
+  discountType: "percent" | "amount";
   discountValue: string;
-  minOrderDollars: string;
   maxRedemptions: string;
-  expiresAt: string;
+  endsAt: string;
 }
 
 const emptyForm: CreateForm = {
@@ -25,9 +24,8 @@ const emptyForm: CreateForm = {
   description: "",
   discountType: "percent",
   discountValue: "",
-  minOrderDollars: "",
   maxRedemptions: "",
-  expiresAt: "",
+  endsAt: "",
 };
 
 export default function Coupons() {
@@ -93,9 +91,8 @@ export default function Coupons() {
         : Math.round(discountValue * 100),
     };
     if (form.description.trim()) body.description = form.description.trim();
-    if (form.minOrderDollars) body.minOrderCents = Math.round(parseFloat(form.minOrderDollars) * 100);
     if (form.maxRedemptions) body.maxRedemptions = parseInt(form.maxRedemptions, 10);
-    if (form.expiresAt) body.expiresAt = new Date(form.expiresAt).toISOString();
+    if (form.endsAt) body.endsAt = new Date(form.endsAt).toISOString();
 
     createMutation.mutate({ data: body });
   };
@@ -109,6 +106,9 @@ export default function Coupons() {
 
   const formatDiscount = (c: Coupon) =>
     c.discountType === "percent" ? `${c.discountValue}% off` : `${formatMoney(c.discountValue)} off`;
+
+  const formatDate = (d: string | null) =>
+    d ? new Date(d).toLocaleDateString("en-CA") : null;
 
   return (
     <div className="space-y-6">
@@ -161,11 +161,11 @@ export default function Coupons() {
               <label className="text-sm font-bold">Discount Type *</label>
               <select
                 value={form.discountType}
-                onChange={e => setForm(f => ({ ...f, discountType: e.target.value as "percent" | "fixed_cents", discountValue: "" }))}
+                onChange={e => setForm(f => ({ ...f, discountType: e.target.value as "percent" | "amount", discountValue: "" }))}
                 className="w-full px-3 py-2 rounded-lg bg-background border border-border focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
               >
                 <option value="percent">Percentage (e.g. 10%)</option>
-                <option value="fixed_cents">Fixed Amount (e.g. $5.00)</option>
+                <option value="amount">Fixed Amount (e.g. $5.00)</option>
               </select>
             </div>
 
@@ -174,7 +174,7 @@ export default function Coupons() {
                 {form.discountType === "percent" ? "Discount % *" : "Discount Amount ($) *"}
               </label>
               <div className="relative">
-                {form.discountType === "fixed_cents" && (
+                {form.discountType === "amount" && (
                   <span className="absolute inset-y-0 left-3 flex items-center text-muted-foreground">$</span>
                 )}
                 <input
@@ -186,29 +186,12 @@ export default function Coupons() {
                   value={form.discountValue}
                   onChange={e => setForm(f => ({ ...f, discountValue: e.target.value }))}
                   placeholder={form.discountType === "percent" ? "10" : "5.00"}
-                  className={`w-full px-3 py-2 rounded-lg bg-background border border-border focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all ${form.discountType === "fixed_cents" ? "pl-7" : ""}`}
+                  className={`w-full px-3 py-2 rounded-lg bg-background border border-border focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all ${form.discountType === "amount" ? "pl-7" : ""}`}
                 />
                 {form.discountType === "percent" && (
                   <span className="absolute inset-y-0 right-3 flex items-center text-muted-foreground">%</span>
                 )}
               </div>
-            </div>
-
-            <div className="space-y-1">
-              <label className="text-sm font-bold">Min. Order Amount ($)</label>
-              <div className="relative">
-                <span className="absolute inset-y-0 left-3 flex items-center text-muted-foreground">$</span>
-                <input
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  value={form.minOrderDollars}
-                  onChange={e => setForm(f => ({ ...f, minOrderDollars: e.target.value }))}
-                  placeholder="0.00"
-                  className="w-full pl-7 pr-3 py-2 rounded-lg bg-background border border-border focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
-                />
-              </div>
-              <p className="text-xs text-muted-foreground">Leave blank for no minimum</p>
             </div>
 
             <div className="space-y-1">
@@ -229,8 +212,8 @@ export default function Coupons() {
               <label className="text-sm font-bold">Expiry Date (optional)</label>
               <input
                 type="datetime-local"
-                value={form.expiresAt}
-                onChange={e => setForm(f => ({ ...f, expiresAt: e.target.value }))}
+                value={form.endsAt}
+                onChange={e => setForm(f => ({ ...f, endsAt: e.target.value }))}
                 className="w-full px-3 py-2 rounded-lg bg-background border border-border focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
               />
             </div>
@@ -282,7 +265,6 @@ export default function Coupons() {
                 <tr>
                   <th className="text-left px-4 py-3 font-bold text-muted-foreground uppercase text-xs tracking-wider">Code</th>
                   <th className="text-left px-4 py-3 font-bold text-muted-foreground uppercase text-xs tracking-wider">Discount</th>
-                  <th className="text-left px-4 py-3 font-bold text-muted-foreground uppercase text-xs tracking-wider">Min. Order</th>
                   <th className="text-left px-4 py-3 font-bold text-muted-foreground uppercase text-xs tracking-wider">Uses</th>
                   <th className="text-left px-4 py-3 font-bold text-muted-foreground uppercase text-xs tracking-wider">Expires</th>
                   <th className="text-left px-4 py-3 font-bold text-muted-foreground uppercase text-xs tracking-wider">Status</th>
@@ -301,22 +283,17 @@ export default function Coupons() {
                       </div>
                     </td>
                     <td className="px-4 py-3 font-semibold text-primary">{formatDiscount(coupon)}</td>
-                    <td className="px-4 py-3 text-muted-foreground">
-                      {coupon.minOrderCents > 0 ? formatMoney(coupon.minOrderCents) : "—"}
-                    </td>
                     <td className="px-4 py-3">
                       {coupon.maxRedemptions != null
                         ? `${coupon.redemptionsCount} / ${coupon.maxRedemptions}`
                         : `${coupon.redemptionsCount} / ∞`}
                     </td>
                     <td className="px-4 py-3 text-muted-foreground">
-                      {coupon.expiresAt
-                        ? new Date(coupon.expiresAt).toLocaleDateString("en-CA")
-                        : "Never"}
+                      {formatDate(coupon.endsAt) ?? "Never"}
                     </td>
                     <td className="px-4 py-3">
                       {(() => {
-                        const isExpired = coupon.expiresAt ? new Date(coupon.expiresAt) < new Date() : false;
+                        const isExpired = coupon.endsAt ? new Date(coupon.endsAt) < new Date() : false;
                         const isMaxed = coupon.maxRedemptions != null && coupon.redemptionsCount >= coupon.maxRedemptions;
                         const label = isExpired ? "Expired" : isMaxed ? "Maxed out" : coupon.isActive ? "Active" : "Disabled";
                         const cls = coupon.isActive && !isExpired && !isMaxed

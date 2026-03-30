@@ -226,27 +226,43 @@ export async function runMigrations(): Promise<void> {
         id                  SERIAL PRIMARY KEY,
         code                TEXT NOT NULL UNIQUE,
         description         TEXT,
-        discount_type       TEXT NOT NULL CHECK (discount_type IN ('percent', 'fixed_cents')),
+        discount_type       TEXT NOT NULL,
         discount_value      INTEGER NOT NULL CHECK (discount_value > 0),
-        min_order_cents     INTEGER NOT NULL DEFAULT 0,
         max_redemptions     INTEGER,
         redemptions_count   INTEGER NOT NULL DEFAULT 0,
-        expires_at          TIMESTAMPTZ,
+        starts_at           TIMESTAMPTZ,
+        ends_at             TIMESTAMPTZ,
         is_active           BOOLEAN NOT NULL DEFAULT TRUE,
         stripe_coupon_id    TEXT,
+        stripe_promotion_code_id TEXT,
         created_at          TIMESTAMPTZ NOT NULL DEFAULT NOW()
       );
     `);
 
+    // Idempotent column additions / migrations for schema evolution
     await db.execute(sql.raw(
       `ALTER TABLE stripe_pending_checkouts ADD COLUMN IF NOT EXISTS applied_coupon_code TEXT`
     ));
     await db.execute(sql.raw(
       `ALTER TABLE orders ADD COLUMN IF NOT EXISTS applied_coupon_code TEXT`
     ));
-
     await db.execute(sql.raw(
       `ALTER TABLE coupons ADD COLUMN IF NOT EXISTS stripe_promotion_code_id TEXT`
+    ));
+    // Add starts_at / ends_at (v2 schema)
+    await db.execute(sql.raw(
+      `ALTER TABLE coupons ADD COLUMN IF NOT EXISTS starts_at TIMESTAMPTZ`
+    ));
+    await db.execute(sql.raw(
+      `ALTER TABLE coupons ADD COLUMN IF NOT EXISTS ends_at TIMESTAMPTZ`
+    ));
+    // Migrate expires_at → ends_at for existing rows
+    await db.execute(sql.raw(
+      `UPDATE coupons SET ends_at = expires_at WHERE expires_at IS NOT NULL AND ends_at IS NULL`
+    ));
+    // Migrate discount_type 'fixed_cents' → 'amount'
+    await db.execute(sql.raw(
+      `UPDATE coupons SET discount_type = 'amount' WHERE discount_type = 'fixed_cents'`
     ));
 
     logger.info("Startup migrations complete.");

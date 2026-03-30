@@ -85,9 +85,11 @@ router.get("/cart", async (req, res): Promise<void> => {
       .where(eq(couponsTable.code, session.appliedCouponCode))
       .limit(1);
 
-    if (coupon && coupon.isActive && (!coupon.expiresAt || coupon.expiresAt >= new Date()) &&
-        (coupon.maxRedemptions == null || coupon.redemptionsCount < coupon.maxRedemptions) &&
-        response.subtotalInCents >= coupon.minOrderCents) {
+    const now = new Date();
+    if (coupon && coupon.isActive &&
+        (!coupon.startsAt || coupon.startsAt <= now) &&
+        (!coupon.endsAt || coupon.endsAt >= now) &&
+        (coupon.maxRedemptions == null || coupon.redemptionsCount < coupon.maxRedemptions)) {
       const discountAmountCents = coupon.discountType === "percent"
         ? Math.round(response.subtotalInCents * coupon.discountValue / 100)
         : Math.min(coupon.discountValue, response.subtotalInCents);
@@ -279,19 +281,19 @@ router.post("/cart/coupon", couponLimiter, async (req, res): Promise<void> => {
     return;
   }
 
-  if (coupon.expiresAt && coupon.expiresAt < new Date()) {
+  const now = new Date();
+  if (coupon.startsAt && coupon.startsAt > now) {
+    res.json({ valid: false, error: "This coupon is not yet active" });
+    return;
+  }
+
+  if (coupon.endsAt && coupon.endsAt < now) {
     res.json({ valid: false, error: "This coupon has expired" });
     return;
   }
 
   if (coupon.maxRedemptions != null && coupon.redemptionsCount >= coupon.maxRedemptions) {
     res.json({ valid: false, error: "This coupon has reached its maximum uses" });
-    return;
-  }
-
-  if (subtotal < coupon.minOrderCents) {
-    const minFormatted = `$${(coupon.minOrderCents / 100).toFixed(2)}`;
-    res.json({ valid: false, error: `Minimum order of ${minFormatted} required for this coupon` });
     return;
   }
 

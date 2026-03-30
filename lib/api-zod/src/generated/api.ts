@@ -1444,3 +1444,63 @@ export const AdminSendOrderInvoiceResponse = zod.object({
   depositPaidCents: zod.number(),
   invoiceId: zod.string().optional(),
 });
+
+// ── Coupons (Task #12) ────────────────────────────────────────────────────────
+
+export const CouponDiscountTypeSchema = zod.enum(["percent", "amount"]);
+
+export const CouponSchema = zod.object({
+  id: zod.number(),
+  code: zod.string(),
+  description: zod.string().nullable(),
+  discountType: CouponDiscountTypeSchema,
+  discountValue: zod.number(),
+  maxRedemptions: zod.number().nullable(),
+  redemptionsCount: zod.number(),
+  startsAt: zod.string().nullable(),
+  endsAt: zod.string().nullable(),
+  isActive: zod.boolean(),
+  stripeCouponId: zod.string().nullable(),
+  stripePromotionCodeId: zod.string().nullable(),
+  createdAt: zod.string(),
+});
+
+export const AdminListCouponsResponse = zod.array(CouponSchema);
+
+export const AdminCreateCouponBody = zod.object({
+  code: zod.string().min(1).max(50),
+  description: zod.string().max(200).optional(),
+  discountType: CouponDiscountTypeSchema,
+  discountValue: zod.number().int().positive(),
+  maxRedemptions: zod.number().int().positive().optional(),
+  startsAt: zod.string().datetime().optional(),
+  endsAt: zod.string().datetime().optional(),
+});
+
+export const AdminToggleCouponParams = zod.object({
+  id: zod.number().int().positive(),
+});
+
+export const AdminDeleteCouponParams = zod.object({
+  id: zod.number().int().positive(),
+});
+
+export const CartApplyCouponBody = zod.object({
+  code: zod.string().min(1).max(50),
+});
+
+export const CartApplyCouponResponse = zod.union([
+  zod.object({
+    valid: zod.literal(true),
+    couponId: zod.number(),
+    code: zod.string(),
+    discountAmountCents: zod.number(),
+    totalAfterDiscountInCents: zod.number(),
+    description: zod.string(),
+    stripePromotionCodeId: zod.string().nullable(),
+  }),
+  zod.object({
+    valid: zod.literal(false),
+    error: zod.string(),
+  }),
+]);

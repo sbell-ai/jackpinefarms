@@ -107,16 +107,26 @@ router.post("/webhooks/stripe", async (req, res): Promise<void> => {
           .where(eq(customerCartsTable.customerId, pending.customerId));
       }
 
-      const amountDiscount = (checkoutSession as any).total_details?.amount_discount ?? 0;
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+      const amountDiscount: number = checkoutSession.total_details?.amount_discount ?? 0;
       if (amountDiscount > 0) {
         if (pending.appliedCouponCode) {
+          // Pre-applied code: increment by the stored code
           db.update(couponsTable)
             .set({ redemptionsCount: sql`${couponsTable.redemptionsCount} + 1` })
             .where(eq(couponsTable.code, pending.appliedCouponCode))
             .catch((e: unknown) => console.warn("[Webhook] Coupon redemption increment failed:", e));
         } else {
-          const discounts = (checkoutSession as any).discounts as Array<{ promotion_code?: string }> | undefined;
-          const promoCodeId = discounts?.[0]?.promotion_code;
+          // Stripe-page-entered code: look up via promotion code ID from session
+          const sessionDiscounts: Array<{ promotion_code?: string | { id: string } }> =
+            checkoutSession.discounts ?? [];
+          const rawPromoCode = sessionDiscounts[0]?.promotion_code;
+          const promoCodeId =
+            typeof rawPromoCode === "string"
+              ? rawPromoCode
+              : typeof rawPromoCode === "object" && rawPromoCode !== null
+                ? rawPromoCode.id
+                : null;
           if (promoCodeId) {
             db.update(couponsTable)
               .set({ redemptionsCount: sql`${couponsTable.redemptionsCount} + 1` })
