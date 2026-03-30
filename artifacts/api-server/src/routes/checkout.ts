@@ -47,10 +47,16 @@ async function buildOrderItems(
       productName: product.name,
       quantity: item.quantity,
       pricingType: product.pricingType,
-      unitPriceInCents: product.priceInCents,
+      unitPriceInCents:
+        product.isOnSale && product.salePriceCents != null
+          ? product.salePriceCents
+          : product.priceInCents,
       unitLabel: product.unitLabel ?? null,
       isGiblets: false,
-      lineTotalInCents: product.priceInCents * item.quantity,
+      lineTotalInCents:
+        (product.isOnSale && product.salePriceCents != null
+          ? product.salePriceCents
+          : product.priceInCents) * item.quantity,
     });
 
     if (isMeat && item.addGiblets) {

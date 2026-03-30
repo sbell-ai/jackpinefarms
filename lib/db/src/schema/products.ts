@@ -3,6 +3,7 @@ import {
   text,
   serial,
   integer,
+  boolean,
   timestamp,
   pgEnum,
 } from "drizzle-orm/pg-core";
@@ -36,6 +37,8 @@ export const productsTable = pgTable("products", {
   depositDescription: text("deposit_description"),
   availability: availabilityStatusEnum("availability").notNull().default("taking_orders"),
   imageUrl: text("image_url"),
+  isOnSale: boolean("is_on_sale").notNull().default(false),
+  salePriceCents: integer("sale_price_cents"),
   displayOrder: integer("display_order").notNull().default(0),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true })

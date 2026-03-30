@@ -119,12 +119,31 @@ export default function ProductDetail() {
         <div className="flex flex-col">
           <h1 className="text-4xl md:text-5xl font-serif font-bold text-primary mb-4">{product.name}</h1>
           
-          <div className="flex items-baseline gap-3 mb-6">
-            <span className="text-3xl font-bold text-foreground">
-              {formatMoney(product.priceInCents)}
-            </span>
-            {product.unitLabel && (
-              <span className="text-xl text-muted-foreground">/ {product.unitLabel}</span>
+          <div className="flex items-baseline gap-3 mb-6 flex-wrap">
+            {product.isOnSale && product.salePriceCents != null ? (
+              <>
+                <span className="text-3xl font-bold text-red-600 dark:text-red-400">
+                  {formatMoney(product.salePriceCents)}
+                </span>
+                {product.unitLabel && (
+                  <span className="text-xl text-muted-foreground">/ {product.unitLabel}</span>
+                )}
+                <span className="text-xl text-muted-foreground line-through">
+                  {formatMoney(product.priceInCents)}
+                </span>
+                <span className="px-2 py-0.5 bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 text-sm font-bold rounded-full">
+                  Sale
+                </span>
+              </>
+            ) : (
+              <>
+                <span className="text-3xl font-bold text-foreground">
+                  {formatMoney(product.priceInCents)}
+                </span>
+                {product.unitLabel && (
+                  <span className="text-xl text-muted-foreground">/ {product.unitLabel}</span>
+                )}
+              </>
             )}
           </div>
 

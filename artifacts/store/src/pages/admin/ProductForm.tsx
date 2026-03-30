@@ -15,10 +15,20 @@ const formSchema = z.object({
   productType: z.enum(["eggs_chicken", "eggs_duck", "meat_chicken", "meat_turkey"]),
   pricingType: z.enum(["unit", "deposit"]),
   priceInDollars: z.coerce.number().min(0, "Price must be positive"),
+  isOnSale: z.boolean().default(false),
+  salePriceInDollars: z.coerce.number().min(0, "Sale price must be positive").optional(),
   unitLabel: z.string().optional(),
   depositDescription: z.string().optional(),
   availability: z.enum(["taking_orders", "preorder", "sold_out", "disabled"]),
   displayOrder: z.coerce.number().int().default(0),
+}).refine((data) => {
+  if (data.isOnSale) {
+    return data.salePriceInDollars != null && data.salePriceInDollars > 0 && data.salePriceInDollars < data.priceInDollars;
+  }
+  return true;
+}, {
+  message: "Sale price must be greater than $0 and less than the regular price",
+  path: ["salePriceInDollars"],
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -55,6 +65,8 @@ export default function ProductForm() {
         productType: product.productType,
         pricingType: product.pricingType,
         priceInDollars: product.priceInCents / 100,
+        isOnSale: product.isOnSale ?? false,
+        salePriceInDollars: product.salePriceCents != null ? product.salePriceCents / 100 : undefined,
         unitLabel: product.unitLabel || "",
         depositDescription: product.depositDescription || "",
         availability: product.availability,
@@ -64,6 +76,7 @@ export default function ProductForm() {
   }, [isEditing, product, reset]);
 
   const pricingType = watch("pricingType");
+  const isOnSale = watch("isOnSale");
 
   const onSubmit = async (data: FormValues) => {
     const payload = {
@@ -72,6 +85,10 @@ export default function ProductForm() {
       productType: data.productType,
       pricingType: data.pricingType,
       priceInCents: Math.round(data.priceInDollars * 100),
+      isOnSale: data.isOnSale,
+      salePriceCents: data.isOnSale && data.salePriceInDollars != null
+        ? Math.round(data.salePriceInDollars * 100)
+        : null,
       unitLabel: data.unitLabel || null,
       depositDescription: data.pricingType === 'deposit' ? (data.depositDescription || null) : null,
       availability: data.availability,
@@ -218,6 +235,40 @@ export default function ProductForm() {
               <p className="text-xs text-muted-foreground">Shown in a special notice box on the product page.</p>
             </div>
           )}
+
+          <div className="border-t border-border pt-4 space-y-4">
+            <label className="flex items-center gap-3 cursor-pointer select-none">
+              <input
+                type="checkbox"
+                {...register("isOnSale")}
+                className="w-5 h-5 rounded border-border text-red-600 focus:ring-red-500"
+              />
+              <div>
+                <span className="text-sm font-bold text-foreground">Mark as On Sale</span>
+                <p className="text-xs text-muted-foreground">Displays a "Sale" badge and crossed-out original price in the storefront.</p>
+              </div>
+            </label>
+
+            {isOnSale && (
+              <div className="space-y-2 pl-8">
+                <label className="text-sm font-bold text-foreground">Sale Price ($)</label>
+                <div className="relative max-w-xs">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-muted-foreground">$</div>
+                  <input
+                    type="number"
+                    step="0.01"
+                    {...register("salePriceInDollars")}
+                    placeholder="0.00"
+                    className="w-full pl-8 pr-4 py-2.5 rounded-lg bg-background border border-border focus:ring-2 focus:ring-red-500/20 focus:border-red-500 transition-all"
+                  />
+                </div>
+                {errors.salePriceInDollars && (
+                  <p className="text-destructive text-sm">{errors.salePriceInDollars.message}</p>
+                )}
+                <p className="text-xs text-muted-foreground">Must be less than the regular price. This is what customers will pay.</p>
+              </div>
+            )}
+          </div>
         </div>
 
         <div className="flex justify-end gap-4">

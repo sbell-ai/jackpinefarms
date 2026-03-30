@@ -158,6 +158,10 @@ export async function runMigrations(): Promise<void> {
       );
     `);
 
+    // ── Sale pricing columns (Task #11) ─────────────────────────────────────
+    await db.execute(sql.raw(`ALTER TABLE products ADD COLUMN IF NOT EXISTS is_on_sale BOOLEAN NOT NULL DEFAULT FALSE`));
+    await db.execute(sql.raw(`ALTER TABLE products ADD COLUMN IF NOT EXISTS sale_price_cents INTEGER`));
+
     // ── product_images (Task #8) ─────────────────────────────────────────────
     await db.execute(sql`
       CREATE TABLE IF NOT EXISTS product_images (

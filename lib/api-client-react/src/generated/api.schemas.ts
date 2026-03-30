@@ -86,6 +86,9 @@ export interface Product {
   pricingType: PricingType;
   /** Price in cents. For eggs this is per unit/half-dozen. For meat this is the deposit amount. */
   priceInCents: number;
+  isOnSale: boolean;
+  /** @nullable */
+  salePriceCents: number | null;
   /**
    * Display label for the unit (e.g. "dozen", "half-dozen")
    * @nullable
@@ -111,6 +114,9 @@ export interface CreateProductBody {
   productType: ProductType;
   pricingType: PricingType;
   priceInCents: number;
+  isOnSale?: boolean;
+  /** @nullable */
+  salePriceCents?: number | null;
   /** @nullable */
   unitLabel?: string | null;
   /** @nullable */
@@ -127,6 +133,9 @@ export interface UpdateProductBody {
   productType?: ProductType;
   pricingType?: PricingType;
   priceInCents?: number;
+  isOnSale?: boolean;
+  /** @nullable */
+  salePriceCents?: number | null;
   /** @nullable */
   unitLabel?: string | null;
   /** @nullable */

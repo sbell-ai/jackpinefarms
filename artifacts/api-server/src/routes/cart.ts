@@ -35,7 +35,10 @@ async function buildCartResponse(sessionCart: Array<{ productId: number; quantit
       const product = productMap.get(item.productId);
       if (!product) return null;
       const isMeat = product.pricingType === "deposit";
-      const unitPriceInCents = product.priceInCents;
+      const unitPriceInCents =
+        product.isOnSale && product.salePriceCents != null
+          ? product.salePriceCents
+          : product.priceInCents;
       const gibletsCents = item.addGiblets && isMeat ? 200 * item.quantity : 0;
       const lineTotalInCents = unitPriceInCents * item.quantity + gibletsCents;
       return {

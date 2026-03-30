@@ -61,6 +61,8 @@ export const ListProductsResponseItem = zod.object({
     .describe(
       "Price in cents. For eggs this is per unit\/half-dozen. For meat this is the deposit amount.",
     ),
+  isOnSale: zod.boolean().default(false),
+  salePriceCents: zod.number().nullable(),
   unitLabel: zod
     .string()
     .nullable()
@@ -92,6 +94,8 @@ export const CreateProductBody = zod.object({
   ]),
   pricingType: zod.enum(["unit", "deposit"]),
   priceInCents: zod.number(),
+  isOnSale: zod.boolean().optional(),
+  salePriceCents: zod.number().nullish(),
   unitLabel: zod.string().nullish(),
   depositDescription: zod.string().nullish(),
   availability: zod.enum(["taking_orders", "preorder", "sold_out", "disabled"]),
@@ -122,6 +126,8 @@ export const GetProductResponse = zod.object({
     .describe(
       "Price in cents. For eggs this is per unit\/half-dozen. For meat this is the deposit amount.",
     ),
+  isOnSale: zod.boolean().default(false),
+  salePriceCents: zod.number().nullable(),
   unitLabel: zod
     .string()
     .nullable()
@@ -153,6 +159,8 @@ export const UpdateProductBody = zod.object({
     .optional(),
   pricingType: zod.enum(["unit", "deposit"]).optional(),
   priceInCents: zod.number().optional(),
+  isOnSale: zod.boolean().optional(),
+  salePriceCents: zod.number().nullish(),
   unitLabel: zod.string().nullish(),
   depositDescription: zod.string().nullish(),
   availability: zod
@@ -178,6 +186,8 @@ export const UpdateProductResponse = zod.object({
     .describe(
       "Price in cents. For eggs this is per unit\/half-dozen. For meat this is the deposit amount.",
     ),
+  isOnSale: zod.boolean().default(false),
+  salePriceCents: zod.number().nullable(),
   unitLabel: zod
     .string()
     .nullable()

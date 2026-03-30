@@ -51,6 +51,11 @@ export default function Shop() {
                   
                   {/* Status Badges */}
                   <div className="absolute top-4 right-4 flex flex-col gap-2 items-end">
+                    {product.isOnSale && product.salePriceCents != null && (
+                      <span className="bg-red-600 text-white px-3 py-1 rounded-full text-xs font-bold tracking-wider shadow-sm">
+                        Sale
+                      </span>
+                    )}
                     {product.availability === 'sold_out' && (
                       <span className="bg-foreground text-background px-3 py-1 rounded-full text-xs font-bold tracking-wider shadow-sm">
                         Sold Out
@@ -73,10 +78,22 @@ export default function Shop() {
                   
                   <div className="flex items-center justify-between mt-auto pt-4 border-t border-border/50">
                     <div className="flex flex-col">
-                      <span className="font-bold text-xl text-primary">
-                        {formatMoney(product.priceInCents)}
-                        {product.unitLabel && <span className="text-sm font-normal text-muted-foreground"> / {product.unitLabel}</span>}
-                      </span>
+                      {product.isOnSale && product.salePriceCents != null ? (
+                        <div className="flex items-baseline gap-2 flex-wrap">
+                          <span className="font-bold text-xl text-red-600 dark:text-red-400">
+                            {formatMoney(product.salePriceCents)}
+                            {product.unitLabel && <span className="text-sm font-normal"> / {product.unitLabel}</span>}
+                          </span>
+                          <span className="text-sm text-muted-foreground line-through">
+                            {formatMoney(product.priceInCents)}
+                          </span>
+                        </div>
+                      ) : (
+                        <span className="font-bold text-xl text-primary">
+                          {formatMoney(product.priceInCents)}
+                          {product.unitLabel && <span className="text-sm font-normal text-muted-foreground"> / {product.unitLabel}</span>}
+                        </span>
+                      )}
                       {product.pricingType === 'deposit' && (
                         <span className="text-xs font-medium text-accent uppercase tracking-wider mt-1">Deposit</span>
                       )}
