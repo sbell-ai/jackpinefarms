@@ -8,7 +8,8 @@ import {
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { formatMoney } from "@/lib/utils";
-import { Loader2, ArrowLeft, CheckCircle2, AlertCircle, ShoppingBag, Plus, Minus } from "lucide-react";
+import { Loader2, ArrowLeft, CheckCircle2, AlertCircle, ShoppingBag, Plus, Minus, ChevronLeft, ChevronRight } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 
 export default function ProductDetail() {
@@ -27,14 +28,18 @@ export default function ProductDetail() {
   
   const [quantity, setQuantity] = useState(1);
   const [addGiblets, setAddGiblets] = useState(false);
+  const [activeImageIndex, setActiveImageIndex] = useState(0);
 
   const unitLabel = product?.unitLabel ?? null;
   const isDozen = unitLabel === "dozen";
   const isHalfDozen = unitLabel === "half-dozen";
 
-  // Reset quantity to 1 whenever product changes
+  // Reset quantity and active image whenever product changes
   useEffect(() => {
-    if (product) setQuantity(1);
+    if (product) {
+      setQuantity(1);
+      setActiveImageIndex(0);
+    }
   }, [product?.id]);
   
   const notifyMutation = useSubscribeNotifyMe();
@@ -99,20 +104,96 @@ export default function ProductDetail() {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-20">
         {/* Images */}
-        <div className="rounded-3xl overflow-hidden bg-card border border-border shadow-md">
-          <div className="aspect-[4/3] w-full relative">
-            {product.images?.[0]?.url ? (
-              <img src={product.images[0].url} alt={product.name} className="w-full h-full object-cover" />
-            ) : (
-              <img src="https://images.unsplash.com/photo-1516684732162-798a0062be99?w=800&q=80" alt={product.name} className="w-full h-full object-cover" />
-            )}
-            
-            {product.availability === 'sold_out' && (
-              <div className="absolute top-6 right-6 bg-foreground text-background px-4 py-2 rounded-full text-sm font-bold tracking-wider shadow-lg">
-                Sold Out
-              </div>
-            )}
+        <div className="flex flex-col gap-3">
+          {/* Main image */}
+          <div className="rounded-3xl overflow-hidden bg-card border border-border shadow-md relative">
+            <div className="aspect-[4/3] w-full relative">
+              {product.images?.[activeImageIndex]?.url ? (
+                <img
+                  src={product.images[activeImageIndex].url}
+                  alt={product.images[activeImageIndex].altText ?? product.name}
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <img
+                  src="https://images.unsplash.com/photo-1516684732162-798a0062be99?w=800&q=80"
+                  alt={product.name}
+                  className="w-full h-full object-cover"
+                />
+              )}
+
+              {product.availability === 'sold_out' && (
+                <div className="absolute top-6 right-6 bg-foreground text-background px-4 py-2 rounded-full text-sm font-bold tracking-wider shadow-lg">
+                  Sold Out
+                </div>
+              )}
+
+              {/* Arrow navigation (only when 2+ images) */}
+              {(product.images?.length ?? 0) > 1 && (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => setActiveImageIndex(i => Math.max(0, i - 1))}
+                    disabled={activeImageIndex === 0}
+                    className="absolute left-3 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-black/50 hover:bg-black/70 text-white flex items-center justify-center transition-colors disabled:opacity-30"
+                    aria-label="Previous image"
+                  >
+                    <ChevronLeft className="w-5 h-5" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setActiveImageIndex(i => Math.min((product.images?.length ?? 1) - 1, i + 1))}
+                    disabled={activeImageIndex === (product.images?.length ?? 1) - 1}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-black/50 hover:bg-black/70 text-white flex items-center justify-center transition-colors disabled:opacity-30"
+                    aria-label="Next image"
+                  >
+                    <ChevronRight className="w-5 h-5" />
+                  </button>
+                  {/* Dot indicators */}
+                  <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-1.5">
+                    {product.images!.map((_, i) => (
+                      <button
+                        key={i}
+                        type="button"
+                        onClick={() => setActiveImageIndex(i)}
+                        className={cn(
+                          "w-2 h-2 rounded-full transition-all",
+                          i === activeImageIndex ? "bg-white scale-125" : "bg-white/50 hover:bg-white/80"
+                        )}
+                        aria-label={`Go to image ${i + 1}`}
+                      />
+                    ))}
+                  </div>
+                </>
+              )}
+            </div>
           </div>
+
+          {/* Thumbnail strip (only when 2+ images) */}
+          {(product.images?.length ?? 0) > 1 && (
+            <div className="flex gap-2 overflow-x-auto pb-1">
+              {product.images!.map((img, i) => (
+                <button
+                  key={img.id}
+                  type="button"
+                  onClick={() => setActiveImageIndex(i)}
+                  className={cn(
+                    "flex-shrink-0 w-16 h-16 rounded-xl overflow-hidden border-2 transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-primary",
+                    i === activeImageIndex
+                      ? "border-primary shadow-md"
+                      : "border-border opacity-60 hover:opacity-100 hover:border-border/80"
+                  )}
+                  aria-label={`View image ${i + 1}`}
+                >
+                  <img
+                    src={img.url}
+                    alt={img.altText ?? `${product.name} ${i + 1}`}
+                    className="w-full h-full object-cover"
+                  />
+                </button>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Product Info */}

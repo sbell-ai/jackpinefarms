@@ -69,7 +69,7 @@ export function RichTextEditor({
     if (!editor) return;
     const currentHtml = editor.getHTML();
     if (value !== currentHtml) {
-      editor.commands.setContent(value || "", false);
+      editor.commands.setContent(value || "", { emitUpdate: false });
     }
   }, [value]);
 
