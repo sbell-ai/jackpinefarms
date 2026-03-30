@@ -173,7 +173,7 @@ router.post("/checkout/stripe", async (req, res): Promise<void> => {
     return;
   }
 
-  const { name: customerName, email: customerEmail, phone: customerPhone, notes, couponCode } = parsed.data;
+  const { name: customerName, email: customerEmail, phone: customerPhone, notes } = parsed.data;
 
   const stripe = getStripe();
 
@@ -184,18 +184,24 @@ router.post("/checkout/stripe", async (req, res): Promise<void> => {
 
   let discountAmountCents = 0;
   let appliedCouponCode: string | null = null;
-  let stripeCouponId: string | null = null;
+  let stripePromotionCodeId: string | null = null;
 
-  if (couponCode) {
-    const couponResult = await validateCoupon(couponCode, orderData.totalInCents);
+  const sessionCouponCode: string | undefined = session.appliedCouponCode;
+  if (sessionCouponCode) {
+    const couponResult = await validateCoupon(sessionCouponCode, orderData.totalInCents);
     if (couponResult) {
       discountAmountCents = couponResult.discountAmountCents;
       appliedCouponCode = couponResult.coupon.code;
-      stripeCouponId = couponResult.coupon.stripeCouponId ?? null;
+      stripePromotionCodeId = couponResult.coupon.stripePromotionCodeId ?? null;
     }
   }
 
   const totalAfterDiscount = Math.max(0, orderData.totalInCents - discountAmountCents);
+
+  if (totalAfterDiscount > 0 && totalAfterDiscount < 50) {
+    res.status(400).json({ error: "Order total after discount must be at least $0.50 for card payment. Use Cash at Pickup instead." });
+    return;
+  }
 
   const baseUrl = process.env.STORE_BASE_URL ?? `https://${process.env.REPLIT_DEV_DOMAIN}/store`;
 
@@ -217,8 +223,10 @@ router.post("/checkout/stripe", async (req, res): Promise<void> => {
     cancel_url: `${baseUrl}/checkout`,
   };
 
-  if (stripeCouponId) {
-    sessionParams.discounts = [{ coupon: stripeCouponId }];
+  if (stripePromotionCodeId) {
+    sessionParams.discounts = [{ promotion_code: stripePromotionCodeId }];
+  } else {
+    sessionParams.allow_promotion_codes = true;
   }
 
   const checkoutSession = await stripe.checkout.sessions.create(sessionParams);
@@ -231,7 +239,7 @@ router.post("/checkout/stripe", async (req, res): Promise<void> => {
     customerPhone,
     notes: notes ?? null,
     cartSnapshot: orderData.lineItems,
-    totalInCents: totalAfterDiscount,
+    totalInCents: totalAfterDiscount || orderData.totalInCents,
     appliedCouponCode,
   });
 
@@ -267,13 +275,14 @@ router.post("/checkout/cash", async (req, res): Promise<void> => {
     return;
   }
 
-  const { name: customerName, email: customerEmail, phone: customerPhone, notes, couponCode } = parsed.data;
+  const { name: customerName, email: customerEmail, phone: customerPhone, notes } = parsed.data;
 
   let discountAmountCents = 0;
   let appliedCouponId: number | null = null;
 
-  if (couponCode) {
-    const couponResult = await validateCoupon(couponCode, orderData.totalInCents);
+  const sessionCouponCodeCash: string | undefined = session.appliedCouponCode;
+  if (sessionCouponCodeCash) {
+    const couponResult = await validateCoupon(sessionCouponCodeCash, orderData.totalInCents);
     if (couponResult) {
       discountAmountCents = couponResult.discountAmountCents;
       appliedCouponId = couponResult.coupon.id;
@@ -308,6 +317,7 @@ router.post("/checkout/cash", async (req, res): Promise<void> => {
   }
 
   session.cart = [];
+  session.appliedCouponCode = null;
   await new Promise<void>((resolve, reject) =>
     session.save((err: Error | null) => (err ? reject(err) : resolve()))
   );

@@ -3,6 +3,15 @@ import { Router, type IRouter } from "express";
 import { inArray, eq } from "drizzle-orm";
 import { db, productsTable, customerCartsTable, couponsTable } from "@workspace/db";
 import { AddCartItemBody, RemoveCartItemParams } from "@workspace/api-zod";
+import rateLimit from "express-rate-limit";
+
+const couponLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: "Too many coupon attempts. Please wait a minute." },
+});
 
 const router: IRouter = Router();
 
@@ -68,6 +77,36 @@ router.get("/cart", async (req, res): Promise<void> => {
   const session = (req as any).session;
   const cart: Array<{ productId: number; quantity: number; addGiblets: boolean }> = session.cart ?? [];
   const response = await buildCartResponse(cart);
+
+  if (session.appliedCouponCode) {
+    const [coupon] = await db
+      .select()
+      .from(couponsTable)
+      .where(eq(couponsTable.code, session.appliedCouponCode))
+      .limit(1);
+
+    if (coupon && coupon.isActive && (!coupon.expiresAt || coupon.expiresAt >= new Date()) &&
+        (coupon.maxRedemptions == null || coupon.redemptionsCount < coupon.maxRedemptions) &&
+        response.subtotalInCents >= coupon.minOrderCents) {
+      const discountAmountCents = coupon.discountType === "percent"
+        ? Math.round(response.subtotalInCents * coupon.discountValue / 100)
+        : Math.min(coupon.discountValue, response.subtotalInCents);
+      const label = coupon.discountType === "percent"
+        ? `${coupon.discountValue}% off`
+        : `$${(coupon.discountValue / 100).toFixed(2)} off`;
+      (response as any).appliedCoupon = {
+        code: coupon.code,
+        discountAmountCents,
+        description: coupon.description ? `${coupon.description} (${label})` : label,
+        stripePromotionCodeId: coupon.stripePromotionCodeId ?? null,
+      };
+      (response as any).totalAfterDiscountInCents = Math.max(0, response.subtotalInCents - discountAmountCents);
+    } else {
+      session.appliedCouponCode = null;
+      session.save(() => {});
+    }
+  }
+
   res.json(response);
 });
 
@@ -212,7 +251,7 @@ router.post("/cart/clear", async (req, res): Promise<void> => {
   res.json({ items: [], subtotalInCents: 0, itemCount: 0 });
 });
 
-router.post("/cart/coupon/validate", async (req, res): Promise<void> => {
+router.post("/cart/coupon", couponLimiter, async (req, res): Promise<void> => {
   const code = typeof req.body?.code === "string" ? req.body.code.trim().toUpperCase() : null;
   if (!code) {
     res.status(400).json({ valid: false, error: "Coupon code is required" });
@@ -261,19 +300,34 @@ router.post("/cart/coupon/validate", async (req, res): Promise<void> => {
       ? Math.round(subtotal * coupon.discountValue / 100)
       : Math.min(coupon.discountValue, subtotal);
 
-  const description =
+  const label =
     coupon.discountType === "percent"
       ? `${coupon.discountValue}% off`
       : `$${(coupon.discountValue / 100).toFixed(2)} off`;
+
+  session.appliedCouponCode = coupon.code;
+  await new Promise<void>((resolve, reject) =>
+    session.save((err: Error | null) => (err ? reject(err) : resolve()))
+  );
 
   res.json({
     valid: true,
     couponId: coupon.id,
     code: coupon.code,
     discountAmountCents,
-    description: coupon.description ? `${coupon.description} (${description})` : description,
-    stripeCouponId: coupon.stripeCouponId ?? null,
+    totalAfterDiscountInCents: Math.max(0, subtotal - discountAmountCents),
+    description: coupon.description ? `${coupon.description} (${label})` : label,
+    stripePromotionCodeId: coupon.stripePromotionCodeId ?? null,
   });
+});
+
+router.delete("/cart/coupon", async (req, res): Promise<void> => {
+  const session = (req as any).session;
+  session.appliedCouponCode = null;
+  await new Promise<void>((resolve, reject) =>
+    session.save((err: Error | null) => (err ? reject(err) : resolve()))
+  );
+  res.json({ removed: true });
 });
 
 export default router;

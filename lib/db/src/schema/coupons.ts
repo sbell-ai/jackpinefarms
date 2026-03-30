@@ -12,6 +12,7 @@ export const couponsTable = pgTable("coupons", {
   expiresAt: timestamp("expires_at", { withTimezone: true }),
   isActive: boolean("is_active").notNull().default(true),
   stripeCouponId: text("stripe_coupon_id"),
+  stripePromotionCodeId: text("stripe_promotion_code_id"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 

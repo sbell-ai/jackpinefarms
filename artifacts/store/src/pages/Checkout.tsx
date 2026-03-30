@@ -11,7 +11,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { formatMoney } from "@/lib/utils";
-import { Loader2, CreditCard, Banknote, AlertTriangle, Lock as LockIcon, Tag, Check, X } from "lucide-react";
+import { Loader2, CreditCard, Banknote, AlertTriangle, Lock as LockIcon, Tag } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 const checkoutSchema = z.object({
@@ -23,20 +23,21 @@ const checkoutSchema = z.object({
 
 type CheckoutForm = z.infer<typeof checkoutSchema>;
 
-interface AppliedCoupon {
+type AppliedCoupon = {
   code: string;
   discountAmountCents: number;
   description: string;
-}
+};
 
 export default function Checkout() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   
-  const { data: cart, isLoading: isCartLoading } = useGetCart({
+  const { data: rawCart, isLoading: isCartLoading } = useGetCart({
     query: { queryKey: getGetCartQueryKey() }
   });
+  const cart = rawCart as (typeof rawCart & { appliedCoupon?: AppliedCoupon; totalAfterDiscountInCents?: number }) | undefined;
   
   const { data: session } = useAuthMe({
     query: { queryKey: getAuthMeQueryKey(), retry: false }
@@ -44,11 +45,6 @@ export default function Checkout() {
 
   const [paymentMethod, setPaymentMethod] = useState<'stripe' | 'cash'>('cash');
   const [gibletsUpdating, setGibletsUpdating] = useState<number | null>(null);
-
-  const [couponInput, setCouponInput] = useState("");
-  const [appliedCoupon, setAppliedCoupon] = useState<AppliedCoupon | null>(null);
-  const [couponError, setCouponError] = useState<string | null>(null);
-  const [isValidatingCoupon, setIsValidatingCoupon] = useState(false);
 
   const hasDeposits = (cart?.items as any[] | undefined)?.some(
     (item: any) => item.pricingType === "deposit"
@@ -71,41 +67,6 @@ export default function Checkout() {
     } finally {
       setGibletsUpdating(null);
     }
-  };
-
-  const handleApplyCoupon = async () => {
-    const code = couponInput.trim().toUpperCase();
-    if (!code) return;
-
-    setCouponError(null);
-    setIsValidatingCoupon(true);
-    try {
-      const res = await fetch("/api/cart/coupon/validate", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({ code, cartTotal: cart?.subtotalInCents ?? 0 }),
-      });
-      const data = await res.json();
-      if (!res.ok || !data.valid) {
-        setCouponError(data.error ?? "Invalid or expired coupon code");
-        setAppliedCoupon(null);
-        return;
-      }
-      setAppliedCoupon({
-        code: data.code,
-        discountAmountCents: data.discountAmountCents,
-        description: data.description ?? `${data.discountType === "percent" ? `${data.discountValue}% off` : formatMoney(data.discountValue)} your order`,
-      });
-      setCouponInput("");
-    } finally {
-      setIsValidatingCoupon(false);
-    }
-  };
-
-  const handleRemoveCoupon = () => {
-    setAppliedCoupon(null);
-    setCouponError(null);
   };
 
   const stripeMutation = useCreateStripeCheckout();
@@ -133,12 +94,11 @@ export default function Checkout() {
 
   const onSubmit = async (data: CheckoutForm) => {
     try {
-      const payload = { ...data, couponCode: appliedCoupon?.code };
       if (paymentMethod === 'stripe') {
-        const res = await stripeMutation.mutateAsync({ data: payload });
+        const res = await stripeMutation.mutateAsync({ data });
         window.location.href = res.checkoutUrl;
       } else {
-        const res = await cashMutation.mutateAsync({ data: payload });
+        const res = await cashMutation.mutateAsync({ data });
         queryClient.invalidateQueries({ queryKey: getGetCartQueryKey() });
         setLocation(`/order-confirmation?id=${res.id}`);
       }
@@ -157,8 +117,9 @@ export default function Checkout() {
 
   const isPending = stripeMutation.isPending || cashMutation.isPending;
   const subtotal = cart.subtotalInCents;
+  const appliedCoupon = cart.appliedCoupon;
   const discount = appliedCoupon?.discountAmountCents ?? 0;
-  const total = Math.max(0, subtotal - discount);
+  const total = cart.totalAfterDiscountInCents ?? subtotal;
 
   return (
     <div className="flex-1 bg-muted/30">
@@ -322,57 +283,16 @@ export default function Checkout() {
                 ))}
               </div>
 
-              {/* Coupon Code Input */}
-              <div className="border-t border-border pt-4 space-y-2">
-                {appliedCoupon ? (
-                  <div className="flex items-center justify-between px-3 py-2 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-xl">
-                    <div className="flex items-center gap-2 text-green-700 dark:text-green-400">
-                      <Check className="w-4 h-4 shrink-0" />
-                      <div>
-                        <p className="text-xs font-bold font-mono">{appliedCoupon.code}</p>
-                        <p className="text-xs">{appliedCoupon.description}</p>
-                      </div>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={handleRemoveCoupon}
-                      className="p-1 rounded hover:bg-green-100 dark:hover:bg-green-800 transition-colors"
-                    >
-                      <X className="w-3.5 h-3.5" />
-                    </button>
+              {appliedCoupon && (
+                <div className="flex items-center gap-2 px-3 py-2 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-xl text-green-700 dark:text-green-400">
+                  <Tag className="w-3.5 h-3.5 shrink-0" />
+                  <div className="text-xs">
+                    <span className="font-bold font-mono">{appliedCoupon.code}</span>
+                    <span className="text-green-600 dark:text-green-500"> — {appliedCoupon.description}</span>
                   </div>
-                ) : (
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-bold text-muted-foreground flex items-center gap-1.5">
-                      <Tag className="w-3.5 h-3.5" />
-                      Coupon Code
-                    </label>
-                    <div className="flex gap-2">
-                      <input
-                        type="text"
-                        value={couponInput}
-                        onChange={e => { setCouponInput(e.target.value.toUpperCase()); setCouponError(null); }}
-                        onKeyDown={e => e.key === "Enter" && (e.preventDefault(), handleApplyCoupon())}
-                        placeholder="Enter code"
-                        className="flex-1 min-w-0 px-3 py-2 rounded-lg bg-background border border-border focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all text-sm font-mono uppercase placeholder:normal-case placeholder:font-sans"
-                      />
-                      <button
-                        type="button"
-                        onClick={handleApplyCoupon}
-                        disabled={!couponInput.trim() || isValidatingCoupon}
-                        className="px-3 py-2 rounded-lg bg-muted hover:bg-muted/80 text-sm font-bold transition-colors disabled:opacity-40 shrink-0"
-                      >
-                        {isValidatingCoupon ? <Loader2 className="w-4 h-4 animate-spin" /> : "Apply"}
-                      </button>
-                    </div>
-                    {couponError && (
-                      <p className="text-destructive text-xs font-medium">{couponError}</p>
-                    )}
-                  </div>
-                )}
-              </div>
+                </div>
+              )}
 
-              {/* Totals */}
               <div className="border-t border-border pt-4 space-y-2">
                 <div className="flex justify-between text-sm text-muted-foreground">
                   <span>Subtotal</span>
@@ -380,7 +300,7 @@ export default function Checkout() {
                 </div>
                 {discount > 0 && (
                   <div className="flex justify-between text-sm text-green-600 dark:text-green-400 font-semibold">
-                    <span>Discount ({appliedCoupon?.code})</span>
+                    <span>Discount</span>
                     <span>−{formatMoney(discount)}</span>
                   </div>
                 )}

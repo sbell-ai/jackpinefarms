@@ -11,5 +11,6 @@ declare module "express-session" {
     admin?: boolean;
     customerId?: number;
     cart?: SessionCartItem[];
+    appliedCouponCode?: string | null;
   }
 }

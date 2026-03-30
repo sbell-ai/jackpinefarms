@@ -6,7 +6,7 @@ import {
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { formatMoney } from "@/lib/utils";
-import { Loader2, Trash2, ArrowRight, ShoppingBag, Plus, Minus } from "lucide-react";
+import { Loader2, Trash2, ArrowRight, ShoppingBag, Plus, Minus, Tag, Check, X } from "lucide-react";
 
 type CartItem = {
   productId: number;
@@ -23,6 +23,20 @@ type CartItem = {
   imageUrl?: string | null;
 };
 
+type AppliedCoupon = {
+  code: string;
+  discountAmountCents: number;
+  description: string;
+  stripePromotionCodeId: string | null;
+};
+
+type CartData = {
+  items: CartItem[];
+  subtotalInCents: number;
+  itemCount: number;
+  appliedCoupon?: AppliedCoupon;
+  totalAfterDiscountInCents?: number;
+};
 
 export default function Cart() {
   const [, setLocation] = useLocation();
@@ -32,7 +46,7 @@ export default function Cart() {
     query: { queryKey: getGetCartQueryKey() }
   });
 
-  const cart = rawCart as { items: CartItem[]; subtotalInCents: number; itemCount: number } | undefined;
+  const cart = rawCart as CartData | undefined;
 
   const removeMutation = useRemoveCartItem({
     mutation: {
@@ -41,6 +55,11 @@ export default function Cart() {
   });
 
   const [updatePending, setUpdatePending] = useState(false);
+  const [couponInput, setCouponInput] = useState("");
+  const [couponError, setCouponError] = useState<string | null>(null);
+  const [isApplying, setIsApplying] = useState(false);
+  const [isRemoving, setIsRemoving] = useState(false);
+
   const handleUpdateQuantity = async (productId: number, newQty: number, addGiblets: boolean) => {
     if (newQty < 1) return;
     setUpdatePending(true);
@@ -59,6 +78,43 @@ export default function Cart() {
 
   const handleRemove = (productId: number) => {
     removeMutation.mutate({ productId });
+  };
+
+  const handleApplyCoupon = async () => {
+    const code = couponInput.trim().toUpperCase();
+    if (!code) return;
+    setCouponError(null);
+    setIsApplying(true);
+    try {
+      const res = await fetch("/api/cart/coupon", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ code }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.valid) {
+        setCouponError(data.error ?? "Invalid or expired coupon code");
+        return;
+      }
+      setCouponInput("");
+      await queryClient.invalidateQueries({ queryKey: getGetCartQueryKey() });
+    } finally {
+      setIsApplying(false);
+    }
+  };
+
+  const handleRemoveCoupon = async () => {
+    setIsRemoving(true);
+    try {
+      await fetch("/api/cart/coupon", {
+        method: "DELETE",
+        credentials: "include",
+      });
+      await queryClient.invalidateQueries({ queryKey: getGetCartQueryKey() });
+    } finally {
+      setIsRemoving(false);
+    }
   };
 
   if (isLoading) {
@@ -88,6 +144,10 @@ export default function Cart() {
   }
 
   const hasDeposits = cart.items.some(i => i.pricingType === "deposit");
+  const appliedCoupon = cart.appliedCoupon;
+  const subtotal = cart.subtotalInCents;
+  const discount = appliedCoupon?.discountAmountCents ?? 0;
+  const total = cart.totalAfterDiscountInCents ?? subtotal;
 
   return (
     <div className="flex-1 max-w-5xl mx-auto w-full px-4 py-12 md:py-16">
@@ -190,24 +250,82 @@ export default function Cart() {
         </div>
 
         <div className="lg:col-span-1">
-          <div className="bg-card border border-border rounded-3xl p-8 shadow-sm sticky top-28">
-            <h3 className="font-serif text-2xl font-bold text-foreground mb-6">Summary</h3>
+          <div className="bg-card border border-border rounded-3xl p-8 shadow-sm sticky top-28 space-y-6">
+            <h3 className="font-serif text-2xl font-bold text-foreground">Summary</h3>
             
-            <div className="space-y-4 mb-6">
+            {/* Coupon Code */}
+            <div className="space-y-2">
+              {appliedCoupon ? (
+                <div className="flex items-center justify-between px-3 py-2.5 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-xl">
+                  <div className="flex items-center gap-2 text-green-700 dark:text-green-400">
+                    <Check className="w-4 h-4 shrink-0" />
+                    <div>
+                      <p className="text-xs font-bold font-mono">{appliedCoupon.code}</p>
+                      <p className="text-xs">{appliedCoupon.description}</p>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleRemoveCoupon}
+                    disabled={isRemoving}
+                    className="p-1 rounded hover:bg-green-100 dark:hover:bg-green-800 transition-colors disabled:opacity-50"
+                  >
+                    {isRemoving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <X className="w-3.5 h-3.5" />}
+                  </button>
+                </div>
+              ) : (
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-muted-foreground flex items-center gap-1.5">
+                    <Tag className="w-3.5 h-3.5" />
+                    Have a coupon code?
+                  </label>
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={couponInput}
+                      onChange={e => { setCouponInput(e.target.value.toUpperCase()); setCouponError(null); }}
+                      onKeyDown={e => e.key === "Enter" && (e.preventDefault(), handleApplyCoupon())}
+                      placeholder="Enter code"
+                      className="flex-1 min-w-0 px-3 py-2 rounded-lg bg-background border border-border focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all text-sm font-mono uppercase placeholder:normal-case placeholder:font-sans"
+                    />
+                    <button
+                      type="button"
+                      onClick={handleApplyCoupon}
+                      disabled={!couponInput.trim() || isApplying}
+                      className="px-3 py-2 rounded-lg bg-muted hover:bg-muted/80 text-sm font-bold transition-colors disabled:opacity-40 shrink-0"
+                    >
+                      {isApplying ? <Loader2 className="w-4 h-4 animate-spin" /> : "Apply"}
+                    </button>
+                  </div>
+                  {couponError && (
+                    <p className="text-destructive text-xs font-medium">{couponError}</p>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* Totals */}
+            <div className="space-y-3">
               <div className="flex justify-between text-muted-foreground">
                 <span>Items ({cart.itemCount})</span>
-                <span>{formatMoney(cart.subtotalInCents)}</span>
+                <span>{formatMoney(subtotal)}</span>
               </div>
+              {discount > 0 && (
+                <div className="flex justify-between text-green-600 dark:text-green-400 font-semibold">
+                  <span>Discount</span>
+                  <span>−{formatMoney(discount)}</span>
+                </div>
+              )}
               <div className="flex justify-between text-muted-foreground">
                 <span>Taxes & Fees</span>
                 <span>Calculated at pickup</span>
               </div>
             </div>
 
-            <div className="pt-6 border-t border-border mb-8">
+            <div className="pt-4 border-t border-border">
               <div className="flex justify-between items-baseline mb-2">
                 <span className="font-bold text-lg">Total Due Now</span>
-                <span className="font-bold text-3xl text-primary">{formatMoney(cart.subtotalInCents)}</span>
+                <span className="font-bold text-3xl text-primary">{formatMoney(total)}</span>
               </div>
               {hasDeposits && (
                 <p className="text-xs text-accent font-medium bg-accent/5 p-2 rounded text-center border border-accent/10">

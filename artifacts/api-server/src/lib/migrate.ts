@@ -242,6 +242,10 @@ export async function runMigrations(): Promise<void> {
       `ALTER TABLE stripe_pending_checkouts ADD COLUMN IF NOT EXISTS applied_coupon_code TEXT`
     ));
 
+    await db.execute(sql.raw(
+      `ALTER TABLE coupons ADD COLUMN IF NOT EXISTS stripe_promotion_code_id TEXT`
+    ));
+
     logger.info("Startup migrations complete.");
   } catch (err) {
     logger.error({ err }, "Startup migration failed — server will still start");

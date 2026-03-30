@@ -56,6 +56,7 @@ router.post("/admin/coupons", requireAdmin, async (req, res): Promise<void> => {
   }
 
   let stripeCouponId: string | null = null;
+  let stripePromotionCodeId: string | null = null;
   const stripe = getStripe();
 
   if (stripe) {
@@ -67,10 +68,18 @@ router.post("/admin/coupons", requireAdmin, async (req, res): Promise<void> => {
           ? { percent_off: discountValue }
           : { amount_off: discountValue, currency: "cad" }),
         duration: "once",
+        ...(maxRedemptions != null ? { max_redemptions: maxRedemptions } : {}),
       });
       stripeCouponId = stripeCoupon.id;
+
+      const promoCode = await stripe.promotionCodes.create({
+        coupon: stripeCoupon.id,
+        code,
+        ...(expiresAt ? { expires_at: Math.floor(new Date(expiresAt).getTime() / 1000) } : {}),
+      });
+      stripePromotionCodeId = promoCode.id;
     } catch (err: any) {
-      console.warn("[admin-coupons] Stripe coupon creation failed:", err.message);
+      console.warn("[admin-coupons] Stripe sync failed:", err.message);
     }
   }
 
@@ -85,6 +94,7 @@ router.post("/admin/coupons", requireAdmin, async (req, res): Promise<void> => {
       maxRedemptions: maxRedemptions ?? null,
       expiresAt: expiresAt ? new Date(expiresAt) : null,
       stripeCouponId,
+      stripePromotionCodeId,
     })
     .returning();
 
@@ -109,9 +119,18 @@ router.patch("/admin/coupons/:id/toggle", requireAdmin, async (req, res): Promis
     return;
   }
 
+  const newActive = !existing.isActive;
+
+  const stripe = getStripe();
+  if (stripe && existing.stripePromotionCodeId) {
+    stripe.promotionCodes
+      .update(existing.stripePromotionCodeId, { active: newActive })
+      .catch((err: any) => console.warn("[admin-coupons] Stripe promo code toggle failed:", err.message));
+  }
+
   const [updated] = await db
     .update(couponsTable)
-    .set({ isActive: !existing.isActive })
+    .set({ isActive: newActive })
     .where(eq(couponsTable.id, id))
     .returning();
 
@@ -142,10 +161,17 @@ router.delete("/admin/coupons/:id", requireAdmin, async (req, res): Promise<void
   }
 
   const stripe = getStripe();
-  if (stripe && existing.stripeCouponId) {
-    stripe.coupons.del(existing.stripeCouponId).catch((err: any) =>
-      console.warn("[admin-coupons] Stripe coupon deletion failed:", err.message)
-    );
+  if (stripe) {
+    if (existing.stripePromotionCodeId) {
+      stripe.promotionCodes
+        .update(existing.stripePromotionCodeId, { active: false })
+        .catch((err: any) => console.warn("[admin-coupons] Stripe promo code deactivation failed:", err.message));
+    }
+    if (existing.stripeCouponId) {
+      stripe.coupons
+        .del(existing.stripeCouponId)
+        .catch((err: any) => console.warn("[admin-coupons] Stripe coupon deletion failed:", err.message));
+    }
   }
 
   await db.delete(couponsTable).where(eq(couponsTable.id, id));
