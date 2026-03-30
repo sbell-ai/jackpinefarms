@@ -101,6 +101,14 @@ export const CreateProductBody = zod.object({
   availability: zod.enum(["taking_orders", "preorder", "sold_out", "disabled"]),
   imageUrl: zod.string().nullish(),
   displayOrder: zod.number(),
+}).superRefine((data, ctx) => {
+  if (data.isOnSale) {
+    if (data.salePriceCents == null || data.salePriceCents <= 0) {
+      ctx.addIssue({ code: zod.ZodIssueCode.custom, message: "Sale price must be greater than $0 when on sale", path: ["salePriceCents"] });
+    } else if (data.salePriceCents >= data.priceInCents) {
+      ctx.addIssue({ code: zod.ZodIssueCode.custom, message: "Sale price must be less than the regular price", path: ["salePriceCents"] });
+    }
+  }
 });
 
 /**
@@ -168,6 +176,14 @@ export const UpdateProductBody = zod.object({
     .optional(),
   imageUrl: zod.string().nullish(),
   displayOrder: zod.number().optional(),
+}).superRefine((data, ctx) => {
+  if (data.isOnSale === true) {
+    if (data.salePriceCents == null || data.salePriceCents <= 0) {
+      ctx.addIssue({ code: zod.ZodIssueCode.custom, message: "Sale price must be greater than $0 when on sale", path: ["salePriceCents"] });
+    } else if (data.priceInCents != null && data.salePriceCents >= data.priceInCents) {
+      ctx.addIssue({ code: zod.ZodIssueCode.custom, message: "Sale price must be less than the regular price", path: ["salePriceCents"] });
+    }
+  }
 });
 
 export const UpdateProductResponse = zod.object({
@@ -417,6 +433,8 @@ export const GetCartResponse = zod.object({
       quantity: zod.number(),
       unitLabel: zod.string().nullable(),
       unitPriceInCents: zod.number(),
+      isOnSale: zod.boolean(),
+      originalPriceInCents: zod.number(),
       addGiblets: zod
         .boolean()
         .describe("For meat products — add giblets add-on ($2\/bird)"),
@@ -452,6 +470,8 @@ export const AddCartItemResponse = zod.object({
       quantity: zod.number(),
       unitLabel: zod.string().nullable(),
       unitPriceInCents: zod.number(),
+      isOnSale: zod.boolean(),
+      originalPriceInCents: zod.number(),
       addGiblets: zod
         .boolean()
         .describe("For meat products — add giblets add-on ($2\/bird)"),
@@ -484,6 +504,8 @@ export const RemoveCartItemResponse = zod.object({
       quantity: zod.number(),
       unitLabel: zod.string().nullable(),
       unitPriceInCents: zod.number(),
+      isOnSale: zod.boolean(),
+      originalPriceInCents: zod.number(),
       addGiblets: zod
         .boolean()
         .describe("For meat products — add giblets add-on ($2\/bird)"),
@@ -512,6 +534,8 @@ export const ClearCartResponse = zod.object({
       quantity: zod.number(),
       unitLabel: zod.string().nullable(),
       unitPriceInCents: zod.number(),
+      isOnSale: zod.boolean(),
+      originalPriceInCents: zod.number(),
       addGiblets: zod
         .boolean()
         .describe("For meat products — add giblets add-on ($2\/bird)"),

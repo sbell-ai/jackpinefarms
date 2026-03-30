@@ -14,6 +14,8 @@ type CartItem = {
   productType: string;
   pricingType: "unit" | "deposit";
   unitPriceInCents: number;
+  isOnSale: boolean;
+  originalPriceInCents: number;
   quantity: number;
   addGiblets: boolean;
   lineTotalInCents: number;
@@ -108,9 +110,20 @@ export default function Cart() {
                   </button>
                 </div>
 
-                <div className="flex items-baseline gap-2 mb-4">
-                  <span className="font-bold text-lg text-primary">{formatMoney(item.unitPriceInCents)}</span>
-                  {item.unitLabel && <span className="text-sm text-muted-foreground">/ {item.unitLabel}</span>}
+                <div className="flex items-baseline gap-2 mb-4 flex-wrap">
+                  {item.isOnSale ? (
+                    <>
+                      <span className="font-bold text-lg text-red-600 dark:text-red-400">{formatMoney(item.unitPriceInCents)}</span>
+                      {item.unitLabel && <span className="text-sm text-muted-foreground">/ {item.unitLabel}</span>}
+                      <span className="text-sm text-muted-foreground line-through">{formatMoney(item.originalPriceInCents)}</span>
+                      <span className="px-1.5 py-0.5 bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 text-xs font-bold rounded-full">Sale</span>
+                    </>
+                  ) : (
+                    <>
+                      <span className="font-bold text-lg text-primary">{formatMoney(item.unitPriceInCents)}</span>
+                      {item.unitLabel && <span className="text-sm text-muted-foreground">/ {item.unitLabel}</span>}
+                    </>
+                  )}
                   {item.pricingType === "deposit" && (
                     <span className="ml-2 px-2 py-0.5 bg-accent/10 text-accent text-xs font-bold uppercase tracking-wider rounded-md">
                       Deposit

@@ -35,10 +35,10 @@ async function buildCartResponse(sessionCart: Array<{ productId: number; quantit
       const product = productMap.get(item.productId);
       if (!product) return null;
       const isMeat = product.pricingType === "deposit";
-      const unitPriceInCents =
-        product.isOnSale && product.salePriceCents != null
-          ? product.salePriceCents
-          : product.priceInCents;
+      const isOnSale = product.isOnSale && product.salePriceCents != null;
+      const unitPriceInCents = isOnSale
+        ? product.salePriceCents!
+        : product.priceInCents;
       const gibletsCents = item.addGiblets && isMeat ? 200 * item.quantity : 0;
       const lineTotalInCents = unitPriceInCents * item.quantity + gibletsCents;
       return {
@@ -47,6 +47,8 @@ async function buildCartResponse(sessionCart: Array<{ productId: number; quantit
         productType: product.productType,
         pricingType: product.pricingType,
         unitPriceInCents,
+        isOnSale: isOnSale ?? false,
+        originalPriceInCents: product.priceInCents,
         quantity: item.quantity,
         addGiblets: item.addGiblets && isMeat,
         lineTotalInCents,
