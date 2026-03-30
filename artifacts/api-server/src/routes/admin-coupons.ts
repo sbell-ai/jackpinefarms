@@ -2,6 +2,7 @@ import { Router, type IRouter } from "express";
 import { eq, desc } from "drizzle-orm";
 import { db, couponsTable } from "@workspace/db";
 import { requireAdmin } from "../middlewares/require-admin.js";
+import { logger } from "../lib/logger.js";
 import { z } from "zod";
 
 const router: IRouter = Router();
@@ -107,6 +108,8 @@ router.post("/admin/coupons", requireAdmin, async (req, res): Promise<void> => {
       res.status(502).json({ error: `Stripe sync failed: ${(err as Error).message}. Coupon not created.` });
       return;
     }
+  } else {
+    logger.info({ code }, "[admin-coupons] STRIPE_SECRET_KEY not set — skipping Stripe coupon/promo-code creation (stub)");
   }
 
   const [coupon] = await db
@@ -182,6 +185,11 @@ router.patch("/admin/coupons/:id/toggle", requireAdmin, async (req, res): Promis
       }
     }
     // Deactivating with no Stripe objects: nothing to do on Stripe side
+  } else {
+    logger.info(
+      { id, newActive },
+      "[admin-coupons] STRIPE_SECRET_KEY not set — skipping Stripe promo-code toggle (stub)"
+    );
   }
 
   const [updated] = await db

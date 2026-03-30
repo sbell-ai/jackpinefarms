@@ -94,9 +94,14 @@ router.patch("/admin/orders/:id/status", requireAdmin, async (req, res): Promise
 
   await db.update(ordersTable).set({ status: parsed.data.status }).where(eq(ordersTable.id, id));
 
-  // Increment coupon redemption for cash orders when they reach fulfilled status
+  // Increment coupon redemption only on the first transition to fulfilled for cash orders
   const appliedCode = (existing as { appliedCouponCode?: string | null }).appliedCouponCode;
-  if (parsed.data.status === "fulfilled" && existing.paymentMethod === "cash" && appliedCode) {
+  if (
+    parsed.data.status === "fulfilled" &&
+    existing.status !== "fulfilled" &&
+    existing.paymentMethod === "cash" &&
+    appliedCode
+  ) {
     db.update(couponsTable)
       .set({ redemptionsCount: sql`${couponsTable.redemptionsCount} + 1` })
       .where(eq(couponsTable.code, appliedCode))
