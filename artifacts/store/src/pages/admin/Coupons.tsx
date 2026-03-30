@@ -354,13 +354,21 @@ export default function Coupons() {
                         : "Never"}
                     </td>
                     <td className="px-4 py-3">
-                      <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold ${
-                        coupon.isActive
+                      {(() => {
+                        const isExpired = coupon.expiresAt ? new Date(coupon.expiresAt) < new Date() : false;
+                        const isMaxed = coupon.maxRedemptions != null && coupon.redemptionsCount >= coupon.maxRedemptions;
+                        const label = isExpired ? "Expired" : isMaxed ? "Maxed out" : coupon.isActive ? "Active" : "Disabled";
+                        const cls = coupon.isActive && !isExpired && !isMaxed
                           ? "bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400"
-                          : "bg-muted text-muted-foreground"
-                      }`}>
-                        {coupon.isActive ? "Active" : "Inactive"}
-                      </span>
+                          : isExpired
+                            ? "bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-400"
+                            : "bg-muted text-muted-foreground";
+                        return (
+                          <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold ${cls}`}>
+                            {label}
+                          </span>
+                        );
+                      })()}
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center justify-end gap-1">

@@ -7,7 +7,7 @@ import { z } from "zod";
 const router: IRouter = Router();
 
 const CreateCouponBody = z.object({
-  code: z.string().min(1).max(50).toUpperCase().transform(s => s.trim()),
+  code: z.string().min(1).max(50).toUpperCase().transform(s => s.trim()).refine(s => !/\s/.test(s), { message: "Coupon code cannot contain spaces" }),
   description: z.string().max(200).optional(),
   discountType: z.enum(["percent", "fixed_cents"]),
   discountValue: z.number().int().positive(),
@@ -79,7 +79,8 @@ router.post("/admin/coupons", requireAdmin, async (req, res): Promise<void> => {
       });
       stripePromotionCodeId = promoCode.id;
     } catch (err: any) {
-      console.warn("[admin-coupons] Stripe sync failed:", err.message);
+      res.status(502).json({ error: `Stripe sync failed: ${err.message}. Coupon not created.` });
+      return;
     }
   }
 
@@ -122,10 +123,35 @@ router.patch("/admin/coupons/:id/toggle", requireAdmin, async (req, res): Promis
   const newActive = !existing.isActive;
 
   const stripe = getStripe();
-  if (stripe && existing.stripePromotionCodeId) {
-    stripe.promotionCodes
-      .update(existing.stripePromotionCodeId, { active: newActive })
-      .catch((err: any) => console.warn("[admin-coupons] Stripe promo code toggle failed:", err.message));
+
+  if (stripe) {
+    if (existing.stripePromotionCodeId) {
+      try {
+        await stripe.promotionCodes.update(existing.stripePromotionCodeId, { active: newActive });
+      } catch (err: any) {
+        console.warn("[admin-coupons] Stripe promo code toggle failed:", err.message);
+      }
+    } else if (newActive && existing.stripeCouponId == null) {
+      try {
+        const stripeCoupon = await stripe.coupons.create({
+          id: `JPFARM_${existing.code}`,
+          name: existing.description ?? existing.code,
+          ...(existing.discountType === "percent"
+            ? { percent_off: existing.discountValue }
+            : { amount_off: existing.discountValue, currency: "cad" }),
+          duration: "once",
+        });
+        const promoCode = await stripe.promotionCodes.create({
+          coupon: stripeCoupon.id,
+          code: existing.code,
+        });
+        await db.update(couponsTable)
+          .set({ stripeCouponId: stripeCoupon.id, stripePromotionCodeId: promoCode.id })
+          .where(eq(couponsTable.id, id));
+      } catch (err: any) {
+        console.warn("[admin-coupons] Stripe sync on activate failed:", err.message);
+      }
+    }
   }
 
   const [updated] = await db

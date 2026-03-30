@@ -225,6 +225,17 @@ router.post("/checkout/stripe", async (req, res): Promise<void> => {
 
   if (stripePromotionCodeId) {
     sessionParams.discounts = [{ promotion_code: stripePromotionCodeId }];
+  } else if (appliedCouponCode) {
+    const [couponForStripe] = await db
+      .select({ stripeCouponId: couponsTable.stripeCouponId })
+      .from(couponsTable)
+      .where(eq(couponsTable.code, appliedCouponCode))
+      .limit(1);
+    if (couponForStripe?.stripeCouponId) {
+      sessionParams.discounts = [{ coupon: couponForStripe.stripeCouponId }];
+    } else {
+      sessionParams.allow_promotion_codes = true;
+    }
   } else {
     sessionParams.allow_promotion_codes = true;
   }
@@ -239,7 +250,7 @@ router.post("/checkout/stripe", async (req, res): Promise<void> => {
     customerPhone,
     notes: notes ?? null,
     cartSnapshot: orderData.lineItems,
-    totalInCents: totalAfterDiscount || orderData.totalInCents,
+    totalInCents: totalAfterDiscount,
     appliedCouponCode,
   });
 
