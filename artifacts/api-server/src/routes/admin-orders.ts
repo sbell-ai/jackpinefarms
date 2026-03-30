@@ -1,10 +1,11 @@
 import "../types/session.d.ts";
 import { Router, type IRouter } from "express";
 import { desc, eq, and, SQL } from "drizzle-orm";
-import { db, ordersTable, orderEventsTable, orderItemsTable } from "@workspace/db";
+import { db, ordersTable, orderEventsTable, orderItemsTable, preorderBatchesTable } from "@workspace/db";
 import { requireAdmin } from "../middlewares/require-admin.js";
 import { AdminListOrdersQueryParams, AdminGetOrderParams } from "@workspace/api-zod";
 import { getOrderWithItems } from "./orders.js";
+import { createStripeInvoice } from "../lib/stripe-invoice.js";
 import * as z from "zod";
 
 const router: IRouter = Router();
@@ -214,6 +215,103 @@ router.patch("/admin/orders/:id/assign-batch", requireAdmin, async (req, res): P
 
   const order = await getOrderWithItems(id);
   res.json(order);
+});
+
+const SendOrderInvoiceBody = z.object({
+  weightLbs: z.number().positive(),
+  variant: z.enum(["whole", "half", "quarter"]).default("whole"),
+});
+
+router.post("/admin/orders/:id/send-invoice", requireAdmin, async (req, res): Promise<void> => {
+  const id = Number(req.params.id);
+  if (isNaN(id)) { res.status(400).json({ error: "Invalid id" }); return; }
+
+  const parsed = SendOrderInvoiceBody.safeParse(req.body);
+  if (!parsed.success) { res.status(400).json({ error: parsed.error.message }); return; }
+
+  const { weightLbs, variant } = parsed.data;
+
+  const [order] = await db.select().from(ordersTable).where(eq(ordersTable.id, id)).limit(1);
+  if (!order) { res.status(404).json({ error: "Order not found" }); return; }
+  if (!order.batchId) {
+    res.status(400).json({ error: "Order is not assigned to a preorder batch. Assign a batch before invoicing." });
+    return;
+  }
+
+  const items = await db.select().from(orderItemsTable).where(eq(orderItemsTable.orderId, id));
+  const depositItems = items.filter((i) => i.pricingType === "deposit");
+  const depositPaidCents = depositItems.reduce((s, i) => s + i.lineTotalInCents, 0);
+
+  const [batch] = await db.select().from(preorderBatchesTable).where(eq(preorderBatchesTable.id, order.batchId)).limit(1);
+  if (!batch) { res.status(404).json({ error: "Preorder batch not found" }); return; }
+
+  const pricePerLbCents =
+    variant === "half" ? batch.pricePerLbCentsHalf :
+    variant === "quarter" ? batch.pricePerLbCentsQuarter :
+    batch.pricePerLbCentsWhole;
+
+  const finalTotalCents = Math.round(weightLbs * pricePerLbCents);
+  const remainingCents = Math.max(0, finalTotalCents - depositPaidCents);
+
+  await db.update(ordersTable)
+    .set({ finalWeightLbs: weightLbs })
+    .where(eq(ordersTable.id, id));
+
+  if (remainingCents === 0) {
+    await db.update(ordersTable).set({ status: "invoice_sent" }).where(eq(ordersTable.id, id));
+    await db.insert(orderEventsTable).values({
+      orderId: id,
+      eventType: "invoice_sent",
+      body: `No additional charge: deposit covers full balance. Weight: ${weightLbs} lbs × $${(pricePerLbCents / 100).toFixed(2)}/lb = $${(finalTotalCents / 100).toFixed(2)}. Deposit paid: $${(depositPaidCents / 100).toFixed(2)}.`,
+    });
+    res.json({ status: "deposit_covers_balance", remainingCents: 0, finalTotalCents, depositPaidCents });
+    return;
+  }
+
+  try {
+    const invoiceId = await createStripeInvoice({
+      orderId: id,
+      email: order.customerEmail,
+      customerName: order.customerName,
+      remainingCents,
+      weightLbs,
+      pricePerLbCents,
+      depositPaidCents,
+      eventName: batch.name,
+    });
+
+    if (invoiceId) {
+      await db.update(ordersTable)
+        .set({ stripeInvoiceId: invoiceId, status: "invoice_sent" })
+        .where(eq(ordersTable.id, id));
+      await db.insert(orderEventsTable).values({
+        orderId: id,
+        eventType: "invoice_sent",
+        body: `Stripe invoice ${invoiceId} sent to ${order.customerEmail}. Remaining: $${(remainingCents / 100).toFixed(2)} (${weightLbs} lbs × $${(pricePerLbCents / 100).toFixed(2)}/lb − $${(depositPaidCents / 100).toFixed(2)} deposit).`,
+      });
+      res.json({ status: "invoiced", remainingCents, finalTotalCents, depositPaidCents, invoiceId });
+    } else {
+      await db.update(ordersTable).set({ status: "invoice_sent" }).where(eq(ordersTable.id, id));
+      await db.insert(orderEventsTable).values({
+        orderId: id,
+        eventType: "invoice_sent",
+        body: `[STUB] Invoice queued for ${order.customerEmail}. Remaining: $${(remainingCents / 100).toFixed(2)} (${weightLbs} lbs × $${(pricePerLbCents / 100).toFixed(2)}/lb − $${(depositPaidCents / 100).toFixed(2)} deposit). Configure STRIPE_SECRET_KEY to send real invoices.`,
+      });
+      console.log(
+        `[INVOICE STUB] Order ${id} — ${order.customerEmail}\n` +
+        `  Weight: ${weightLbs} lbs (${variant}, ${batch.name})\n` +
+        `  Final: $${(finalTotalCents / 100).toFixed(2)} | Deposit: $${(depositPaidCents / 100).toFixed(2)} | Remaining: $${(remainingCents / 100).toFixed(2)}`
+      );
+      res.json({ status: "stub", remainingCents, finalTotalCents, depositPaidCents });
+    }
+  } catch (err: any) {
+    await db.insert(orderEventsTable).values({
+      orderId: id,
+      eventType: "invoice_sent",
+      body: `Stripe invoice failed for ${order.customerEmail}: ${err.message}. Remaining: $${(remainingCents / 100).toFixed(2)}.`,
+    });
+    res.status(500).json({ error: `Stripe invoice failed: ${err.message}` });
+  }
 });
 
 export default router;

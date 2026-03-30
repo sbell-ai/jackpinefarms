@@ -5128,3 +5128,77 @@ export function useAdminGetEggAllocations<
 
   return { ...query, queryKey: queryOptions.queryKey };
 }
+
+export const getAdminSendOrderInvoiceUrl = (id: number) => {
+  return `/api/admin/orders/${id}/send-invoice`;
+};
+
+export const adminSendOrderInvoice = async (
+  id: number,
+  adminSendOrderInvoiceBody: { weightLbs: number; variant?: "whole" | "half" | "quarter" },
+  options?: SecondParameter<typeof customFetch>,
+) => {
+  return customFetch<{
+    status: "invoiced" | "stub" | "deposit_covers_balance";
+    remainingCents: number;
+    finalTotalCents: number;
+    depositPaidCents: number;
+    invoiceId?: string;
+  }>(getAdminSendOrderInvoiceUrl(id), {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(adminSendOrderInvoiceBody),
+    ...options,
+  });
+};
+
+export const getAdminSendOrderInvoiceMutationOptions = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof adminSendOrderInvoice>>,
+    TError,
+    { id: number; data: { weightLbs: number; variant?: "whole" | "half" | "quarter" } },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof adminSendOrderInvoice>>,
+  TError,
+  { id: number; data: { weightLbs: number; variant?: "whole" | "half" | "quarter" } },
+  TContext
+> => {
+  const mutationKey = ["adminSendOrderInvoice"];
+  const { mutation: mutationOptions, request: requestOptions } = options ?? {};
+  return {
+    mutationKey,
+    mutationFn: ({ id, data }) => adminSendOrderInvoice(id, data, requestOptions),
+    ...mutationOptions,
+  };
+};
+
+export type AdminSendOrderInvoiceMutationResult = NonNullable<
+  Awaited<ReturnType<typeof adminSendOrderInvoice>>
+>;
+export type AdminSendOrderInvoiceMutationError = ErrorType<ErrorResponse>;
+
+export const useAdminSendOrderInvoice = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof adminSendOrderInvoice>>,
+    TError,
+    { id: number; data: { weightLbs: number; variant?: "whole" | "half" | "quarter" } },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof adminSendOrderInvoice>>,
+  TError,
+  { id: number; data: { weightLbs: number; variant?: "whole" | "half" | "quarter" } },
+  TContext
+> => {
+  return useMutation(getAdminSendOrderInvoiceMutationOptions(options));
+};

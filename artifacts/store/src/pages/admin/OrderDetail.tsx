@@ -14,9 +14,10 @@ import {
   useAdminAllocateEggs,
   useAdminGetEggAllocations,
   getAdminGetEggAllocationsQueryKey,
+  useAdminSendOrderInvoice,
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, RefreshCw, FileText, CheckCircle, XCircle, MessageSquare, Package, Egg } from "lucide-react";
+import { ArrowLeft, RefreshCw, FileText, CheckCircle, XCircle, MessageSquare, Package, Egg, Send, DollarSign } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -70,6 +71,8 @@ export default function AdminOrderDetail() {
   const [newStatus, setNewStatus] = useState("");
   const [statusNote, setStatusNote] = useState("");
   const [selectedBatchId, setSelectedBatchId] = useState("");
+  const [invoiceWeightLbs, setInvoiceWeightLbs] = useState("");
+  const [invoiceVariant, setInvoiceVariant] = useState<"whole" | "half" | "quarter">("whole");
 
   const { data: order, isLoading } = useAdminGetOrder(orderId, {
     query: { queryKey: getAdminGetOrderQueryKey(orderId) },
@@ -154,6 +157,23 @@ export default function AdminOrderDetail() {
     },
   });
 
+  const sendInvoice = useAdminSendOrderInvoice({
+    mutation: {
+      onSuccess: (data: any) => {
+        if (data.status === "deposit_covers_balance") {
+          toast({ title: "Deposit covers balance", description: "No invoice needed — deposit covered the full amount." });
+        } else if (data.status === "invoiced") {
+          toast({ title: "Invoice sent", description: `Stripe invoice sent to ${(order as any)?.customerEmail}. Remaining balance: $${(data.remainingCents / 100).toFixed(2)}` });
+        } else {
+          toast({ title: "Invoice queued (stub)", description: `STRIPE_SECRET_KEY not set. Remaining: $${(data.remainingCents / 100).toFixed(2)}` });
+        }
+        setInvoiceWeightLbs("");
+        invalidate();
+      },
+      onError: (e: any) => toast({ title: "Error", description: e.response?.data?.error ?? e.message, variant: "destructive" }),
+    },
+  });
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-24">
@@ -173,6 +193,8 @@ export default function AdminOrderDetail() {
 
   const hasGiblets = (order as any).items?.some((i: any) => i.isGiblets);
   const refundedGiblets = (order as any).refundedGiblets;
+  const hasDepositItems = (order as any).items?.some((i: any) => i.pricingType === "deposit");
+  const invoiceAlreadySent = !!(order as any).stripeInvoiceId || order.status === "invoice_sent" || order.status === "fulfilled";
 
   return (
     <div className="space-y-6">
@@ -418,6 +440,117 @@ export default function AdminOrderDetail() {
                 onClick={() => allocateEggs.mutate({ orderId })}
               >
                 {allocateEggs.isPending ? "Allocating…" : "Allocate Eggs"}
+              </Button>
+            </>
+          )}
+        </div>
+      )}
+
+      {/* Send Final Invoice */}
+      {hasDepositItems && (order as any).batchId && (
+        <div className="rounded-lg border border-border bg-card p-4 space-y-3">
+          <div className="text-sm font-semibold text-foreground flex items-center gap-2">
+            <Send className="w-4 h-4" /> Final Invoice
+          </div>
+
+          {invoiceAlreadySent ? (
+            <div className="space-y-2">
+              <div className="flex items-center gap-2 text-sm text-teal-700">
+                <CheckCircle className="w-4 h-4" />
+                Invoice already sent.
+              </div>
+              {(order as any).stripeInvoiceId && (
+                <div className="text-xs text-muted-foreground">
+                  Stripe invoice ID: <span className="font-mono">{(order as any).stripeInvoiceId}</span>
+                </div>
+              )}
+              {(order as any).finalWeightLbs && (
+                <div className="text-xs text-muted-foreground">
+                  Final weight on file: {(order as any).finalWeightLbs} lbs
+                </div>
+              )}
+            </div>
+          ) : (
+            <>
+              <p className="text-sm text-muted-foreground">
+                Enter the final dressed weight to calculate the remaining balance. The invoice will be sent to the customer via Stripe.
+              </p>
+
+              {/* Weight + variant row */}
+              <div className="flex gap-2 items-center">
+                <div className="flex-1">
+                  <label className="block text-xs text-muted-foreground mb-1">Final Weight (lbs)</label>
+                  <input
+                    type="number"
+                    min="0.1"
+                    step="0.1"
+                    placeholder="e.g. 5.2"
+                    value={invoiceWeightLbs}
+                    onChange={(e) => setInvoiceWeightLbs(e.target.value)}
+                    className="w-full rounded-md border border-input bg-background px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                  />
+                </div>
+                <div className="w-36">
+                  <label className="block text-xs text-muted-foreground mb-1">Variant</label>
+                  <Select value={invoiceVariant} onValueChange={(v) => setInvoiceVariant(v as any)}>
+                    <SelectTrigger className="text-sm">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="whole">Whole</SelectItem>
+                      <SelectItem value="half">Half</SelectItem>
+                      <SelectItem value="quarter">Quarter</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              {/* Live balance preview */}
+              {(() => {
+                const batch = (batches as any[]).find((b: any) => b.id === (order as any).batchId);
+                const depositPaid = (order as any).items
+                  ?.filter((i: any) => i.pricingType === "deposit")
+                  .reduce((s: number, i: any) => s + i.lineTotalInCents, 0) ?? 0;
+                const pricePerLbCents = batch
+                  ? (invoiceVariant === "half" ? batch.pricePerLbCentsHalf
+                    : invoiceVariant === "quarter" ? batch.pricePerLbCentsQuarter
+                    : batch.pricePerLbCentsWhole)
+                  : 0;
+                const wt = parseFloat(invoiceWeightLbs);
+                if (!batch || isNaN(wt) || wt <= 0) return null;
+                const finalTotal = Math.round(wt * pricePerLbCents);
+                const remaining = Math.max(0, finalTotal - depositPaid);
+                return (
+                  <div className="rounded-md bg-muted/40 border border-border p-3 text-sm space-y-1">
+                    <div className="flex justify-between text-muted-foreground">
+                      <span>{wt} lbs × ${(pricePerLbCents / 100).toFixed(2)}/lb</span>
+                      <span className="text-foreground font-medium">${(finalTotal / 100).toFixed(2)}</span>
+                    </div>
+                    <div className="flex justify-between text-muted-foreground">
+                      <span>Deposit paid</span>
+                      <span>− ${(depositPaid / 100).toFixed(2)}</span>
+                    </div>
+                    <div className="flex justify-between font-semibold border-t border-border pt-1 mt-1">
+                      <span className="flex items-center gap-1"><DollarSign className="w-3.5 h-3.5" />Balance due</span>
+                      <span className={remaining === 0 ? "text-teal-700" : "text-foreground"}>
+                        {remaining === 0 ? "Fully covered" : `$${(remaining / 100).toFixed(2)}`}
+                      </span>
+                    </div>
+                  </div>
+                );
+              })()}
+
+              <Button
+                size="sm"
+                disabled={!invoiceWeightLbs || parseFloat(invoiceWeightLbs) <= 0 || sendInvoice.isPending}
+                onClick={() =>
+                  sendInvoice.mutate({
+                    id: orderId,
+                    data: { weightLbs: parseFloat(invoiceWeightLbs), variant: invoiceVariant },
+                  })
+                }
+              >
+                {sendInvoice.isPending ? "Sending…" : "Send Invoice"}
               </Button>
             </>
           )}

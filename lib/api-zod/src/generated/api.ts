@@ -1391,3 +1391,20 @@ export const AdminGetEggAllocationsResponseItem = zod.object({
 export const AdminGetEggAllocationsResponse = zod.array(
   AdminGetEggAllocationsResponseItem,
 );
+
+export const AdminSendOrderInvoiceParams = zod.object({
+  id: zod.number().int().positive(),
+});
+
+export const AdminSendOrderInvoiceBody = zod.object({
+  weightLbs: zod.number().positive(),
+  variant: zod.enum(["whole", "half", "quarter"]).default("whole"),
+});
+
+export const AdminSendOrderInvoiceResponse = zod.object({
+  status: zod.enum(["invoiced", "stub", "deposit_covers_balance"]),
+  remainingCents: zod.number(),
+  finalTotalCents: zod.number(),
+  depositPaidCents: zod.number(),
+  invoiceId: zod.string().optional(),
+});

@@ -1,0 +1,79 @@
+Implement a Discounts & Coupons system for the Jack Pine Farms Store.
+
+A) Product “On Sale” pricing (per-product)
+
+1) Database + schema
+
+- Add fields to products (or equivalent):
+    - `isOnSale` boolean (default false)
+    - `salePriceCents` integer nullable (must be < regular price when set)
+    - (optional) `saleStartsAt`, `saleEndsAt` timestamps for scheduled sales (nice-to-have; if too much, omit v1)
+- Add Zod validation:
+    - If `isOnSale = true`, require `salePriceCents` and enforce `salePriceCents > 0` and `< regularPriceCents`.
+
+2) Admin product create/edit UI
+
+- Add a “Sale” section:
+    - Toggle: “On sale”
+    - Input: Sale price
+    - Clear helper text: “Sale price overrides the regular price at checkout.”
+- Ensure forms validate and errors are shown inline.
+
+3) Storefront display rules (product page + listings)
+
+- If product is on sale:
+    - Show original price with a red strikethrough (use Tailwind `line-through` and red text like `text-red-600`)
+    - Show sale price in red + bold (`text-red-600 font-bold`)
+    - Example layout on product page:
+        - Original: “$5.00 / dozen” (struck through, red)
+        - Sale: “$4.00 / dozen” (red, bold)
+- Ensure the sale price is what gets added to cart and used for totals.
+
+4) Checkout/Stripe charging
+
+- The amount charged must reflect the sale price, not just the UI.
+- If you currently use Stripe Prices tied to products:
+    - When a sale is enabled/changed, create a new Stripe Price for the sale price and switch the product to reference it (and deactivate old sale prices as needed).
+    - If you use your own internal pricing and pass amounts to Stripe Checkout, ensure the line item amount uses sale price.
+- Add a regression check:
+    - Product on sale shows correct UI and Stripe charges the sale amount.
+
+B) Coupon module (code-based discounts)
+
+1) Coupon data model
+
+- Create a `coupons` table with:
+    - `id` (serial), `code` (unique, uppercase normalized), `type` enum (`percent`,`amount`), `value` (int: percent 1–100 or amountCents), `active` boolean, `startsAt`/`endsAt` nullable, `maxRedemptions` nullable, `redemptionsCount` default 0, `createdAt`.
+- Optional v1 fields if easy:
+    - `minSubtotalCents` nullable
+    - `appliesTo` scope (all products vs specific product IDs)
+
+2) Admin coupon UI (create “on the fly”)
+
+- Add `/admin/coupons` page:
+    - Create coupon form (code, type, value, active, optional expiration/max redemptions)
+    - List coupons with status (Active/Expired/Disabled) and quick disable toggle
+- Validate with Zod; normalize code to uppercase and strip spaces.
+
+3) Customer checkout application
+
+- Add coupon input on cart/checkout: “Coupon code”
+- Apply coupon server-side (never trust client math)
+- Rules:
+    - If invalid/expired/inactive/maxed out: show a clear error
+    - If valid: show discount line item and new total
+- Prevent negative totals (floor at 0).
+
+4) Stripe integration for coupons
+
+- If using Stripe Checkout:
+    - Create and manage Stripe Coupons/Promotion Codes OR apply discount via Stripe-supported discount mechanisms.
+    - Ensure the final charged amount in Stripe matches the discount applied.
+- Ensure redemption tracking is reliable:
+    - Increment `redemptionsCount` only when an order is successfully placed/paid (not when someone merely types the code).
+
+Definition of Done
+
+- Sale pricing: toggle + sale price works, displays correctly (red bold sale price + red strikethrough original), and Stripe charges sale price.
+- Coupons: admin can create coupons anytime, customer can apply at checkout, server validates, totals are correct, and Stripe charges the discounted amount.
+- TypeScript/Zod validation and DB schema are consistent; no hardcoded secrets.
