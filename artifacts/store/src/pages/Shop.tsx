@@ -84,7 +84,7 @@ export default function Shop() {
                             {formatMoney(product.salePriceCents)}
                             {product.unitLabel && <span className="text-sm font-normal"> / {product.unitLabel}</span>}
                           </span>
-                          <span className="text-sm text-muted-foreground line-through">
+                          <span className="text-sm text-red-400 dark:text-red-600 line-through">
                             {formatMoney(product.priceInCents)}
                           </span>
                         </div>

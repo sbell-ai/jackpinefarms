@@ -115,7 +115,7 @@ export default function Cart() {
                     <>
                       <span className="font-bold text-lg text-red-600 dark:text-red-400">{formatMoney(item.unitPriceInCents)}</span>
                       {item.unitLabel && <span className="text-sm text-muted-foreground">/ {item.unitLabel}</span>}
-                      <span className="text-sm text-muted-foreground line-through">{formatMoney(item.originalPriceInCents)}</span>
+                      <span className="text-sm text-red-400 dark:text-red-600 line-through">{formatMoney(item.originalPriceInCents)}</span>
                       <span className="px-1.5 py-0.5 bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 text-xs font-bold rounded-full">Sale</span>
                     </>
                   ) : (

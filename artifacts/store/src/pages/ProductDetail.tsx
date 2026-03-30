@@ -128,7 +128,7 @@ export default function ProductDetail() {
                 {product.unitLabel && (
                   <span className="text-xl text-muted-foreground">/ {product.unitLabel}</span>
                 )}
-                <span className="text-xl text-muted-foreground line-through">
+                <span className="text-xl text-red-400 dark:text-red-600 line-through">
                   {formatMoney(product.priceInCents)}
                 </span>
                 <span className="px-2 py-0.5 bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 text-sm font-bold rounded-full">
