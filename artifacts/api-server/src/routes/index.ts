@@ -18,6 +18,7 @@ import productImagesRouter from "./product-images.js";
 import expensesRouter from "./expenses.js";
 import contactRouter from "./contact.js";
 import adminCouponsRouter from "./admin-coupons.js";
+import siteSettingsRouter from "./site-settings.js";
 
 const router: IRouter = Router();
 
@@ -40,5 +41,6 @@ router.use(eggsRouter);
 router.use(expensesRouter);
 router.use(contactRouter);
 router.use(adminCouponsRouter);
+router.use(siteSettingsRouter);
 
 export default router;

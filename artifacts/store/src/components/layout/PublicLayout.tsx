@@ -4,10 +4,12 @@ import { Menu, X, ShoppingCart, Leaf, User } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { useGetCart, getGetCartQueryKey, useAuthMe, getAuthMeQueryKey } from "@workspace/api-client-react";
+import { useSiteImage } from "@/lib/useSiteImage";
 
 export function PublicLayout({ children }: { children: ReactNode }) {
   const [isScrolled, setIsScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const logoUrl = useSiteImage("image.logo", `${import.meta.env.BASE_URL}images/logo.png`);
   const [location] = useLocation();
 
   const { data: cart } = useGetCart({
@@ -55,7 +57,7 @@ export function PublicLayout({ children }: { children: ReactNode }) {
             <Link href="/" className="flex items-center gap-3 group">
               <div className="w-10 h-10 flex items-center justify-center group-hover:scale-105 transition-transform">
                 <img 
-                  src={`${import.meta.env.BASE_URL}images/logo.png`} 
+                  src={logoUrl} 
                   alt="Jack Pine Farm Logo" 
                   className="w-full h-full object-contain"
                 />
@@ -189,7 +191,7 @@ export function PublicLayout({ children }: { children: ReactNode }) {
             <div>
               <div className="flex items-center gap-3 mb-6">
                 <img 
-                  src={`${import.meta.env.BASE_URL}images/logo.png`} 
+                  src={logoUrl} 
                   alt="Jack Pine Farm Logo" 
                   className="w-10 h-10 object-contain brightness-0 invert"
                 />

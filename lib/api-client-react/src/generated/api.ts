@@ -72,6 +72,8 @@ import type {
   RegisterBody,
   SendInvoicesBody,
   SendInvoicesResponse,
+  SiteSettingEntry,
+  SiteSettings,
   StripeCheckoutResponse,
   SuccessResponse,
   UnsubscribeBody,
@@ -5534,4 +5536,122 @@ export const useRemoveCartCoupon = <
   TContext
 > => {
   return useMutation(getRemoveCartCouponMutationOptions(options));
+};
+
+export const getGetSiteSettingsUrl = () => `/api/site-settings`;
+
+export const getSiteSettings = async (
+  options?: RequestInit,
+): Promise<SiteSettings> =>
+  customFetch<SiteSettings>(getGetSiteSettingsUrl(), {
+    ...options,
+    method: "GET",
+  });
+
+export const getGetSiteSettingsQueryKey = () =>
+  [getGetSiteSettingsUrl()] as const;
+
+export const getGetSiteSettingsQueryOptions = <
+  TData = Awaited<ReturnType<typeof getSiteSettings>>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getSiteSettings>>,
+    ErrorType<ErrorResponse>,
+    TData
+  >;
+  request?: RequestInit;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+  const queryKey = queryOptions?.queryKey ?? getGetSiteSettingsQueryKey();
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getSiteSettings>>> = () =>
+    getSiteSettings(requestOptions);
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getSiteSettings>>,
+    ErrorType<ErrorResponse>,
+    TData
+  >;
+};
+
+export type GetSiteSettingsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getSiteSettings>>
+>;
+export type GetSiteSettingsQueryError = ErrorType<ErrorResponse>;
+
+export const useGetSiteSettings = <
+  TData = Awaited<ReturnType<typeof getSiteSettings>>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getSiteSettings>>,
+    ErrorType<ErrorResponse>,
+    TData
+  >;
+  request?: RequestInit;
+}): UseQueryResult<TData, ErrorType<ErrorResponse>> => {
+  const queryOptions = getGetSiteSettingsQueryOptions(options);
+  return useQuery(queryOptions);
+};
+
+export const getAdminUpdateSiteSettingUrl = (key: string) =>
+  `/api/admin/site-settings/${key}`;
+
+export const adminUpdateSiteSetting = async (
+  key: string,
+  body: { value: string },
+  options?: RequestInit,
+): Promise<SiteSettingEntry> =>
+  customFetch<SiteSettingEntry>(getAdminUpdateSiteSettingUrl(key), {
+    ...options,
+    method: "PUT",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(body),
+  });
+
+export const getAdminUpdateSiteSettingMutationOptions = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof adminUpdateSiteSetting>>,
+    TError,
+    { key: string; data: { value: string } },
+    TContext
+  >;
+  request?: RequestInit;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof adminUpdateSiteSetting>>,
+  TError,
+  { key: string; data: { value: string } },
+  TContext
+> => {
+  const { mutation: mutationOptions, request: requestOptions } = options ?? {};
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof adminUpdateSiteSetting>>,
+    { key: string; data: { value: string } }
+  > = ({ key, data }) => adminUpdateSiteSetting(key, data, requestOptions);
+  return { mutationFn, ...mutationOptions };
+};
+
+export type AdminUpdateSiteSettingMutationResult = NonNullable<
+  Awaited<ReturnType<typeof adminUpdateSiteSetting>>
+>;
+export type AdminUpdateSiteSettingMutationError = ErrorType<ErrorResponse>;
+
+export const useAdminUpdateSiteSetting = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof adminUpdateSiteSetting>>,
+    TError,
+    { key: string; data: { value: string } },
+    TContext
+  >;
+  request?: RequestInit;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof adminUpdateSiteSetting>>,
+  TError,
+  { key: string; data: { value: string } },
+  TContext
+> => {
+  return useMutation(getAdminUpdateSiteSettingMutationOptions(options));
 };

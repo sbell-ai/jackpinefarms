@@ -6,6 +6,7 @@ import {
   useCreateStripeCheckout,
   useCreateCashOrder
 } from "@workspace/api-client-react";
+import { useSiteImage } from "@/lib/useSiteImage";
 import type { Cart } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
@@ -28,6 +29,7 @@ export default function Checkout() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const checkoutHero = useSiteImage("image.checkout_hero", `${import.meta.env.BASE_URL}images/checkout-hero.png`);
   
   const { data: cart, isLoading: isCartLoading } = useGetCart({
     query: { queryKey: getGetCartQueryKey() }
@@ -117,7 +119,7 @@ export default function Checkout() {
     <div className="flex-1 bg-muted/30">
       <div className="h-48 md:h-64 w-full relative overflow-hidden bg-primary">
         <img 
-          src={`${import.meta.env.BASE_URL}images/checkout-hero.png`} 
+          src={checkoutHero}
           alt="Farm Checkout" 
           className="w-full h-full object-cover opacity-60 mix-blend-overlay"
         />

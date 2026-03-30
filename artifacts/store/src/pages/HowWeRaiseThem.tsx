@@ -1,6 +1,16 @@
 import { CheckCircle2 } from "lucide-react";
+import { useSiteImage } from "@/lib/useSiteImage";
 
 export default function HowWeRaiseThem() {
+  const pasturePhoto = useSiteImage(
+    "image.how_we_pasture",
+    "https://pixabay.com/get/g27363507b289c0d668275bdf140bc91146030b4daa710f9f7a3795301792362addc33384d168bd84b4bcd9eaf77913bc1ea8f3b44f781b3da4309d479f4202f1_1280.jpg"
+  );
+  const feedPhoto = useSiteImage(
+    "image.how_we_feed",
+    "https://pixabay.com/get/gfbeb1c72db35e62592a594faf40308f92977b9b859073740d980ef8704251cb4be1784bcebb71e1de9040afa32822162_1280.jpg"
+  );
+
   return (
     <div className="w-full">
       {/* Hero */}
@@ -22,8 +32,7 @@ export default function HowWeRaiseThem() {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center mb-24">
             <div className="order-2 lg:order-1 relative">
               <div className="absolute -inset-4 bg-accent/10 rounded-3xl transform -rotate-3"></div>
-              {/* pasture landscape detail */},
-              <img src="https://pixabay.com/get/g27363507b289c0d668275bdf140bc91146030b4daa710f9f7a3795301792362addc33384d168bd84b4bcd9eaf77913bc1ea8f3b44f781b3da4309d479f4202f1_1280.jpg" alt="Lush green pasture grass" className="relative rounded-2xl shadow-xl w-full aspect-[4/3] object-cover border-4 border-white" />
+              <img src={pasturePhoto} alt="Lush green pasture grass" className="relative rounded-2xl shadow-xl w-full aspect-[4/3] object-cover border-4 border-white" />
             </div>
             <div className="order-1 lg:order-2">
               <h2 className="text-3xl font-serif font-bold text-primary mb-6">True Pasture Raised</h2>
@@ -58,8 +67,7 @@ export default function HowWeRaiseThem() {
             </div>
             <div className="relative">
               <div className="absolute -inset-4 bg-primary/10 rounded-3xl transform rotate-2"></div>
-              {/* grains and feed */},
-              <img src="https://pixabay.com/get/gfbeb1c72db35e62592a594faf40308f92977b9b859073740d980ef8704251cb4be1784bcebb71e1de9040afa32822162_1280.jpg" alt="Natural grains" className="relative rounded-2xl shadow-xl w-full aspect-[4/3] object-cover border-4 border-white" />
+              <img src={feedPhoto} alt="Natural grains" className="relative rounded-2xl shadow-xl w-full aspect-[4/3] object-cover border-4 border-white" />
             </div>
           </div>
 

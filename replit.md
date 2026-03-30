@@ -124,6 +124,8 @@ Database layer using Drizzle ORM with PostgreSQL.
 - `stripe_pending` — Stripe payment intent tracking
 - `expenses` — farm operating expenses (date, category, amount, vendor, payment method)
 - `contact_submissions` — contact form submissions (name, email, subject, message, ip, user_agent, status)
+- `site_settings` — key-value store for admin-editable site content (image URLs, etc.)
+- `coupons` — discount codes with Stripe sync, percent/amount types, start/end dates, redemption limits
 
 **Order status enum (9 values)**:
 `pending_payment | deposit_paid | cash_pending | pickup_assigned | weights_entered | invoice_sent | fulfilled | cancelled | no_show`
@@ -171,7 +173,24 @@ When calling hooks with query options in React Query v5, always pass `queryKey` 
 - Password: set via `ADMIN_PASSWORD` env var (dev default: `jackpine2026`)
 - Contact form email recipient: set `CONTACT_TO_EMAIL` secret to the farm owner's inbox (e.g. `steph@jackpinefarms.farm`). Without it, submissions are stored in DB but not emailed.
 - Session: express-session with `SESSION_SECRET` env var
-- Admin UI at `/admin` (dashboard), `/admin/orders`, `/admin/products`, `/admin/batches`, `/admin/pickup-events`, `/admin/customers`, `/admin/eggs` (egg inventory), `/admin/flocks`, `/admin/animals`
+- Admin UI at `/admin` (dashboard), `/admin/orders`, `/admin/products`, `/admin/batches`, `/admin/pickup-events`, `/admin/customers`, `/admin/eggs` (egg inventory), `/admin/flocks`, `/admin/animals`, `/admin/expenses`, `/admin/coupons`, `/admin/site-images`
+
+## Site Images (admin-editable)
+
+All storefront images are now admin-editable via `/admin/site-images`. Images are stored in object storage; the URL is persisted in `site_settings`. Each page falls back to a static file or external URL if no custom image is set.
+
+**Image slots**:
+- `image.hero_bg` — Home page hero background (fallback: `/images/hero-bg.jpg`)
+- `image.logo` — Logo in navbar + footer (fallback: `/images/logo.png`)
+- `image.checkout_hero` — Checkout page banner (fallback: `/images/checkout-hero.png`)
+- `image.home_promise` — "The Jack Pine Promise" section photo
+- `image.about_farm` — About page farm landscape
+- `image.how_we_pasture` — HowWeRaiseThem pasture photo
+- `image.how_we_feed` — HowWeRaiseThem feed/grain photo
+- `image.product_fallback` — Shown on products/shop with no images uploaded
+
+**API**: `GET /api/site-settings` (public), `PUT /api/admin/site-settings/:key` (admin)
+**Hook**: `useSiteImage(key, fallback)` in `@/lib/useSiteImage`
 
 ## Egg & Flock Accounting
 

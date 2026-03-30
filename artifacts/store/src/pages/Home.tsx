@@ -2,10 +2,14 @@ import { Link } from "wouter";
 import { ArrowRight, CheckCircle2 } from "lucide-react";
 import { useListProducts } from "@workspace/api-client-react";
 import { formatMoney, stripHtml } from "@/lib/utils";
+import { useSiteImage } from "@/lib/useSiteImage";
 
 export default function Home() {
   const { data: products } = useListProducts();
   const featuredProducts = products?.slice(0, 3) || [];
+  const heroBg = useSiteImage("image.hero_bg", `${import.meta.env.BASE_URL}images/hero-bg.jpg`);
+  const promisePhoto = useSiteImage("image.home_promise", "https://images.unsplash.com/photo-1500595046743-cd271d694d30?w=800&q=80");
+  const productFallback = useSiteImage("image.product_fallback", "https://images.unsplash.com/photo-1598965402089-897ce52e8355?w=600&q=80");
 
   return (
     <div className="flex flex-col w-full">
@@ -13,7 +17,7 @@ export default function Home() {
       <section className="relative min-h-[85vh] flex items-center justify-center overflow-hidden">
         <div className="absolute inset-0 z-0">
           <img 
-            src={`${import.meta.env.BASE_URL}images/hero-bg.jpg`}
+            src={heroBg}
             alt="Turkeys on pasture at sunset, Jack Pine Farm"
             className="w-full h-full object-cover"
           />
@@ -70,7 +74,7 @@ export default function Home() {
                   {product.images?.[0]?.url ? (
                     <img src={product.images[0].url} alt={product.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
                   ) : (
-                    <img src="https://images.unsplash.com/photo-1598965402089-897ce52e8355?w=600&q=80" alt={product.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                    <img src={productFallback} alt={product.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
                   )}
                   {product.availability === 'sold_out' && (
                     <div className="absolute inset-0 bg-background/50 backdrop-blur-[2px] flex items-center justify-center">
@@ -142,7 +146,7 @@ export default function Home() {
               <div className="aspect-square rounded-full bg-primary-foreground/5 absolute -inset-8 blur-3xl"></div>
               {/* pasture landscape */}
               <img 
-                src="https://images.unsplash.com/photo-1500595046743-cd271d694d30?w=800&q=80" 
+                src={promisePhoto}
                 alt="Lush green pasture" 
                 className="relative rounded-2xl shadow-2xl border-4 border-primary-foreground/10 object-cover aspect-[4/3] w-full"
               />

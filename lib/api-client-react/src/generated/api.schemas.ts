@@ -792,3 +792,10 @@ export type AdminListEggAdjustmentsParams = {
   fromDate?: string;
   toDate?: string;
 };
+
+export interface SiteSettingEntry {
+  key: string;
+  value: string;
+}
+
+export type SiteSettings = Record<string, string>;

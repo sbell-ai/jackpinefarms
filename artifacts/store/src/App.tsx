@@ -47,6 +47,7 @@ import AdminFlocks from "./pages/admin/Flocks";
 import AdminAnimals from "./pages/admin/Animals";
 import AdminExpenses from "./pages/admin/Expenses";
 import AdminCoupons from "./pages/admin/Coupons";
+import AdminSiteImages from "./pages/admin/SiteImages";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -108,6 +109,9 @@ function Router() {
       </Route>
       <Route path="/admin/coupons">
         <AdminLayout><AdminCoupons /></AdminLayout>
+      </Route>
+      <Route path="/admin/site-images">
+        <AdminLayout><AdminSiteImages /></AdminLayout>
       </Route>
       <Route path="/admin">
         <AdminLayout><AdminDashboard /></AdminLayout>

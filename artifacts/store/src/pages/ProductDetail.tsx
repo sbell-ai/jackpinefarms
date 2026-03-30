@@ -11,6 +11,7 @@ import { formatMoney } from "@/lib/utils";
 import { Loader2, ArrowLeft, CheckCircle2, AlertCircle, ShoppingBag, Plus, Minus, ChevronLeft, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
+import { useSiteImage } from "@/lib/useSiteImage";
 
 export default function ProductDetail() {
   const [, params] = useRoute("/shop/:id");
@@ -18,6 +19,7 @@ export default function ProductDetail() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const productFallback = useSiteImage("image.product_fallback", "https://images.unsplash.com/photo-1516684732162-798a0062be99?w=800&q=80");
   
   const { data: product, isLoading, isError } = useGetProduct(id, {
     query: { queryKey: getGetProductQueryKey(id) }
@@ -116,7 +118,7 @@ export default function ProductDetail() {
                 />
               ) : (
                 <img
-                  src="https://images.unsplash.com/photo-1516684732162-798a0062be99?w=800&q=80"
+                  src={productFallback}
                   alt={product.name}
                   className="w-full h-full object-cover"
                 />

@@ -2,9 +2,11 @@ import { Link } from "wouter";
 import { useListProducts } from "@workspace/api-client-react";
 import { formatMoney, stripHtml } from "@/lib/utils";
 import { Loader2, ArrowRight } from "lucide-react";
+import { useSiteImage } from "@/lib/useSiteImage";
 
 export default function Shop() {
   const { data: products, isLoading } = useListProducts();
+  const productFallback = useSiteImage("image.product_fallback", "https://images.unsplash.com/photo-1587486913049-53fc88980cfc?w=600&q=80");
 
   if (isLoading) {
     return (
@@ -46,7 +48,7 @@ export default function Shop() {
                   {product.images?.[0]?.url ? (
                     <img src={product.images[0].url} alt={product.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
                   ) : (
-                    <img src="https://images.unsplash.com/photo-1587486913049-53fc88980cfc?w=600&q=80" alt={product.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                    <img src={productFallback} alt={product.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
                   )}
                   
                   {/* Status Badges */}

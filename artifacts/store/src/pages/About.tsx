@@ -1,4 +1,11 @@
+import { useSiteImage } from "@/lib/useSiteImage";
+
 export default function About() {
+  const aboutFarm = useSiteImage(
+    "image.about_farm",
+    "https://pixabay.com/get/g38f317c0f9f359c2d37723a48902c4a484a546ad499a306b93b56021742b4bfcc63a12e4dd446dfe76599e09466a7d6bb5894208e2f99925caf88aa0060a0b51_1280.jpg"
+  );
+
   return (
     <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-20 w-full">
       <div className="text-center mb-16">
@@ -11,8 +18,7 @@ export default function About() {
           Jack Pine Farm was born from a desire to connect our community with food they can trust.
         </p>
 
-        {/* farm scene placeholder */},
-        <img src="https://pixabay.com/get/g38f317c0f9f359c2d37723a48902c4a484a546ad499a306b93b56021742b4bfcc63a12e4dd446dfe76599e09466a7d6bb5894208e2f99925caf88aa0060a0b51_1280.jpg" alt="Farm landscape" className="w-full rounded-3xl shadow-lg mb-12 border-4 border-white object-cover aspect-video" />
+        <img src={aboutFarm} alt="Farm landscape" className="w-full rounded-3xl shadow-lg mb-12 border-4 border-white object-cover aspect-video" />
 
         <div className="bg-card p-10 rounded-3xl border border-border shadow-sm mb-12">
           <h2 className="text-3xl mt-0">Roots in the Soil</h2>

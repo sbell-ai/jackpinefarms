@@ -280,6 +280,31 @@ export async function runMigrations(): Promise<void> {
       EXCEPTION WHEN duplicate_object THEN NULL; END $$;
     `);
 
+    // Create site_settings key-value table for admin-editable content
+    await db.execute(sql.raw(`
+      CREATE TABLE IF NOT EXISTS site_settings (
+        key TEXT PRIMARY KEY,
+        value TEXT NOT NULL DEFAULT '',
+        updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      )
+    `));
+    // Seed the known image keys so they always exist (upsert — preserve any existing value)
+    const imageKeys = [
+      'image.hero_bg',
+      'image.logo',
+      'image.checkout_hero',
+      'image.home_promise',
+      'image.about_farm',
+      'image.how_we_pasture',
+      'image.how_we_feed',
+      'image.product_fallback',
+    ];
+    for (const key of imageKeys) {
+      await db.execute(sql.raw(
+        `INSERT INTO site_settings (key, value) VALUES ('${key}', '') ON CONFLICT (key) DO NOTHING`
+      ));
+    }
+
     logger.info("Startup migrations complete.");
   } catch (err) {
     logger.error({ err }, "Startup migration failed — server will still start");
