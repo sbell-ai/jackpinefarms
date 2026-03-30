@@ -222,6 +222,21 @@ router.patch("/products/:id", requireAdmin, async (req, res): Promise<void> => {
     parsed.data.description = cleanedDescription;
   }
 
+  // Enforce sale price invariant using merged state (update fields + existing)
+  const effectiveOnSale = parsed.data.isOnSale ?? existing.isOnSale;
+  const effectiveSalePrice = "salePriceCents" in parsed.data ? parsed.data.salePriceCents : existing.salePriceCents;
+  const effectivePrice = parsed.data.priceInCents ?? existing.priceInCents;
+  if (effectiveOnSale) {
+    if (effectiveSalePrice == null || effectiveSalePrice <= 0) {
+      res.status(400).json({ error: "Sale price must be greater than $0 when on sale" });
+      return;
+    }
+    if (effectiveSalePrice >= effectivePrice) {
+      res.status(400).json({ error: "Sale price must be less than the regular price" });
+      return;
+    }
+  }
+
   const updateData = { ...parsed.data, updatedAt: new Date() };
 
   const [product] = await db

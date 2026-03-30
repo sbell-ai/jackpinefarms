@@ -51,6 +51,14 @@ export const insertProductSchema = createInsertSchema(productsTable).omit({
   id: true,
   createdAt: true,
   updatedAt: true,
+}).superRefine((data, ctx) => {
+  if (data.isOnSale) {
+    if (data.salePriceCents == null || data.salePriceCents <= 0) {
+      ctx.addIssue({ code: "custom", message: "Sale price must be greater than $0 when on sale", path: ["salePriceCents"] });
+    } else if (data.salePriceCents >= data.priceInCents) {
+      ctx.addIssue({ code: "custom", message: "Sale price must be less than the regular price", path: ["salePriceCents"] });
+    }
+  }
 });
 export type InsertProduct = z.infer<typeof insertProductSchema>;
 export type Product = typeof productsTable.$inferSelect;
