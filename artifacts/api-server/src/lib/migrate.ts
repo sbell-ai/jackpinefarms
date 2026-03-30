@@ -271,6 +271,14 @@ export async function runMigrations(): Promise<void> {
     await db.execute(sql.raw(
       `UPDATE coupons SET discount_type = 'amount' WHERE discount_type = 'fixed_cents'`
     ));
+    // Add check constraint to enforce discount_type values at DB level
+    await db.execute(sql`
+      DO $$ BEGIN
+        ALTER TABLE coupons
+          ADD CONSTRAINT coupons_discount_type_check
+          CHECK (discount_type IN ('percent', 'amount'));
+      EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+    `);
 
     logger.info("Startup migrations complete.");
   } catch (err) {
