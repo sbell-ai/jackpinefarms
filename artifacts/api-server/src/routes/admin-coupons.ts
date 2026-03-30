@@ -150,14 +150,17 @@ router.patch("/admin/coupons/:id/toggle", requireAdmin, async (req, res): Promis
 
   if (stripe) {
     if (existing.stripePromotionCodeId) {
-      // Promo code exists — just toggle its active flag
+      // Promo code exists — toggle its active flag; failure blocks local change
       try {
         await stripe.promotionCodes.update(existing.stripePromotionCodeId, { active: newActive });
       } catch (err: unknown) {
-        console.warn("[admin-coupons] Stripe promo code toggle failed:", (err as Error).message);
+        res.status(502).json({
+          error: `Stripe sync failed: ${(err as Error).message}. Coupon not updated.`,
+        });
+        return;
       }
     } else if (newActive) {
-      // Activating but no Stripe objects yet — create them now
+      // Activating but no Stripe objects yet — create them now; failure blocks activation
       try {
         const endsAtIso = existing.endsAt ? existing.endsAt.toISOString() : undefined;
         const ids = await createStripeObjects(stripe, {
@@ -172,9 +175,13 @@ router.patch("/admin/coupons/:id/toggle", requireAdmin, async (req, res): Promis
           .set({ stripeCouponId: ids.stripeCouponId, stripePromotionCodeId: ids.stripePromotionCodeId })
           .where(eq(couponsTable.id, id));
       } catch (err: unknown) {
-        console.warn("[admin-coupons] Stripe sync on activate failed:", (err as Error).message);
+        res.status(502).json({
+          error: `Stripe sync failed: ${(err as Error).message}. Coupon not activated.`,
+        });
+        return;
       }
     }
+    // Deactivating with no Stripe objects: nothing to do on Stripe side
   }
 
   const [updated] = await db

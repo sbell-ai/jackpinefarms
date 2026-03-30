@@ -222,18 +222,15 @@ router.post("/checkout/stripe", async (req, res): Promise<void> => {
   let allowPromoCodes = true;
 
   if (stripePromotionCodeId) {
+    // Always use promotion_code — never fall back to raw coupon ID
     discountsParam = [{ promotion_code: stripePromotionCodeId }];
     allowPromoCodes = false;
   } else if (appliedCouponCode) {
-    const [couponForStripe] = await db
-      .select({ stripeCouponId: couponsTable.stripeCouponId })
-      .from(couponsTable)
-      .where(eq(couponsTable.code, appliedCouponCode))
-      .limit(1);
-    if (couponForStripe?.stripeCouponId) {
-      discountsParam = [{ coupon: couponForStripe.stripeCouponId }];
-      allowPromoCodes = false;
-    }
+    // Coupon is applied in-app but has no Stripe promotion code (e.g. Stripe not configured).
+    // Drop the discount from the Stripe session; the coupon was validated server-side
+    // and the discountAmountCents is already reflected in totalAfterDiscount above.
+    // allow_promotion_codes remains true so the customer can't double-dip.
+    allowPromoCodes = false;
   }
 
   const sessionParams: Stripe.Checkout.SessionCreateParams = {

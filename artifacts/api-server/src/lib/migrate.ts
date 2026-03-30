@@ -256,10 +256,17 @@ export async function runMigrations(): Promise<void> {
     await db.execute(sql.raw(
       `ALTER TABLE coupons ADD COLUMN IF NOT EXISTS ends_at TIMESTAMPTZ`
     ));
-    // Migrate expires_at → ends_at for existing rows
-    await db.execute(sql.raw(
-      `UPDATE coupons SET ends_at = expires_at WHERE expires_at IS NOT NULL AND ends_at IS NULL`
-    ));
+    // Migrate expires_at → ends_at for existing rows (only if expires_at column exists)
+    await db.execute(sql`
+      DO $$ BEGIN
+        IF EXISTS (
+          SELECT 1 FROM information_schema.columns
+          WHERE table_name = 'coupons' AND column_name = 'expires_at'
+        ) THEN
+          UPDATE coupons SET ends_at = expires_at WHERE expires_at IS NOT NULL AND ends_at IS NULL;
+        END IF;
+      END $$;
+    `);
     // Migrate discount_type 'fixed_cents' → 'amount'
     await db.execute(sql.raw(
       `UPDATE coupons SET discount_type = 'amount' WHERE discount_type = 'fixed_cents'`
