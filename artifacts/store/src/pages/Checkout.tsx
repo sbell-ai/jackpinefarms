@@ -11,7 +11,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { formatMoney } from "@/lib/utils";
-import { Loader2, CreditCard, Banknote, AlertTriangle, Lock as LockIcon } from "lucide-react";
+import { Loader2, CreditCard, Banknote, AlertTriangle, Lock as LockIcon, Tag, Check, X } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 const checkoutSchema = z.object({
@@ -22,6 +22,12 @@ const checkoutSchema = z.object({
 });
 
 type CheckoutForm = z.infer<typeof checkoutSchema>;
+
+interface AppliedCoupon {
+  code: string;
+  discountAmountCents: number;
+  description: string;
+}
 
 export default function Checkout() {
   const [, setLocation] = useLocation();
@@ -38,6 +44,11 @@ export default function Checkout() {
 
   const [paymentMethod, setPaymentMethod] = useState<'stripe' | 'cash'>('cash');
   const [gibletsUpdating, setGibletsUpdating] = useState<number | null>(null);
+
+  const [couponInput, setCouponInput] = useState("");
+  const [appliedCoupon, setAppliedCoupon] = useState<AppliedCoupon | null>(null);
+  const [couponError, setCouponError] = useState<string | null>(null);
+  const [isValidatingCoupon, setIsValidatingCoupon] = useState(false);
 
   const hasDeposits = (cart?.items as any[] | undefined)?.some(
     (item: any) => item.pricingType === "deposit"
@@ -62,6 +73,41 @@ export default function Checkout() {
     }
   };
 
+  const handleApplyCoupon = async () => {
+    const code = couponInput.trim().toUpperCase();
+    if (!code) return;
+
+    setCouponError(null);
+    setIsValidatingCoupon(true);
+    try {
+      const res = await fetch("/api/cart/coupon/validate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ code, cartTotal: cart?.subtotalInCents ?? 0 }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.valid) {
+        setCouponError(data.error ?? "Invalid or expired coupon code");
+        setAppliedCoupon(null);
+        return;
+      }
+      setAppliedCoupon({
+        code: data.code,
+        discountAmountCents: data.discountAmountCents,
+        description: data.description ?? `${data.discountType === "percent" ? `${data.discountValue}% off` : formatMoney(data.discountValue)} your order`,
+      });
+      setCouponInput("");
+    } finally {
+      setIsValidatingCoupon(false);
+    }
+  };
+
+  const handleRemoveCoupon = () => {
+    setAppliedCoupon(null);
+    setCouponError(null);
+  };
+
   const stripeMutation = useCreateStripeCheckout();
   const cashMutation = useCreateCashOrder();
 
@@ -69,7 +115,6 @@ export default function Checkout() {
     resolver: zodResolver(checkoutSchema)
   });
 
-  // Prefill form if logged in
   useEffect(() => {
     if (session?.id && session.email) {
       reset({
@@ -80,7 +125,6 @@ export default function Checkout() {
     }
   }, [session, reset]);
 
-  // Redirect if empty
   useEffect(() => {
     if (!isCartLoading && (!cart || cart.items.length === 0)) {
       setLocation("/cart");
@@ -89,12 +133,12 @@ export default function Checkout() {
 
   const onSubmit = async (data: CheckoutForm) => {
     try {
+      const payload = { ...data, couponCode: appliedCoupon?.code };
       if (paymentMethod === 'stripe') {
-        const res = await stripeMutation.mutateAsync({ data });
-        // Redirect to Stripe Checkout URL
+        const res = await stripeMutation.mutateAsync({ data: payload });
         window.location.href = res.checkoutUrl;
       } else {
-        const res = await cashMutation.mutateAsync({ data });
+        const res = await cashMutation.mutateAsync({ data: payload });
         queryClient.invalidateQueries({ queryKey: getGetCartQueryKey() });
         setLocation(`/order-confirmation?id=${res.id}`);
       }
@@ -112,6 +156,9 @@ export default function Checkout() {
   }
 
   const isPending = stripeMutation.isPending || cashMutation.isPending;
+  const subtotal = cart.subtotalInCents;
+  const discount = appliedCoupon?.discountAmountCents ?? 0;
+  const total = Math.max(0, subtotal - discount);
 
   return (
     <div className="flex-1 bg-muted/30">
@@ -242,10 +289,10 @@ export default function Checkout() {
 
           {/* Sidebar Summary */}
           <div className="lg:col-span-5 xl:col-span-4">
-            <div className="bg-card border border-border rounded-3xl p-6 shadow-md sticky top-28">
-              <h3 className="font-serif text-xl font-bold text-foreground mb-4">Order Summary</h3>
+            <div className="bg-card border border-border rounded-3xl p-6 shadow-md sticky top-28 space-y-5">
+              <h3 className="font-serif text-xl font-bold text-foreground">Order Summary</h3>
               
-              <div className="space-y-4 mb-6 max-h-[40vh] overflow-y-auto pr-2">
+              <div className="space-y-4 max-h-[40vh] overflow-y-auto pr-2">
                 {(cart.items as any[]).map(item => (
                   <div key={item.productId} className="text-sm space-y-2">
                     <div className="flex justify-between items-start">
@@ -275,10 +322,71 @@ export default function Checkout() {
                 ))}
               </div>
 
-              <div className="pt-4 border-t border-border mb-6">
-                <div className="flex justify-between items-baseline">
+              {/* Coupon Code Input */}
+              <div className="border-t border-border pt-4 space-y-2">
+                {appliedCoupon ? (
+                  <div className="flex items-center justify-between px-3 py-2 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-xl">
+                    <div className="flex items-center gap-2 text-green-700 dark:text-green-400">
+                      <Check className="w-4 h-4 shrink-0" />
+                      <div>
+                        <p className="text-xs font-bold font-mono">{appliedCoupon.code}</p>
+                        <p className="text-xs">{appliedCoupon.description}</p>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleRemoveCoupon}
+                      className="p-1 rounded hover:bg-green-100 dark:hover:bg-green-800 transition-colors"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                ) : (
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-bold text-muted-foreground flex items-center gap-1.5">
+                      <Tag className="w-3.5 h-3.5" />
+                      Coupon Code
+                    </label>
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        value={couponInput}
+                        onChange={e => { setCouponInput(e.target.value.toUpperCase()); setCouponError(null); }}
+                        onKeyDown={e => e.key === "Enter" && (e.preventDefault(), handleApplyCoupon())}
+                        placeholder="Enter code"
+                        className="flex-1 min-w-0 px-3 py-2 rounded-lg bg-background border border-border focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all text-sm font-mono uppercase placeholder:normal-case placeholder:font-sans"
+                      />
+                      <button
+                        type="button"
+                        onClick={handleApplyCoupon}
+                        disabled={!couponInput.trim() || isValidatingCoupon}
+                        className="px-3 py-2 rounded-lg bg-muted hover:bg-muted/80 text-sm font-bold transition-colors disabled:opacity-40 shrink-0"
+                      >
+                        {isValidatingCoupon ? <Loader2 className="w-4 h-4 animate-spin" /> : "Apply"}
+                      </button>
+                    </div>
+                    {couponError && (
+                      <p className="text-destructive text-xs font-medium">{couponError}</p>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* Totals */}
+              <div className="border-t border-border pt-4 space-y-2">
+                <div className="flex justify-between text-sm text-muted-foreground">
+                  <span>Subtotal</span>
+                  <span>{formatMoney(subtotal)}</span>
+                </div>
+                {discount > 0 && (
+                  <div className="flex justify-between text-sm text-green-600 dark:text-green-400 font-semibold">
+                    <span>Discount ({appliedCoupon?.code})</span>
+                    <span>−{formatMoney(discount)}</span>
+                  </div>
+                )}
+                <div className="flex justify-between items-baseline pt-1 border-t border-border">
                   <span className="font-bold text-lg">Total Due Now</span>
-                  <span className="font-bold text-2xl text-primary">{formatMoney(cart.subtotalInCents)}</span>
+                  <span className="font-bold text-2xl text-primary">{formatMoney(total)}</span>
                 </div>
               </div>
 
@@ -295,7 +403,7 @@ export default function Checkout() {
                 )}
               </button>
               
-              <p className="text-xs text-center text-muted-foreground mt-4 flex items-center justify-center gap-1">
+              <p className="text-xs text-center text-muted-foreground flex items-center justify-center gap-1">
                 <LockIcon className="w-3 h-3" /> Secure checkout
               </p>
             </div>

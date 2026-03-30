@@ -217,6 +217,53 @@ export interface CheckoutContactBody {
   phone: string;
   /** @nullable */
   notes?: string | null;
+  couponCode?: string;
+}
+
+export type CouponDiscountType = "percent" | "fixed_cents";
+
+export interface Coupon {
+  id: number;
+  code: string;
+  /** @nullable */
+  description: string | null;
+  discountType: CouponDiscountType;
+  discountValue: number;
+  minOrderCents: number;
+  /** @nullable */
+  maxRedemptions: number | null;
+  redemptionsCount: number;
+  /** @nullable */
+  expiresAt: string | null;
+  isActive: boolean;
+  /** @nullable */
+  stripeCouponId: string | null;
+  createdAt: string;
+}
+
+export interface CreateCouponBody {
+  code: string;
+  description?: string;
+  discountType: CouponDiscountType;
+  discountValue: number;
+  minOrderCents?: number;
+  maxRedemptions?: number;
+  expiresAt?: string;
+}
+
+export interface CouponValidateResult {
+  valid: true;
+  couponId: number;
+  code: string;
+  discountAmountCents: number;
+  description: string;
+  /** @nullable */
+  stripeCouponId: string | null;
+}
+
+export interface CouponValidateError {
+  valid: false;
+  error: string;
 }
 
 export interface StripeCheckoutResponse {

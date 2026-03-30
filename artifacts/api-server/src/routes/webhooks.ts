@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
-import { eq, lt } from "drizzle-orm";
-import { db, ordersTable, stripePendingCheckoutsTable, customerCartsTable } from "@workspace/db";
+import { eq, lt, sql } from "drizzle-orm";
+import { db, ordersTable, stripePendingCheckoutsTable, customerCartsTable, couponsTable } from "@workspace/db";
 import { createOrderFromData, generateClaimToken } from "./checkout.js";
 import { sendEmail } from "../lib/email.js";
 
@@ -101,6 +101,13 @@ router.post("/webhooks/stripe", async (req, res): Promise<void> => {
         await db
           .delete(customerCartsTable)
           .where(eq(customerCartsTable.customerId, pending.customerId));
+      }
+
+      if (pending.appliedCouponCode) {
+        db.update(couponsTable)
+          .set({ redemptionsCount: sql`${couponsTable.redemptionsCount} + 1` })
+          .where(eq(couponsTable.code, pending.appliedCouponCode))
+          .catch((e: unknown) => console.warn("[Webhook] Coupon redemption increment failed:", e));
       }
 
       const baseUrl = process.env.STORE_BASE_URL ?? `https://${process.env.REPLIT_DEV_DOMAIN}/store`;

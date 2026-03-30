@@ -554,6 +554,7 @@ export const CreateStripeCheckoutBody = zod.object({
   email: zod.string().email(),
   phone: zod.string(),
   notes: zod.string().nullish(),
+  couponCode: zod.string().optional(),
 });
 
 export const CreateStripeCheckoutResponse = zod.object({
@@ -569,6 +570,7 @@ export const CreateCashOrderBody = zod.object({
   email: zod.string().email(),
   phone: zod.string(),
   notes: zod.string().nullish(),
+  couponCode: zod.string().optional(),
 });
 
 /**

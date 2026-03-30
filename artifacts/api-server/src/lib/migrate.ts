@@ -220,6 +220,28 @@ export async function runMigrations(): Promise<void> {
         ON contact_submissions (created_at DESC);
     `);
 
+    // ── Coupons (Task #12) ───────────────────────────────────────────────────
+    await db.execute(sql`
+      CREATE TABLE IF NOT EXISTS coupons (
+        id                  SERIAL PRIMARY KEY,
+        code                TEXT NOT NULL UNIQUE,
+        description         TEXT,
+        discount_type       TEXT NOT NULL CHECK (discount_type IN ('percent', 'fixed_cents')),
+        discount_value      INTEGER NOT NULL CHECK (discount_value > 0),
+        min_order_cents     INTEGER NOT NULL DEFAULT 0,
+        max_redemptions     INTEGER,
+        redemptions_count   INTEGER NOT NULL DEFAULT 0,
+        expires_at          TIMESTAMPTZ,
+        is_active           BOOLEAN NOT NULL DEFAULT TRUE,
+        stripe_coupon_id    TEXT,
+        created_at          TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      );
+    `);
+
+    await db.execute(sql.raw(
+      `ALTER TABLE stripe_pending_checkouts ADD COLUMN IF NOT EXISTS applied_coupon_code TEXT`
+    ));
+
     logger.info("Startup migrations complete.");
   } catch (err) {
     logger.error({ err }, "Startup migration failed — server will still start");

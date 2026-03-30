@@ -21,6 +21,7 @@ export const stripePendingCheckoutsTable = pgTable("stripe_pending_checkouts", {
   notes: text("notes"),
   cartSnapshot: jsonb("cart_snapshot").notNull().$type<CartLineItem[]>(),
   totalInCents: integer("total_in_cents").notNull(),
+  appliedCouponCode: text("applied_coupon_code"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 

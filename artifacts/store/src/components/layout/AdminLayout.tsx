@@ -3,7 +3,7 @@ import { Link, useLocation } from "wouter";
 import { useAdminMe, useAdminLogout, getAdminMeQueryKey } from "@workspace/api-client-react";
 import {
   Store, Package, LogOut, Loader2, Home, ShoppingBag, Layers,
-  CalendarDays, Users, LayoutDashboard, Egg, Bird, Rabbit, Menu, X, Receipt,
+  CalendarDays, Users, LayoutDashboard, Egg, Bird, Rabbit, Menu, X, Receipt, Tag,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
@@ -60,6 +60,7 @@ export function AdminLayout({ children }: { children: ReactNode }) {
     { href: "/admin/flocks", label: "Flocks", icon: Bird },
     { href: "/admin/animals", label: "Animals", icon: Rabbit },
     { href: "/admin/expenses", label: "Expenses", icon: Receipt },
+    { href: "/admin/coupons", label: "Coupons", icon: Tag },
   ];
 
   const isActive = (item: typeof navItems[0]) =>

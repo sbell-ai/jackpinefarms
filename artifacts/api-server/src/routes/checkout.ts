@@ -1,6 +1,6 @@
 import "../types/session.d.ts";
 import { Router, type IRouter } from "express";
-import { inArray, eq } from "drizzle-orm";
+import { inArray, eq, sql } from "drizzle-orm";
 import crypto from "node:crypto";
 import {
   db,
@@ -9,6 +9,7 @@ import {
   orderItemsTable,
   stripePendingCheckoutsTable,
   customerCartsTable,
+  couponsTable,
   type CartLineItem,
 } from "@workspace/db";
 import { CreateStripeCheckoutBody, CreateCashOrderBody } from "@workspace/api-zod";
@@ -79,6 +80,26 @@ async function buildOrderItems(
 
 export function generateClaimToken() {
   return crypto.randomBytes(32).toString("hex");
+}
+
+async function validateCoupon(code: string, subtotalInCents: number) {
+  const [coupon] = await db
+    .select()
+    .from(couponsTable)
+    .where(eq(couponsTable.code, code.trim().toUpperCase()))
+    .limit(1);
+
+  if (!coupon || !coupon.isActive) return null;
+  if (coupon.expiresAt && coupon.expiresAt < new Date()) return null;
+  if (coupon.maxRedemptions != null && coupon.redemptionsCount >= coupon.maxRedemptions) return null;
+  if (subtotalInCents < coupon.minOrderCents) return null;
+
+  const discountAmountCents =
+    coupon.discountType === "percent"
+      ? Math.round(subtotalInCents * coupon.discountValue / 100)
+      : Math.min(coupon.discountValue, subtotalInCents);
+
+  return { coupon, discountAmountCents };
 }
 
 export async function createOrderFromData(data: {
@@ -152,7 +173,7 @@ router.post("/checkout/stripe", async (req, res): Promise<void> => {
     return;
   }
 
-  const { name: customerName, email: customerEmail, phone: customerPhone, notes } = parsed.data;
+  const { name: customerName, email: customerEmail, phone: customerPhone, notes, couponCode } = parsed.data;
 
   const stripe = getStripe();
 
@@ -161,25 +182,46 @@ router.post("/checkout/stripe", async (req, res): Promise<void> => {
     return;
   }
 
+  let discountAmountCents = 0;
+  let appliedCouponCode: string | null = null;
+  let stripeCouponId: string | null = null;
+
+  if (couponCode) {
+    const couponResult = await validateCoupon(couponCode, orderData.totalInCents);
+    if (couponResult) {
+      discountAmountCents = couponResult.discountAmountCents;
+      appliedCouponCode = couponResult.coupon.code;
+      stripeCouponId = couponResult.coupon.stripeCouponId ?? null;
+    }
+  }
+
+  const totalAfterDiscount = Math.max(0, orderData.totalInCents - discountAmountCents);
+
   const baseUrl = process.env.STORE_BASE_URL ?? `https://${process.env.REPLIT_DEV_DOMAIN}/store`;
 
   const stripeLineItems = orderData.lineItems.map((li) => ({
     price_data: {
-      currency: "usd",
+      currency: "cad",
       product_data: { name: li.productName },
       unit_amount: li.unitPriceInCents,
     },
     quantity: li.quantity,
   }));
 
-  const checkoutSession = await stripe.checkout.sessions.create({
+  const sessionParams: any = {
     payment_method_types: ["card"],
     line_items: stripeLineItems,
     mode: "payment",
     customer_email: customerEmail,
     success_url: `${baseUrl}/order-confirmation?stripe_session_id={CHECKOUT_SESSION_ID}`,
     cancel_url: `${baseUrl}/checkout`,
-  });
+  };
+
+  if (stripeCouponId) {
+    sessionParams.discounts = [{ coupon: stripeCouponId }];
+  }
+
+  const checkoutSession = await stripe.checkout.sessions.create(sessionParams);
 
   await db.insert(stripePendingCheckoutsTable).values({
     stripeSessionId: checkoutSession.id,
@@ -189,7 +231,8 @@ router.post("/checkout/stripe", async (req, res): Promise<void> => {
     customerPhone,
     notes: notes ?? null,
     cartSnapshot: orderData.lineItems,
-    totalInCents: orderData.totalInCents,
+    totalInCents: totalAfterDiscount,
+    appliedCouponCode,
   });
 
   res.json({ checkoutUrl: checkoutSession.url, sessionId: checkoutSession.id });
@@ -224,7 +267,20 @@ router.post("/checkout/cash", async (req, res): Promise<void> => {
     return;
   }
 
-  const { name: customerName, email: customerEmail, phone: customerPhone, notes } = parsed.data;
+  const { name: customerName, email: customerEmail, phone: customerPhone, notes, couponCode } = parsed.data;
+
+  let discountAmountCents = 0;
+  let appliedCouponId: number | null = null;
+
+  if (couponCode) {
+    const couponResult = await validateCoupon(couponCode, orderData.totalInCents);
+    if (couponResult) {
+      discountAmountCents = couponResult.discountAmountCents;
+      appliedCouponId = couponResult.coupon.id;
+    }
+  }
+
+  const totalAfterDiscount = Math.max(0, orderData.totalInCents - discountAmountCents);
 
   const isGuest = !session.customerId;
   const claimToken = isGuest ? generateClaimToken() : null;
@@ -238,11 +294,18 @@ router.post("/checkout/cash", async (req, res): Promise<void> => {
     notes: notes ?? null,
     paymentMethod: "cash",
     status: "cash_pending",
-    totalInCents: orderData.totalInCents,
+    totalInCents: totalAfterDiscount,
     lineItems: orderData.lineItems,
     claimToken,
     claimTokenExpiresAt,
   });
+
+  if (appliedCouponId != null) {
+    db.update(couponsTable)
+      .set({ redemptionsCount: sql`${couponsTable.redemptionsCount} + 1` })
+      .where(eq(couponsTable.id, appliedCouponId))
+      .catch((err: any) => console.warn("[checkout/cash] Coupon redemption increment failed:", err.message));
+  }
 
   session.cart = [];
   await new Promise<void>((resolve, reject) =>

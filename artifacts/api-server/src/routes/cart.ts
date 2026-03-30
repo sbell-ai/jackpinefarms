@@ -1,7 +1,7 @@
 import "../types/session.d.ts";
 import { Router, type IRouter } from "express";
 import { inArray, eq } from "drizzle-orm";
-import { db, productsTable, customerCartsTable } from "@workspace/db";
+import { db, productsTable, customerCartsTable, couponsTable } from "@workspace/db";
 import { AddCartItemBody, RemoveCartItemParams } from "@workspace/api-zod";
 
 const router: IRouter = Router();
@@ -210,6 +210,70 @@ router.post("/cart/clear", async (req, res): Promise<void> => {
   await persistCartForCustomer(session.customerId, []);
 
   res.json({ items: [], subtotalInCents: 0, itemCount: 0 });
+});
+
+router.post("/cart/coupon/validate", async (req, res): Promise<void> => {
+  const code = typeof req.body?.code === "string" ? req.body.code.trim().toUpperCase() : null;
+  if (!code) {
+    res.status(400).json({ valid: false, error: "Coupon code is required" });
+    return;
+  }
+
+  const session = (req as any).session;
+  const sessionCart: Array<{ productId: number; quantity: number; addGiblets: boolean }> = session.cart ?? [];
+  const cartData = await buildCartResponse(sessionCart);
+  const subtotal = cartData.subtotalInCents;
+
+  const [coupon] = await db
+    .select()
+    .from(couponsTable)
+    .where(eq(couponsTable.code, code))
+    .limit(1);
+
+  if (!coupon) {
+    res.json({ valid: false, error: "Invalid coupon code" });
+    return;
+  }
+
+  if (!coupon.isActive) {
+    res.json({ valid: false, error: "This coupon is no longer active" });
+    return;
+  }
+
+  if (coupon.expiresAt && coupon.expiresAt < new Date()) {
+    res.json({ valid: false, error: "This coupon has expired" });
+    return;
+  }
+
+  if (coupon.maxRedemptions != null && coupon.redemptionsCount >= coupon.maxRedemptions) {
+    res.json({ valid: false, error: "This coupon has reached its maximum uses" });
+    return;
+  }
+
+  if (subtotal < coupon.minOrderCents) {
+    const minFormatted = `$${(coupon.minOrderCents / 100).toFixed(2)}`;
+    res.json({ valid: false, error: `Minimum order of ${minFormatted} required for this coupon` });
+    return;
+  }
+
+  const discountAmountCents =
+    coupon.discountType === "percent"
+      ? Math.round(subtotal * coupon.discountValue / 100)
+      : Math.min(coupon.discountValue, subtotal);
+
+  const description =
+    coupon.discountType === "percent"
+      ? `${coupon.discountValue}% off`
+      : `$${(coupon.discountValue / 100).toFixed(2)} off`;
+
+  res.json({
+    valid: true,
+    couponId: coupon.id,
+    code: coupon.code,
+    discountAmountCents,
+    description: coupon.description ? `${coupon.description} (${description})` : description,
+    stripeCouponId: coupon.stripeCouponId ?? null,
+  });
 });
 
 export default router;
