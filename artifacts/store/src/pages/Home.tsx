@@ -125,7 +125,7 @@ export default function Home() {
                   "100% Pasture Raised — birds roam freely outside.",
                   "Non-GMO Feed — no compromises on what they eat.",
                   "Transparent Pricing — know exactly what you pay for.",
-                  "Local Community First — pickup right from the farm."
+                  "Local Community First — pickups are prearranged at local spots."
                 ].map((item, i) => (
                   <div key={i} className="flex items-start gap-4">
                     <CheckCircle2 className="w-6 h-6 text-accent shrink-0 mt-1" />
