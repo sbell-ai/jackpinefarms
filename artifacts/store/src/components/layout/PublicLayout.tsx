@@ -198,7 +198,7 @@ export function PublicLayout({ children }: { children: ReactNode }) {
                 <span className="font-serif text-2xl font-bold">Jack Pine Farm</span>
               </div>
               <p className="text-primary-foreground/80 max-w-sm leading-relaxed">
-                Pastured poultry and farm-fresh eggs from our 70 acres to your table. Raised right, with care.
+                Pastured poultry and farm-fresh eggs from our farm to your table. Raised right, with care.
               </p>
             </div>
             
