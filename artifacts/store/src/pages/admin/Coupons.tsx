@@ -180,7 +180,7 @@ export default function Coupons() {
                 <input
                   required
                   type="number"
-                  min="0.01"
+                  min={form.discountType === "percent" ? "1" : "0.01"}
                   step={form.discountType === "percent" ? "1" : "0.01"}
                   max={form.discountType === "percent" ? "100" : undefined}
                   value={form.discountValue}
