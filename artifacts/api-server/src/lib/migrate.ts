@@ -284,6 +284,33 @@ export async function runMigrations(): Promise<void> {
       EXCEPTION WHEN duplicate_object THEN NULL; END $$;
     `);
 
+    // ── Customer schema evolution (Task #14) ────────────────────────────────
+    // Make email nullable (storefront still requires it, admin-created customers may not have one)
+    await db.execute(sql.raw(`ALTER TABLE customers ALTER COLUMN email DROP NOT NULL`));
+    // Make password_hash nullable (admin-created customers don't have passwords)
+    await db.execute(sql.raw(`ALTER TABLE customers ALTER COLUMN password_hash DROP NOT NULL`));
+    // Add notes column for admin-created customers
+    await db.execute(sql.raw(`ALTER TABLE customers ADD COLUMN IF NOT EXISTS notes TEXT`));
+    // Replace blanket unique constraint with a partial unique index (unique only when not null)
+    await db.execute(sql`
+      DO $$ BEGIN
+        ALTER TABLE customers DROP CONSTRAINT IF EXISTS customers_email_unique;
+      EXCEPTION WHEN undefined_object THEN NULL; END $$;
+    `);
+    await db.execute(sql.raw(
+      `CREATE UNIQUE INDEX IF NOT EXISTS customers_email_unique_partial ON customers (email) WHERE email IS NOT NULL`
+    ));
+
+    // ── Orders schema evolution (Task #14) ──────────────────────────────────
+    // Add source column to distinguish storefront vs admin-created orders
+    await db.execute(sql.raw(
+      `ALTER TABLE orders ADD COLUMN IF NOT EXISTS source TEXT NOT NULL DEFAULT 'storefront'`
+    ));
+    // Add stripe_checkout_url for admin-generated Stripe payment links
+    await db.execute(sql.raw(
+      `ALTER TABLE orders ADD COLUMN IF NOT EXISTS stripe_checkout_url TEXT`
+    ));
+
     // Create site_settings key-value table for admin-editable content
     await db.execute(sql.raw(`
       CREATE TABLE IF NOT EXISTS site_settings (

@@ -12,6 +12,13 @@ const ListCustomersQuery = z.object({
   offset: z.coerce.number().int().min(0).default(0),
 });
 
+const CreateAdminCustomerBody = z.object({
+  name: z.string().min(1, "Name is required"),
+  email: z.string().email().optional(),
+  phone: z.string().optional(),
+  notes: z.string().optional(),
+});
+
 router.get("/admin/customers", requireAdmin, async (req, res): Promise<void> => {
   const parsed = ListCustomersQuery.safeParse(req.query);
   if (!parsed.success) { res.status(400).json({ error: parsed.error.message }); return; }
@@ -24,6 +31,7 @@ router.get("/admin/customers", requireAdmin, async (req, res): Promise<void> => 
       email: customersTable.email,
       name: customersTable.name,
       phone: customersTable.phone,
+      notes: customersTable.notes,
       createdAt: customersTable.createdAt,
     })
     .from(customersTable)
@@ -47,6 +55,45 @@ router.get("/admin/customers", requireAdmin, async (req, res): Promise<void> => 
     ...c,
     orderCount: countMap.get(c.id) ?? 0,
   })));
+});
+
+router.post("/admin/customers", requireAdmin, async (req, res): Promise<void> => {
+  const parsed = CreateAdminCustomerBody.safeParse(req.body);
+  if (!parsed.success) { res.status(400).json({ error: parsed.error.message }); return; }
+
+  const { name, email, phone, notes } = parsed.data;
+
+  if (email) {
+    const [existing] = await db
+      .select({ id: customersTable.id })
+      .from(customersTable)
+      .where(eq(customersTable.email, email))
+      .limit(1);
+    if (existing) {
+      res.status(409).json({ error: "A customer with this email already exists." });
+      return;
+    }
+  }
+
+  const [customer] = await db
+    .insert(customersTable)
+    .values({
+      name,
+      email: email ?? null,
+      phone: phone ?? null,
+      notes: notes ?? null,
+      emailVerified: false,
+    })
+    .returning({
+      id: customersTable.id,
+      name: customersTable.name,
+      email: customersTable.email,
+      phone: customersTable.phone,
+      notes: customersTable.notes,
+      createdAt: customersTable.createdAt,
+    });
+
+  res.status(201).json({ ...customer, orderCount: 0 });
 });
 
 router.get("/admin/customers/:id", requireAdmin, async (req, res): Promise<void> => {
@@ -101,6 +148,7 @@ router.get("/admin/customers/:id", requireAdmin, async (req, res): Promise<void>
     email: customer.email,
     name: customer.name,
     phone: customer.phone,
+    notes: customer.notes,
     emailVerified: customer.emailVerified,
     orderCount: orders.length,
     orders,

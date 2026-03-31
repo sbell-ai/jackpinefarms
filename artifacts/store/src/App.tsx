@@ -49,6 +49,7 @@ import AdminAnimals from "./pages/admin/Animals";
 import AdminExpenses from "./pages/admin/Expenses";
 import AdminCoupons from "./pages/admin/Coupons";
 import AdminSiteImages from "./pages/admin/SiteImages";
+import AdminNewOrder from "./pages/admin/NewOrder";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -74,6 +75,9 @@ function Router() {
       </Route>
       <Route path="/admin/products">
         <AdminLayout><AdminProducts /></AdminLayout>
+      </Route>
+      <Route path="/admin/orders/new">
+        <AdminLayout><AdminNewOrder /></AdminLayout>
       </Route>
       <Route path="/admin/orders/:id">
         <AdminLayout><AdminOrderDetail /></AdminLayout>

@@ -14,6 +14,7 @@ export interface OrderSummary {
   customerEmail: string;
   status: OrderStatus;
   paymentMethod: PaymentMethod;
+  source: string;
   totalInCents: number;
   createdAt: Date;
   refundedGiblets: boolean;

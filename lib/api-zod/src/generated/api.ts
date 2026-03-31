@@ -15,24 +15,27 @@ export const HealthCheckResponse = zod.object({
   status: zod.string(),
 });
 
-export const ProductImageSchema = zod.object({
-  id: zod.number(),
-  productId: zod.number(),
-  url: zod.string(),
-  sortOrder: zod.number(),
-  altText: zod.string().nullable(),
-  createdAt: zod.date(),
+/**
+ * @summary Get public site settings
+ */
+export const GetSiteSettingsResponse = zod
+  .record(zod.string(), zod.string())
+  .describe("Map of site setting keys to their string values");
+
+/**
+ * @summary Update a site setting (admin)
+ */
+export const UpdateSiteSettingsParams = zod.object({
+  key: zod.coerce.string(),
 });
 
-export const AddProductImageBody = zod.object({
-  objectPath: zod.string(),
-  contentType: zod.string().optional(),
-  altText: zod.string().optional(),
+export const UpdateSiteSettingsBody = zod.object({
+  value: zod.string(),
 });
 
-export const ReorderProductImagesBody = zod.object({
-  imageIds: zod.array(zod.number()),
-});
+export const UpdateSiteSettingsResponse = zod
+  .record(zod.string(), zod.string())
+  .describe("Map of site setting keys to their string values");
 
 /**
  * Returns all non-disabled products (public). Disabled products excluded.
@@ -61,8 +64,6 @@ export const ListProductsResponseItem = zod.object({
     .describe(
       "Price in cents. For eggs this is per unit\/half-dozen. For meat this is the deposit amount.",
     ),
-  isOnSale: zod.boolean().default(false),
-  salePriceCents: zod.number().nullable(),
   unitLabel: zod
     .string()
     .nullable()
@@ -73,10 +74,22 @@ export const ListProductsResponseItem = zod.object({
     .describe("Description of what the deposit covers (for meat products)"),
   availability: zod.enum(["taking_orders", "preorder", "sold_out", "disabled"]),
   imageUrl: zod.string().nullable(),
+  isOnSale: zod.boolean(),
+  salePriceCents: zod.number().nullable(),
   displayOrder: zod.number(),
+  images: zod.array(
+    zod.object({
+      id: zod.number(),
+      productId: zod.number(),
+      objectKey: zod.string(),
+      url: zod.string(),
+      sortOrder: zod.number(),
+      altText: zod.string().nullable(),
+      createdAt: zod.date(),
+    }),
+  ),
   createdAt: zod.date(),
   updatedAt: zod.date(),
-  images: zod.array(ProductImageSchema),
 });
 export const ListProductsResponse = zod.array(ListProductsResponseItem);
 
@@ -94,21 +107,11 @@ export const CreateProductBody = zod.object({
   ]),
   pricingType: zod.enum(["unit", "deposit"]),
   priceInCents: zod.number(),
-  isOnSale: zod.boolean().optional(),
-  salePriceCents: zod.number().nullish(),
   unitLabel: zod.string().nullish(),
   depositDescription: zod.string().nullish(),
   availability: zod.enum(["taking_orders", "preorder", "sold_out", "disabled"]),
   imageUrl: zod.string().nullish(),
   displayOrder: zod.number(),
-}).superRefine((data, ctx) => {
-  if (data.isOnSale) {
-    if (data.salePriceCents == null || data.salePriceCents <= 0) {
-      ctx.addIssue({ code: zod.ZodIssueCode.custom, message: "Sale price must be greater than $0 when on sale", path: ["salePriceCents"] });
-    } else if (data.salePriceCents >= data.priceInCents) {
-      ctx.addIssue({ code: zod.ZodIssueCode.custom, message: "Sale price must be less than the regular price", path: ["salePriceCents"] });
-    }
-  }
 });
 
 /**
@@ -134,8 +137,6 @@ export const GetProductResponse = zod.object({
     .describe(
       "Price in cents. For eggs this is per unit\/half-dozen. For meat this is the deposit amount.",
     ),
-  isOnSale: zod.boolean().default(false),
-  salePriceCents: zod.number().nullable(),
   unitLabel: zod
     .string()
     .nullable()
@@ -146,10 +147,22 @@ export const GetProductResponse = zod.object({
     .describe("Description of what the deposit covers (for meat products)"),
   availability: zod.enum(["taking_orders", "preorder", "sold_out", "disabled"]),
   imageUrl: zod.string().nullable(),
+  isOnSale: zod.boolean(),
+  salePriceCents: zod.number().nullable(),
   displayOrder: zod.number(),
+  images: zod.array(
+    zod.object({
+      id: zod.number(),
+      productId: zod.number(),
+      objectKey: zod.string(),
+      url: zod.string(),
+      sortOrder: zod.number(),
+      altText: zod.string().nullable(),
+      createdAt: zod.date(),
+    }),
+  ),
   createdAt: zod.date(),
   updatedAt: zod.date(),
-  images: zod.array(ProductImageSchema),
 });
 
 /**
@@ -167,8 +180,6 @@ export const UpdateProductBody = zod.object({
     .optional(),
   pricingType: zod.enum(["unit", "deposit"]).optional(),
   priceInCents: zod.number().optional(),
-  isOnSale: zod.boolean().optional(),
-  salePriceCents: zod.number().nullish(),
   unitLabel: zod.string().nullish(),
   depositDescription: zod.string().nullish(),
   availability: zod
@@ -176,14 +187,6 @@ export const UpdateProductBody = zod.object({
     .optional(),
   imageUrl: zod.string().nullish(),
   displayOrder: zod.number().optional(),
-}).superRefine((data, ctx) => {
-  if (data.isOnSale === true) {
-    if (data.salePriceCents == null || data.salePriceCents <= 0) {
-      ctx.addIssue({ code: zod.ZodIssueCode.custom, message: "Sale price must be greater than $0 when on sale", path: ["salePriceCents"] });
-    } else if (data.priceInCents != null && data.salePriceCents >= data.priceInCents) {
-      ctx.addIssue({ code: zod.ZodIssueCode.custom, message: "Sale price must be less than the regular price", path: ["salePriceCents"] });
-    }
-  }
 });
 
 export const UpdateProductResponse = zod.object({
@@ -202,8 +205,6 @@ export const UpdateProductResponse = zod.object({
     .describe(
       "Price in cents. For eggs this is per unit\/half-dozen. For meat this is the deposit amount.",
     ),
-  isOnSale: zod.boolean().default(false),
-  salePriceCents: zod.number().nullable(),
   unitLabel: zod
     .string()
     .nullable()
@@ -214,10 +215,22 @@ export const UpdateProductResponse = zod.object({
     .describe("Description of what the deposit covers (for meat products)"),
   availability: zod.enum(["taking_orders", "preorder", "sold_out", "disabled"]),
   imageUrl: zod.string().nullable(),
+  isOnSale: zod.boolean(),
+  salePriceCents: zod.number().nullable(),
   displayOrder: zod.number(),
+  images: zod.array(
+    zod.object({
+      id: zod.number(),
+      productId: zod.number(),
+      objectKey: zod.string(),
+      url: zod.string(),
+      sortOrder: zod.number(),
+      altText: zod.string().nullable(),
+      createdAt: zod.date(),
+    }),
+  ),
   createdAt: zod.date(),
   updatedAt: zod.date(),
-  images: zod.array(ProductImageSchema),
 });
 
 /**
@@ -261,6 +274,17 @@ export const AdminMeResponse = zod.object({
 });
 
 /**
+ * @summary Create a draft admin order (phone/walk-in)
+ */
+export const AdminCreateOrderBody = zod.object({
+  customerId: zod.number().optional(),
+  customerName: zod.string(),
+  customerEmail: zod.string().email().optional(),
+  customerPhone: zod.string().optional(),
+  notes: zod.string().optional(),
+});
+
+/**
  * @summary List all orders (admin)
  */
 export const adminListOrdersQueryLimitDefault = 50;
@@ -301,6 +325,7 @@ export const AdminListOrdersResponseItem = zod.object({
     "no_show",
   ]),
   paymentMethod: zod.enum(["stripe", "cash"]),
+  source: zod.string(),
   totalInCents: zod.number(),
   createdAt: zod.date(),
   refundedGiblets: zod.boolean(),
@@ -308,6 +333,137 @@ export const AdminListOrdersResponseItem = zod.object({
   pickupEventId: zod.number().nullable(),
 });
 export const AdminListOrdersResponse = zod.array(AdminListOrdersResponseItem);
+
+/**
+ * @summary Set items on a draft admin order
+ */
+export const AdminSetOrderItemsParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const AdminSetOrderItemsBodyItem = zod.object({
+  productId: zod.number(),
+  quantity: zod.number(),
+});
+export const AdminSetOrderItemsBody = zod.array(AdminSetOrderItemsBodyItem);
+
+export const AdminSetOrderItemsResponse = zod.object({
+  id: zod.number(),
+  customerId: zod.number().nullable(),
+  customerName: zod.string(),
+  customerEmail: zod.string(),
+  customerPhone: zod.string(),
+  status: zod.enum([
+    "pending_payment",
+    "deposit_paid",
+    "cash_pending",
+    "pickup_assigned",
+    "weights_entered",
+    "invoice_sent",
+    "fulfilled",
+    "cancelled",
+    "no_show",
+  ]),
+  paymentMethod: zod.enum(["stripe", "cash"]),
+  stripeCheckoutSessionId: zod.string().nullable(),
+  totalInCents: zod.number(),
+  notes: zod.string().nullable(),
+  items: zod.array(
+    zod.object({
+      id: zod.number(),
+      productId: zod.number().nullable(),
+      productName: zod.string(),
+      quantity: zod.number(),
+      pricingType: zod.enum(["unit", "deposit"]),
+      unitPriceInCents: zod.number(),
+      unitLabel: zod.string().nullable(),
+      variantLabel: zod.string().nullable(),
+      isGiblets: zod.boolean(),
+      lineTotalInCents: zod.number(),
+    }),
+  ),
+  finalWeightLbs: zod.number().nullable(),
+  createdAt: zod.date(),
+  updatedAt: zod.date(),
+});
+
+/**
+ * @summary Finalize a draft admin order (select payment method)
+ */
+export const AdminFinalizeOrderParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const AdminFinalizeOrderBody = zod.object({
+  paymentMethod: zod.enum(["stripe", "cash"]),
+});
+
+export const AdminFinalizeOrderResponse = zod.object({
+  order: zod.object({
+    id: zod.number(),
+    customerId: zod.number().nullable(),
+    customerName: zod.string(),
+    customerEmail: zod.string(),
+    customerPhone: zod.string(),
+    status: zod.enum([
+      "pending_payment",
+      "deposit_paid",
+      "cash_pending",
+      "pickup_assigned",
+      "weights_entered",
+      "invoice_sent",
+      "fulfilled",
+      "cancelled",
+      "no_show",
+    ]),
+    paymentMethod: zod.enum(["stripe", "cash"]),
+    stripeCheckoutSessionId: zod.string().nullable(),
+    totalInCents: zod.number(),
+    notes: zod.string().nullable(),
+    items: zod.array(
+      zod.object({
+        id: zod.number(),
+        productId: zod.number().nullable(),
+        productName: zod.string(),
+        quantity: zod.number(),
+        pricingType: zod.enum(["unit", "deposit"]),
+        unitPriceInCents: zod.number(),
+        unitLabel: zod.string().nullable(),
+        variantLabel: zod.string().nullable(),
+        isGiblets: zod.boolean(),
+        lineTotalInCents: zod.number(),
+      }),
+    ),
+    finalWeightLbs: zod.number().nullable(),
+    createdAt: zod.date(),
+    updatedAt: zod.date(),
+  }),
+  checkoutUrl: zod.string().nullable(),
+});
+
+/**
+ * @summary Enter final weight and send Stripe invoice for a preorder (admin)
+ */
+export const AdminSendOrderInvoiceParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const adminSendOrderInvoiceBodyVariantDefault = `whole`;
+
+export const AdminSendOrderInvoiceBody = zod.object({
+  weightLbs: zod.number(),
+  variant: zod
+    .enum(["whole", "half", "quarter"])
+    .default(adminSendOrderInvoiceBodyVariantDefault),
+});
+
+export const AdminSendOrderInvoiceResponse = zod.object({
+  status: zod.enum(["invoiced", "stub", "deposit_covers_balance"]),
+  remainingCents: zod.number(),
+  finalTotalCents: zod.number(),
+  depositPaidCents: zod.number(),
+  invoiceId: zod.string().nullish(),
+});
 
 /**
  * @summary Get order details (admin)
@@ -433,8 +589,11 @@ export const GetCartResponse = zod.object({
       quantity: zod.number(),
       unitLabel: zod.string().nullable(),
       unitPriceInCents: zod.number(),
+      originalPriceInCents: zod
+        .number()
+        .nullable()
+        .describe("Original price before sale (null if not on sale)"),
       isOnSale: zod.boolean(),
-      originalPriceInCents: zod.number(),
       addGiblets: zod
         .boolean()
         .describe("For meat products — add giblets add-on ($2\/bird)"),
@@ -443,6 +602,15 @@ export const GetCartResponse = zod.object({
   ),
   subtotalInCents: zod.number(),
   itemCount: zod.number(),
+  appliedCoupon: zod
+    .object({
+      code: zod.string(),
+      discountAmountCents: zod.number(),
+      description: zod.string(),
+      stripePromotionCodeId: zod.string().nullable(),
+    })
+    .nullable(),
+  totalAfterDiscountInCents: zod.number().nullable(),
 });
 
 /**
@@ -470,8 +638,11 @@ export const AddCartItemResponse = zod.object({
       quantity: zod.number(),
       unitLabel: zod.string().nullable(),
       unitPriceInCents: zod.number(),
+      originalPriceInCents: zod
+        .number()
+        .nullable()
+        .describe("Original price before sale (null if not on sale)"),
       isOnSale: zod.boolean(),
-      originalPriceInCents: zod.number(),
       addGiblets: zod
         .boolean()
         .describe("For meat products — add giblets add-on ($2\/bird)"),
@@ -480,6 +651,15 @@ export const AddCartItemResponse = zod.object({
   ),
   subtotalInCents: zod.number(),
   itemCount: zod.number(),
+  appliedCoupon: zod
+    .object({
+      code: zod.string(),
+      discountAmountCents: zod.number(),
+      description: zod.string(),
+      stripePromotionCodeId: zod.string().nullable(),
+    })
+    .nullable(),
+  totalAfterDiscountInCents: zod.number().nullable(),
 });
 
 /**
@@ -504,8 +684,11 @@ export const RemoveCartItemResponse = zod.object({
       quantity: zod.number(),
       unitLabel: zod.string().nullable(),
       unitPriceInCents: zod.number(),
+      originalPriceInCents: zod
+        .number()
+        .nullable()
+        .describe("Original price before sale (null if not on sale)"),
       isOnSale: zod.boolean(),
-      originalPriceInCents: zod.number(),
       addGiblets: zod
         .boolean()
         .describe("For meat products — add giblets add-on ($2\/bird)"),
@@ -514,6 +697,15 @@ export const RemoveCartItemResponse = zod.object({
   ),
   subtotalInCents: zod.number(),
   itemCount: zod.number(),
+  appliedCoupon: zod
+    .object({
+      code: zod.string(),
+      discountAmountCents: zod.number(),
+      description: zod.string(),
+      stripePromotionCodeId: zod.string().nullable(),
+    })
+    .nullable(),
+  totalAfterDiscountInCents: zod.number().nullable(),
 });
 
 /**
@@ -534,8 +726,11 @@ export const ClearCartResponse = zod.object({
       quantity: zod.number(),
       unitLabel: zod.string().nullable(),
       unitPriceInCents: zod.number(),
+      originalPriceInCents: zod
+        .number()
+        .nullable()
+        .describe("Original price before sale (null if not on sale)"),
       isOnSale: zod.boolean(),
-      originalPriceInCents: zod.number(),
       addGiblets: zod
         .boolean()
         .describe("For meat products — add giblets add-on ($2\/bird)"),
@@ -544,6 +739,40 @@ export const ClearCartResponse = zod.object({
   ),
   subtotalInCents: zod.number(),
   itemCount: zod.number(),
+  appliedCoupon: zod
+    .object({
+      code: zod.string(),
+      discountAmountCents: zod.number(),
+      description: zod.string(),
+      stripePromotionCodeId: zod.string().nullable(),
+    })
+    .nullable(),
+  totalAfterDiscountInCents: zod.number().nullable(),
+});
+
+/**
+ * @summary Apply a coupon code to the cart
+ */
+export const ApplyCartCouponBody = zod.object({
+  code: zod.string(),
+});
+
+export const ApplyCartCouponResponse = zod.object({
+  valid: zod.boolean(),
+  couponId: zod.number().nullish(),
+  code: zod.string().nullish(),
+  discountAmountCents: zod.number().nullish(),
+  totalAfterDiscountInCents: zod.number().nullish(),
+  description: zod.string().nullish(),
+  stripePromotionCodeId: zod.string().nullish(),
+  error: zod.string().nullish(),
+});
+
+/**
+ * @summary Remove applied coupon from cart
+ */
+export const RemoveCartCouponResponse = zod.object({
+  removed: zod.boolean(),
 });
 
 /**
@@ -554,7 +783,6 @@ export const CreateStripeCheckoutBody = zod.object({
   email: zod.string().email(),
   phone: zod.string(),
   notes: zod.string().nullish(),
-  couponCode: zod.string().optional(),
 });
 
 export const CreateStripeCheckoutResponse = zod.object({
@@ -570,7 +798,6 @@ export const CreateCashOrderBody = zod.object({
   email: zod.string().email(),
   phone: zod.string(),
   notes: zod.string().nullish(),
-  couponCode: zod.string().optional(),
 });
 
 /**
@@ -592,6 +819,7 @@ export const ListMyOrdersResponseItem = zod.object({
     "no_show",
   ]),
   paymentMethod: zod.enum(["stripe", "cash"]),
+  source: zod.string(),
   totalInCents: zod.number(),
   createdAt: zod.date(),
   refundedGiblets: zod.boolean(),
@@ -670,6 +898,7 @@ export const ClaimOrderResponse = zod.object({
     "no_show",
   ]),
   paymentMethod: zod.enum(["stripe", "cash"]),
+  source: zod.string(),
   totalInCents: zod.number(),
   createdAt: zod.date(),
   refundedGiblets: zod.boolean(),
@@ -1134,6 +1363,87 @@ export const AdminAssignOrderBatchResponse = zod.object({
 });
 
 /**
+ * @summary List all coupons (admin)
+ */
+export const AdminListCouponsResponseItem = zod.object({
+  id: zod.number(),
+  code: zod.string(),
+  description: zod.string().nullable(),
+  discountType: zod.enum(["percent", "amount"]),
+  discountValue: zod.number(),
+  maxRedemptions: zod.number().nullable(),
+  redemptionsCount: zod.number(),
+  isActive: zod.boolean(),
+  stripeCouponId: zod.string().nullable(),
+  stripePromotionCodeId: zod.string().nullable(),
+  startsAt: zod.date().nullable(),
+  endsAt: zod.date().nullable(),
+  createdAt: zod.date(),
+});
+export const AdminListCouponsResponse = zod.array(AdminListCouponsResponseItem);
+
+/**
+ * @summary Create a coupon (admin)
+ */
+export const adminCreateCouponBodyCodeMax = 50;
+
+export const adminCreateCouponBodyDescriptionMax = 200;
+
+export const AdminCreateCouponBody = zod.object({
+  code: zod.string().min(1).max(adminCreateCouponBodyCodeMax),
+  description: zod.string().max(adminCreateCouponBodyDescriptionMax).optional(),
+  discountType: zod.enum(["percent", "amount"]),
+  discountValue: zod.number().min(1),
+  maxRedemptions: zod.number().min(1).optional(),
+  startsAt: zod.date().optional(),
+  endsAt: zod.date().optional(),
+});
+
+/**
+ * @summary Toggle coupon active status (admin)
+ */
+export const AdminToggleCouponParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const AdminToggleCouponResponse = zod.object({
+  id: zod.number(),
+  code: zod.string(),
+  description: zod.string().nullable(),
+  discountType: zod.enum(["percent", "amount"]),
+  discountValue: zod.number(),
+  maxRedemptions: zod.number().nullable(),
+  redemptionsCount: zod.number(),
+  isActive: zod.boolean(),
+  stripeCouponId: zod.string().nullable(),
+  stripePromotionCodeId: zod.string().nullable(),
+  startsAt: zod.date().nullable(),
+  endsAt: zod.date().nullable(),
+  createdAt: zod.date(),
+});
+
+/**
+ * @summary Delete a coupon (admin)
+ */
+export const AdminDeleteCouponParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const AdminDeleteCouponResponse = zod.object({
+  message: zod.string(),
+});
+
+/**
+ * @summary Create an admin-managed customer (phone/walk-in)
+ */
+export const AdminCreateCustomerBody = zod.object({
+  name: zod.string(),
+  email: zod.string().email().optional(),
+  phone: zod.string().optional(),
+  notes: zod.string().optional(),
+});
+
+/**
  * @summary List all customers (admin)
  */
 export const adminListCustomersQueryLimitDefault = 50;
@@ -1146,9 +1456,10 @@ export const AdminListCustomersQueryParams = zod.object({
 
 export const AdminListCustomersResponseItem = zod.object({
   id: zod.number(),
-  email: zod.string(),
+  email: zod.string().nullable(),
   name: zod.string(),
   phone: zod.string().nullable(),
+  notes: zod.string().nullable(),
   orderCount: zod.number(),
   createdAt: zod.date(),
 });
@@ -1165,9 +1476,10 @@ export const AdminGetCustomerParams = zod.object({
 
 export const AdminGetCustomerResponse = zod.object({
   id: zod.number(),
-  email: zod.string(),
+  email: zod.string().nullable(),
   name: zod.string(),
   phone: zod.string().nullable(),
+  notes: zod.string().nullable(),
   emailVerified: zod.boolean(),
   orderCount: zod.number(),
   orders: zod.array(
@@ -1187,6 +1499,7 @@ export const AdminGetCustomerResponse = zod.object({
         "no_show",
       ]),
       paymentMethod: zod.enum(["stripe", "cash"]),
+      source: zod.string(),
       totalInCents: zod.number(),
       createdAt: zod.date(),
       refundedGiblets: zod.boolean(),
@@ -1427,80 +1740,3 @@ export const AdminGetEggAllocationsResponseItem = zod.object({
 export const AdminGetEggAllocationsResponse = zod.array(
   AdminGetEggAllocationsResponseItem,
 );
-
-export const AdminSendOrderInvoiceParams = zod.object({
-  id: zod.number().int().positive(),
-});
-
-export const AdminSendOrderInvoiceBody = zod.object({
-  weightLbs: zod.number().positive(),
-  variant: zod.enum(["whole", "half", "quarter"]).default("whole"),
-});
-
-export const AdminSendOrderInvoiceResponse = zod.object({
-  status: zod.enum(["invoiced", "stub", "deposit_covers_balance"]),
-  remainingCents: zod.number(),
-  finalTotalCents: zod.number(),
-  depositPaidCents: zod.number(),
-  invoiceId: zod.string().optional(),
-});
-
-// ── Coupons (Task #12) ────────────────────────────────────────────────────────
-
-export const CouponDiscountTypeSchema = zod.enum(["percent", "amount"]);
-
-export const CouponSchema = zod.object({
-  id: zod.number(),
-  code: zod.string(),
-  description: zod.string().nullable(),
-  discountType: CouponDiscountTypeSchema,
-  discountValue: zod.number(),
-  maxRedemptions: zod.number().nullable(),
-  redemptionsCount: zod.number(),
-  startsAt: zod.string().nullable(),
-  endsAt: zod.string().nullable(),
-  isActive: zod.boolean(),
-  stripeCouponId: zod.string().nullable(),
-  stripePromotionCodeId: zod.string().nullable(),
-  createdAt: zod.string(),
-});
-
-export const AdminListCouponsResponse = zod.array(CouponSchema);
-
-export const AdminCreateCouponBody = zod.object({
-  code: zod.string().min(1).max(50),
-  description: zod.string().max(200).optional(),
-  discountType: CouponDiscountTypeSchema,
-  discountValue: zod.number().int().positive(),
-  maxRedemptions: zod.number().int().positive().optional(),
-  startsAt: zod.string().datetime().optional(),
-  endsAt: zod.string().datetime().optional(),
-});
-
-export const AdminToggleCouponParams = zod.object({
-  id: zod.number().int().positive(),
-});
-
-export const AdminDeleteCouponParams = zod.object({
-  id: zod.number().int().positive(),
-});
-
-export const CartApplyCouponBody = zod.object({
-  code: zod.string().min(1).max(50),
-});
-
-export const CartApplyCouponResponse = zod.union([
-  zod.object({
-    valid: zod.literal(true),
-    couponId: zod.number(),
-    code: zod.string(),
-    discountAmountCents: zod.number(),
-    totalAfterDiscountInCents: zod.number(),
-    description: zod.string(),
-    stripePromotionCodeId: zod.string().nullable(),
-  }),
-  zod.object({
-    valid: zod.literal(false),
-    error: zod.string(),
-  }),
-]);

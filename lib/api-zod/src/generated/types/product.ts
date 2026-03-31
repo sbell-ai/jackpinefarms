@@ -7,6 +7,7 @@
  */
 import type { AvailabilityStatus } from "./availabilityStatus";
 import type { PricingType } from "./pricingType";
+import type { ProductImage } from "./productImage";
 import type { ProductType } from "./productType";
 
 export interface Product {
@@ -30,7 +31,11 @@ export interface Product {
   availability: AvailabilityStatus;
   /** @nullable */
   imageUrl: string | null;
+  isOnSale: boolean;
+  /** @nullable */
+  salePriceCents: number | null;
   displayOrder: number;
+  images: ProductImage[];
   createdAt: Date;
   updatedAt: Date;
 }

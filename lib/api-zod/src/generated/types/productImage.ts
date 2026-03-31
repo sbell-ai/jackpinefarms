@@ -6,15 +6,13 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export interface AdminCustomerSummary {
+export interface ProductImage {
   id: number;
+  productId: number;
+  objectKey: string;
+  url: string;
+  sortOrder: number;
   /** @nullable */
-  email: string | null;
-  name: string;
-  /** @nullable */
-  phone: string | null;
-  /** @nullable */
-  notes: string | null;
-  orderCount: number;
+  altText: string | null;
   createdAt: Date;
 }

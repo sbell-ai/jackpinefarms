@@ -1,10 +1,11 @@
 import "../types/session.d.ts";
 import { Router, type IRouter } from "express";
-import { desc, eq, and, SQL, sql } from "drizzle-orm";
-import { db, ordersTable, orderEventsTable, orderItemsTable, preorderBatchesTable, couponsTable } from "@workspace/db";
+import { desc, eq, and, SQL, sql, ne } from "drizzle-orm";
+import { db, ordersTable, orderEventsTable, orderItemsTable, preorderBatchesTable, couponsTable, productsTable } from "@workspace/db";
 import { requireAdmin } from "../middlewares/require-admin.js";
 import { AdminListOrdersQueryParams, AdminGetOrderParams } from "@workspace/api-zod";
 import { getOrderWithItems } from "./orders.js";
+import { buildOrderItems } from "./checkout.js";
 import { createStripeInvoice } from "../lib/stripe-invoice.js";
 import * as z from "zod";
 
@@ -25,6 +26,30 @@ const AddNoteBody = z.object({
 const AssignBatchBody = z.object({
   batchId: z.number().int().positive().nullable(),
 });
+
+const CreateAdminOrderBody = z.object({
+  customerId: z.number().int().positive().optional(),
+  customerName: z.string().min(1, "Customer name is required"),
+  customerEmail: z.string().email().optional(),
+  customerPhone: z.string().optional(),
+  notes: z.string().optional(),
+});
+
+const SetOrderItemsBody = z.array(z.object({
+  productId: z.number().int().positive(),
+  quantity: z.number().int().positive(),
+})).min(1, "At least one item is required");
+
+const FinalizeOrderBody = z.object({
+  paymentMethod: z.enum(["cash", "stripe"]),
+});
+
+function getStripe() {
+  const key = process.env.STRIPE_SECRET_KEY;
+  if (!key) return null;
+  const Stripe = require("stripe");
+  return new Stripe(key, { apiVersion: "2025-02-24.acacia" });
+}
 
 router.get("/admin/orders", requireAdmin, async (req, res): Promise<void> => {
   const parsed = AdminListOrdersQueryParams.safeParse(req.query);
@@ -54,6 +79,7 @@ router.get("/admin/orders", requireAdmin, async (req, res): Promise<void> => {
     orders.map((o) => ({
       id: o.id,
       status: o.status,
+      source: (o as any).source ?? "storefront",
       paymentMethod: o.paymentMethod,
       totalInCents: o.totalInCents,
       createdAt: o.createdAt,
@@ -64,6 +90,179 @@ router.get("/admin/orders", requireAdmin, async (req, res): Promise<void> => {
       pickupEventId: o.pickupEventId,
     }))
   );
+});
+
+router.post("/admin/orders", requireAdmin, async (req, res): Promise<void> => {
+  const parsed = CreateAdminOrderBody.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.message });
+    return;
+  }
+
+  const { customerId, customerName, customerEmail, customerPhone, notes } = parsed.data;
+
+  const [order] = await db
+    .insert(ordersTable)
+    .values({
+      customerId: customerId ?? null,
+      customerName,
+      customerEmail: customerEmail ?? "",
+      customerPhone: customerPhone ?? "",
+      notes: notes ?? null,
+      paymentMethod: "cash",
+      status: "cash_pending",
+      source: "admin",
+      totalInCents: 0,
+    } as any)
+    .returning();
+
+  await db.insert(orderEventsTable).values({
+    orderId: order.id,
+    eventType: "note",
+    body: "Order created by admin (draft — items not yet set)",
+  });
+
+  const orderWithItems = await getOrderWithItems(order.id);
+  res.status(201).json(orderWithItems);
+});
+
+router.post("/admin/orders/:id/items", requireAdmin, async (req, res): Promise<void> => {
+  const id = Number(req.params.id);
+  if (isNaN(id)) { res.status(400).json({ error: "Invalid id" }); return; }
+
+  const parsed = SetOrderItemsBody.safeParse(req.body);
+  if (!parsed.success) { res.status(400).json({ error: parsed.error.message }); return; }
+
+  const [order] = await db.select().from(ordersTable).where(eq(ordersTable.id, id)).limit(1);
+  if (!order) { res.status(404).json({ error: "Order not found" }); return; }
+
+  if ((order as any).source !== "admin") {
+    res.status(403).json({ error: "Only admin-created orders can be modified this way" });
+    return;
+  }
+
+  const cart = parsed.data.map((item) => ({
+    productId: item.productId,
+    quantity: item.quantity,
+    addGiblets: false,
+  }));
+
+  const orderData = await buildOrderItems(cart);
+  if (!orderData) {
+    res.status(400).json({ error: "Could not price items — check product IDs" });
+    return;
+  }
+
+  await db.delete(orderItemsTable).where(eq(orderItemsTable.orderId, id));
+
+  await db.insert(orderItemsTable).values(
+    orderData.lineItems.map((li) => ({
+      orderId: id,
+      productId: li.productId,
+      productName: li.productName,
+      quantity: li.quantity,
+      pricingType: li.pricingType,
+      unitPriceInCents: li.unitPriceInCents,
+      unitLabel: li.unitLabel,
+      isGiblets: li.isGiblets,
+      lineTotalInCents: li.lineTotalInCents,
+    }))
+  );
+
+  await db
+    .update(ordersTable)
+    .set({ totalInCents: orderData.totalInCents })
+    .where(eq(ordersTable.id, id));
+
+  const orderWithItems = await getOrderWithItems(id);
+  res.json(orderWithItems);
+});
+
+router.post("/admin/orders/:id/finalize", requireAdmin, async (req, res): Promise<void> => {
+  const id = Number(req.params.id);
+  if (isNaN(id)) { res.status(400).json({ error: "Invalid id" }); return; }
+
+  const parsed = FinalizeOrderBody.safeParse(req.body);
+  if (!parsed.success) { res.status(400).json({ error: parsed.error.message }); return; }
+
+  const [order] = await db.select().from(ordersTable).where(eq(ordersTable.id, id)).limit(1);
+  if (!order) { res.status(404).json({ error: "Order not found" }); return; }
+
+  if ((order as any).source !== "admin") {
+    res.status(403).json({ error: "Only admin-created orders can be finalized this way" });
+    return;
+  }
+
+  const items = await db.select().from(orderItemsTable).where(eq(orderItemsTable.orderId, id));
+  if (items.length === 0) {
+    res.status(400).json({ error: "Cannot finalize an order with no items" });
+    return;
+  }
+
+  const { paymentMethod } = parsed.data;
+
+  if (paymentMethod === "cash") {
+    await db.update(ordersTable)
+      .set({ paymentMethod: "cash", status: "cash_pending" } as any)
+      .where(eq(ordersTable.id, id));
+
+    await db.insert(orderEventsTable).values({
+      orderId: id,
+      eventType: "status_change",
+      body: "Order finalized by admin — Cash at Pickup",
+    });
+
+    const orderWithItems = await getOrderWithItems(id);
+    res.json({ order: orderWithItems, checkoutUrl: null });
+    return;
+  }
+
+  if (paymentMethod === "stripe") {
+    const stripe = getStripe();
+    if (!stripe) {
+      res.status(503).json({ error: "Stripe is not configured. Set STRIPE_SECRET_KEY to generate payment links." });
+      return;
+    }
+
+    const baseUrl = process.env.STORE_BASE_URL ?? `https://${process.env.REPLIT_DEV_DOMAIN}/store`;
+
+    const stripeLineItems = items.map((li) => ({
+      price_data: {
+        currency: "cad",
+        product_data: { name: li.productName },
+        unit_amount: li.unitPriceInCents,
+      },
+      quantity: li.quantity,
+    }));
+
+    const checkoutSession = await stripe.checkout.sessions.create({
+      payment_method_types: ["card"],
+      line_items: stripeLineItems,
+      mode: "payment",
+      customer_email: order.customerEmail || undefined,
+      success_url: `${baseUrl}/order-confirmation?stripe_session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${baseUrl}/checkout`,
+    });
+
+    await db.update(ordersTable)
+      .set({
+        paymentMethod: "stripe",
+        status: "pending_payment",
+        stripeCheckoutSessionId: checkoutSession.id,
+        stripeCheckoutUrl: checkoutSession.url,
+      } as any)
+      .where(eq(ordersTable.id, id));
+
+    await db.insert(orderEventsTable).values({
+      orderId: id,
+      eventType: "status_change",
+      body: `Order finalized by admin — Stripe payment link generated (session: ${checkoutSession.id})`,
+    });
+
+    const orderWithItems = await getOrderWithItems(id);
+    res.json({ order: orderWithItems, checkoutUrl: checkoutSession.url });
+    return;
+  }
 });
 
 router.get("/admin/orders/:id", requireAdmin, async (req, res): Promise<void> => {

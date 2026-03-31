@@ -9,10 +9,13 @@ import type { OrderSummary } from "./orderSummary";
 
 export interface AdminCustomerDetail {
   id: number;
-  email: string;
+  /** @nullable */
+  email: string | null;
   name: string;
   /** @nullable */
   phone: string | null;
+  /** @nullable */
+  notes: string | null;
   emailVerified: boolean;
   orderCount: number;
   orders: OrderSummary[];

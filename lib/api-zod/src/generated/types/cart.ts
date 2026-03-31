@@ -5,10 +5,14 @@
  * Jack Pine Farm Store API
  * OpenAPI spec version: 0.1.0
  */
+import type { AppliedCoupon } from "./appliedCoupon";
 import type { CartItem } from "./cartItem";
 
 export interface Cart {
   items: CartItem[];
   subtotalInCents: number;
   itemCount: number;
+  appliedCoupon: AppliedCoupon | null;
+  /** @nullable */
+  totalAfterDiscountInCents: number | null;
 }

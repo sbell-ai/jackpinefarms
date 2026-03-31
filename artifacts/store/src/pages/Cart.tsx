@@ -6,7 +6,7 @@ import {
   useApplyCartCoupon,
   useRemoveCartCoupon,
 } from "@workspace/api-client-react";
-import type { Cart, ApplyCartCouponResult, ApplyCartCouponError } from "@workspace/api-client-react";
+import type { Cart, ApplyCartCouponResult } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { formatMoney } from "@/lib/utils";
 import { Loader2, Trash2, ArrowRight, ShoppingBag, Plus, Minus, Tag, Check, X, ChevronDown } from "lucide-react";
@@ -32,7 +32,7 @@ export default function Cart() {
 
   const applyMutation = useApplyCartCoupon({
     mutation: {
-      onSuccess: (data: ApplyCartCouponResult | ApplyCartCouponError) => {
+      onSuccess: (data: ApplyCartCouponResult) => {
         if (!data.valid) {
           setCouponError(data.error ?? "Invalid or expired coupon code");
           return;
@@ -142,7 +142,7 @@ export default function Cart() {
                     <>
                       <span className="font-bold text-lg text-red-600 dark:text-red-400">{formatMoney(item.unitPriceInCents)}</span>
                       {item.unitLabel && <span className="text-sm text-muted-foreground">/ {item.unitLabel}</span>}
-                      <span className="text-sm text-red-400 dark:text-red-600 line-through">{formatMoney(item.originalPriceInCents)}</span>
+                      <span className="text-sm text-red-400 dark:text-red-600 line-through">{formatMoney(item.originalPriceInCents ?? item.unitPriceInCents)}</span>
                       <span className="px-1.5 py-0.5 bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 text-xs font-bold rounded-full">Sale</span>
                     </>
                   ) : (

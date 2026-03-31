@@ -1,13 +1,20 @@
 import { Router, type IRouter } from "express";
 import { eq, asc, count } from "drizzle-orm";
 import { db, productsTable, productImagesTable } from "@workspace/db";
-import {
-  AddProductImageBody,
-  ReorderProductImagesBody,
-  GetProductParams,
-} from "@workspace/api-zod";
+import { GetProductParams } from "@workspace/api-zod";
 import { requireAdmin } from "../middlewares/require-admin.js";
 import { deleteStorageObject } from "../lib/objectStorage.js";
+import * as z from "zod";
+
+const AddProductImageBody = z.object({
+  objectPath: z.string(),
+  contentType: z.string().optional(),
+  altText: z.string().optional(),
+});
+
+const ReorderProductImagesBody = z.object({
+  imageIds: z.array(z.number()),
+});
 
 const router: IRouter = Router();
 

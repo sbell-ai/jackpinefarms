@@ -17,6 +17,12 @@ export interface CartItem {
   /** @nullable */
   unitLabel: string | null;
   unitPriceInCents: number;
+  /**
+   * Original price before sale (null if not on sale)
+   * @nullable
+   */
+  originalPriceInCents: number | null;
+  isOnSale: boolean;
   /** For meat products — add giblets add-on ($2/bird) */
   addGiblets: boolean;
   lineTotalInCents: number;

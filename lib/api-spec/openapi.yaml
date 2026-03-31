@@ -47,6 +47,51 @@ paths:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
 
+  /site-settings:
+    get:
+      operationId: getSiteSettings
+      tags: [settings]
+      summary: Get public site settings
+      responses:
+        "200":
+          description: Site settings
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SiteSettings"
+
+  /admin/site-settings/{key}:
+    put:
+      operationId: updateSiteSettings
+      tags: [settings, admin]
+      summary: Update a site setting (admin)
+      parameters:
+        - in: path
+          name: key
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                value:
+                  type: string
+              required:
+                - value
+      responses:
+        "200":
+          description: Updated setting
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SiteSettings"
+        "401":
+          description: Unauthorized
+
   /products:
     get:
       operationId: listProducts
@@ -259,6 +304,35 @@ paths:
                 $ref: "#/components/schemas/ErrorResponse"
 
   /admin/orders:
+    post:
+      operationId: adminCreateOrder
+      tags: [admin, orders]
+      summary: Create a draft admin order (phone/walk-in)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AdminCreateOrderBody"
+      responses:
+        "201":
+          description: Draft order created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OrderDetail"
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
     get:
       operationId: adminListOrders
       tags: [admin, orders]
@@ -290,6 +364,135 @@ paths:
                   $ref: "#/components/schemas/OrderSummary"
         "401":
           description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /admin/orders/{id}/items:
+    post:
+      operationId: adminSetOrderItems
+      tags: [admin, orders]
+      summary: Set items on a draft admin order
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AdminSetOrderItemsBody"
+      responses:
+        "200":
+          description: Updated order with items
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OrderDetail"
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /admin/orders/{id}/finalize:
+    post:
+      operationId: adminFinalizeOrder
+      tags: [admin, orders]
+      summary: Finalize a draft admin order (select payment method)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AdminFinalizeOrderBody"
+      responses:
+        "200":
+          description: Finalized order
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminFinalizeOrderResponse"
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /admin/orders/{id}/send-invoice:
+    post:
+      operationId: adminSendOrderInvoice
+      tags: [admin, orders]
+      summary: Enter final weight and send Stripe invoice for a preorder (admin)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SendOrderInvoiceBody"
+      responses:
+        "200":
+          description: Invoice sent or stubbed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SendOrderInvoiceResponse"
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Not found
           content:
             application/json:
               schema:
@@ -520,6 +723,46 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Cart"
+
+  /cart/coupon:
+    post:
+      operationId: applyCartCoupon
+      tags: [cart]
+      summary: Apply a coupon code to the cart
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                code:
+                  type: string
+              required:
+                - code
+      responses:
+        "200":
+          description: Coupon application result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApplyCartCouponResult"
+    delete:
+      operationId: removeCartCoupon
+      tags: [cart]
+      summary: Remove applied coupon from cart
+      responses:
+        "200":
+          description: Coupon removed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  removed:
+                    type: boolean
+                required:
+                  - removed
 
   /checkout/stripe:
     post:
@@ -1196,7 +1439,135 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
 
+  /admin/coupons:
+    get:
+      operationId: adminListCoupons
+      tags: [admin, coupons]
+      summary: List all coupons (admin)
+      responses:
+        "200":
+          description: Coupon list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Coupon"
+        "401":
+          description: Unauthorized
+    post:
+      operationId: adminCreateCoupon
+      tags: [admin, coupons]
+      summary: Create a coupon (admin)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateCouponBody"
+      responses:
+        "201":
+          description: Coupon created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Coupon"
+        "400":
+          description: Validation error
+        "401":
+          description: Unauthorized
+        "409":
+          description: Coupon code already exists
+
+  /admin/coupons/{id}/toggle:
+    patch:
+      operationId: adminToggleCoupon
+      tags: [admin, coupons]
+      summary: Toggle coupon active status (admin)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Updated coupon
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Coupon"
+        "401":
+          description: Unauthorized
+        "404":
+          description: Not found
+
+  /admin/coupons/{id}:
+    delete:
+      operationId: adminDeleteCoupon
+      tags: [admin, coupons]
+      summary: Delete a coupon (admin)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Coupon deleted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                required:
+                  - message
+        "401":
+          description: Unauthorized
+        "404":
+          description: Not found
+        "409":
+          description: Cannot delete a coupon that has been used
+
   /admin/customers:
+    post:
+      operationId: adminCreateCustomer
+      tags: [admin, customers]
+      summary: Create an admin-managed customer (phone/walk-in)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AdminCreateCustomerBody"
+      responses:
+        "201":
+          description: Customer created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminCustomerSummary"
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "409":
+          description: Email already taken
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
     get:
       operationId: adminListCustomers
       tags: [admin, customers]
@@ -1745,6 +2116,33 @@ components:
         - stripe
         - cash
 
+    ProductImage:
+      type: object
+      properties:
+        id:
+          type: integer
+        productId:
+          type: integer
+        objectKey:
+          type: string
+        url:
+          type: string
+        sortOrder:
+          type: integer
+        altText:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - productId
+        - objectKey
+        - url
+        - sortOrder
+        - altText
+        - createdAt
+
     Product:
       type: object
       properties:
@@ -1771,8 +2169,16 @@ components:
           $ref: "#/components/schemas/AvailabilityStatus"
         imageUrl:
           type: ["string", "null"]
+        isOnSale:
+          type: boolean
+        salePriceCents:
+          type: ["integer", "null"]
         displayOrder:
           type: integer
+        images:
+          type: array
+          items:
+            $ref: "#/components/schemas/ProductImage"
         createdAt:
           type: string
           format: date-time
@@ -1790,7 +2196,10 @@ components:
         - depositDescription
         - availability
         - imageUrl
+        - isOnSale
+        - salePriceCents
         - displayOrder
+        - images
         - createdAt
         - updatedAt
 
@@ -1939,6 +2348,11 @@ components:
           type: ["string", "null"]
         unitPriceInCents:
           type: integer
+        originalPriceInCents:
+          type: ["integer", "null"]
+          description: Original price before sale (null if not on sale)
+        isOnSale:
+          type: boolean
         addGiblets:
           type: boolean
           description: For meat products — add giblets add-on ($2/bird)
@@ -1952,8 +2366,27 @@ components:
         - quantity
         - unitLabel
         - unitPriceInCents
+        - originalPriceInCents
+        - isOnSale
         - addGiblets
         - lineTotalInCents
+
+    AppliedCoupon:
+      type: object
+      properties:
+        code:
+          type: string
+        discountAmountCents:
+          type: integer
+        description:
+          type: string
+        stripePromotionCodeId:
+          type: ["string", "null"]
+      required:
+        - code
+        - discountAmountCents
+        - description
+        - stripePromotionCodeId
 
     Cart:
       type: object
@@ -1966,10 +2399,18 @@ components:
           type: integer
         itemCount:
           type: integer
+        appliedCoupon:
+          allOf:
+            - $ref: "#/components/schemas/AppliedCoupon"
+          nullable: true
+        totalAfterDiscountInCents:
+          type: ["integer", "null"]
       required:
         - items
         - subtotalInCents
         - itemCount
+        - appliedCoupon
+        - totalAfterDiscountInCents
 
     AddCartItemBody:
       type: object
@@ -2061,6 +2502,8 @@ components:
           $ref: "#/components/schemas/OrderStatus"
         paymentMethod:
           $ref: "#/components/schemas/PaymentMethod"
+        source:
+          type: string
         totalInCents:
           type: integer
         createdAt:
@@ -2078,6 +2521,7 @@ components:
         - customerEmail
         - status
         - paymentMethod
+        - source
         - totalInCents
         - createdAt
         - refundedGiblets
@@ -2480,16 +2924,33 @@ components:
         - body
         - createdAt
 
+    AdminCreateCustomerBody:
+      type: object
+      properties:
+        name:
+          type: string
+        email:
+          type: string
+          format: email
+        phone:
+          type: string
+        notes:
+          type: string
+      required:
+        - name
+
     AdminCustomerSummary:
       type: object
       properties:
         id:
           type: integer
         email:
-          type: string
+          type: ["string", "null"]
         name:
           type: string
         phone:
+          type: ["string", "null"]
+        notes:
           type: ["string", "null"]
         orderCount:
           type: integer
@@ -2501,6 +2962,7 @@ components:
         - email
         - name
         - phone
+        - notes
         - orderCount
         - createdAt
 
@@ -2510,10 +2972,12 @@ components:
         id:
           type: integer
         email:
-          type: string
+          type: ["string", "null"]
         name:
           type: string
         phone:
+          type: ["string", "null"]
+        notes:
           type: ["string", "null"]
         emailVerified:
           type: boolean
@@ -2531,10 +2995,92 @@ components:
         - email
         - name
         - phone
+        - notes
         - emailVerified
         - orderCount
         - orders
         - createdAt
+
+    AdminCreateOrderBody:
+      type: object
+      properties:
+        customerId:
+          type: integer
+        customerName:
+          type: string
+        customerEmail:
+          type: string
+          format: email
+        customerPhone:
+          type: string
+        notes:
+          type: string
+      required:
+        - customerName
+
+    AdminSetOrderItemsBody:
+      type: array
+      items:
+        type: object
+        properties:
+          productId:
+            type: integer
+          quantity:
+            type: integer
+        required:
+          - productId
+          - quantity
+
+    AdminFinalizeOrderBody:
+      type: object
+      properties:
+        paymentMethod:
+          $ref: "#/components/schemas/PaymentMethod"
+      required:
+        - paymentMethod
+
+    AdminFinalizeOrderResponse:
+      type: object
+      properties:
+        order:
+          $ref: "#/components/schemas/OrderDetail"
+        checkoutUrl:
+          type: ["string", "null"]
+      required:
+        - order
+        - checkoutUrl
+
+    SendOrderInvoiceBody:
+      type: object
+      properties:
+        weightLbs:
+          type: number
+        variant:
+          type: string
+          enum: [whole, half, quarter]
+          default: whole
+      required:
+        - weightLbs
+
+    SendOrderInvoiceResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [invoiced, stub, deposit_covers_balance]
+        remainingCents:
+          type: integer
+        finalTotalCents:
+          type: integer
+        depositPaidCents:
+          type: integer
+        invoiceId:
+          type: ["string", "null"]
+      required:
+        - status
+        - remainingCents
+        - finalTotalCents
+        - depositPaidCents
 
     UnsubscribePreferences:
       type: object
@@ -2806,3 +3352,109 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/EggAllocationDetail"
+
+    SiteSettings:
+      type: object
+      additionalProperties:
+        type: string
+      description: Map of site setting keys to their string values
+
+    ApplyCartCouponResult:
+      type: object
+      properties:
+        valid:
+          type: boolean
+        couponId:
+          type: ["integer", "null"]
+        code:
+          type: ["string", "null"]
+        discountAmountCents:
+          type: ["integer", "null"]
+        totalAfterDiscountInCents:
+          type: ["integer", "null"]
+        description:
+          type: ["string", "null"]
+        stripePromotionCodeId:
+          type: ["string", "null"]
+        error:
+          type: ["string", "null"]
+      required:
+        - valid
+
+    Coupon:
+      type: object
+      properties:
+        id:
+          type: integer
+        code:
+          type: string
+        description:
+          type: ["string", "null"]
+        discountType:
+          type: string
+          enum: [percent, amount]
+        discountValue:
+          type: integer
+        maxRedemptions:
+          type: ["integer", "null"]
+        redemptionsCount:
+          type: integer
+        isActive:
+          type: boolean
+        stripeCouponId:
+          type: ["string", "null"]
+        stripePromotionCodeId:
+          type: ["string", "null"]
+        startsAt:
+          type: ["string", "null"]
+          format: date-time
+        endsAt:
+          type: ["string", "null"]
+          format: date-time
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - code
+        - description
+        - discountType
+        - discountValue
+        - maxRedemptions
+        - redemptionsCount
+        - isActive
+        - stripeCouponId
+        - stripePromotionCodeId
+        - startsAt
+        - endsAt
+        - createdAt
+
+    CreateCouponBody:
+      type: object
+      properties:
+        code:
+          type: string
+          minLength: 1
+          maxLength: 50
+        description:
+          type: string
+          maxLength: 200
+        discountType:
+          type: string
+          enum: [percent, amount]
+        discountValue:
+          type: integer
+          minimum: 1
+        maxRedemptions:
+          type: integer
+          minimum: 1
+        startsAt:
+          type: string
+          format: date-time
+        endsAt:
+          type: string
+          format: date-time
+      required:
+        - code
+        - discountType
+        - discountValue

@@ -1,0 +1,55 @@
+Create a public Pickup Events page that lists local pickup events created in the Admin dashboard “Pickup Events” section.
+
+Requirements (v1)
+
+1) Data source (single source of truth)
+
+- Use the existing Pickup Events data that Admin already creates (same DB table/model).
+- Do not create a new events table or duplicate event records.
+
+2) Public API endpoint (read-only)
+
+- Add `GET /api/pickup-events` (public, no auth).
+- Returns only events that should be visible publicly:
+    - `status = published` (preferred) or `is_public = true`
+    - and `start_at >= now()` (upcoming)
+- Sort by `start_at ASC`.
+- Response fields (minimum):
+    - `id`
+    - `title` (e.g., “Farm Pickup — Saturday”)
+    - `startAt`, `endAt` (ISO)
+    - `locationName` (optional)
+    - `address` or pickup instructions (whatever Admin stores)
+    - `notes` / `instructions` (optional)
+    - `capacity` + `spotsRemaining` (only if already tracked; otherwise omit v1)
+
+3) Public page UI
+
+- Add a new route/page (choose one):
+    - `/pickup-events` (recommended), or `/events`
+- UI sections:
+    - “Upcoming pickup events” list/cards
+    - Each event shows: date + time (local timezone), location/pickup notes, and any cutoff info if present
+    - Empty state: “No pickup events currently scheduled. Check back soon.”
+- Make it mobile-friendly and match existing site styles.
+
+4) Admin controls (if not already present)
+
+- Ensure Admin Pickup Events has a clear “Published” toggle (or Status dropdown: Draft/Published/Cancelled).
+- Only Published events appear on the public page.
+
+5) Timezone + formatting
+
+- Display times in the farm’s local timezone (America/Detroit).
+- If events are stored as timestamps, convert consistently on the frontend.
+
+Definition of Done
+
+- Admin creates a Pickup Event → toggles Published → it appears on `/pickup-events` immediately.
+- Draft/unpublished events never appear publicly.
+- Cancelled events either do not appear or clearly show as cancelled (pick one; default is “do not show” in v1).
+- TypeScript builds cleanly; endpoint is fast and has sensible error handling.
+
+## Instructions for Replit (copy/paste)
+
+Implement `/pickup-events` public page + `GET /api/pickup-events` endpoint that lists published upcoming events from the existing Admin Pickup Events data (no duplicate tables).

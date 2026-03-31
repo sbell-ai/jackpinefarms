@@ -102,7 +102,7 @@ router.post("/auth/login", authLimiter, async (req, res): Promise<void> => {
     .where(eq(customersTable.email, email.toLowerCase()))
     .limit(1);
 
-  if (!customer || !(await bcrypt.compare(password, customer.passwordHash))) {
+  if (!customer || !customer.passwordHash || !(await bcrypt.compare(password, customer.passwordHash))) {
     res.status(401).json({ error: "Invalid email or password" });
     return;
   }

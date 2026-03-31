@@ -24,7 +24,7 @@ function getStripe() {
   return new Stripe(key, { apiVersion: "2025-02-24.acacia" });
 }
 
-async function buildOrderItems(
+export async function buildOrderItems(
   sessionCart: Array<{ productId: number; quantity: number; addGiblets: boolean }>
 ) {
   if (sessionCart.length === 0) return null;

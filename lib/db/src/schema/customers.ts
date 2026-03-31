@@ -10,10 +10,11 @@ import { z } from "zod/v4";
 
 export const customersTable = pgTable("customers", {
   id: serial("id").primaryKey(),
-  email: text("email").notNull().unique(),
-  passwordHash: text("password_hash").notNull(),
+  email: text("email").unique(),
+  passwordHash: text("password_hash"),
   name: text("name").notNull(),
   phone: text("phone"),
+  notes: text("notes"),
   emailVerified: boolean("email_verified").notNull().default(false),
   verificationToken: text("verification_token"),
   resetToken: text("reset_token"),

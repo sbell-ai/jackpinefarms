@@ -71,6 +71,7 @@ export const PaymentMethod = {
 export interface ProductImage {
   id: number;
   productId: number;
+  objectKey: string;
   url: string;
   sortOrder: number;
   /** @nullable */
@@ -86,9 +87,6 @@ export interface Product {
   pricingType: PricingType;
   /** Price in cents. For eggs this is per unit/half-dozen. For meat this is the deposit amount. */
   priceInCents: number;
-  isOnSale: boolean;
-  /** @nullable */
-  salePriceCents: number | null;
   /**
    * Display label for the unit (e.g. "dozen", "half-dozen")
    * @nullable
@@ -102,10 +100,13 @@ export interface Product {
   availability: AvailabilityStatus;
   /** @nullable */
   imageUrl: string | null;
+  isOnSale: boolean;
+  /** @nullable */
+  salePriceCents: number | null;
   displayOrder: number;
+  images: ProductImage[];
   createdAt: string;
   updatedAt: string;
-  images: ProductImage[];
 }
 
 export interface CreateProductBody {
@@ -114,9 +115,6 @@ export interface CreateProductBody {
   productType: ProductType;
   pricingType: PricingType;
   priceInCents: number;
-  isOnSale?: boolean;
-  /** @nullable */
-  salePriceCents?: number | null;
   /** @nullable */
   unitLabel?: string | null;
   /** @nullable */
@@ -133,9 +131,6 @@ export interface UpdateProductBody {
   productType?: ProductType;
   pricingType?: PricingType;
   priceInCents?: number;
-  isOnSale?: boolean;
-  /** @nullable */
-  salePriceCents?: number | null;
   /** @nullable */
   unitLabel?: string | null;
   /** @nullable */
@@ -190,20 +185,23 @@ export interface CartItem {
   quantity: number;
   /** @nullable */
   unitLabel: string | null;
-  /** @nullable */
-  imageUrl?: string | null;
   unitPriceInCents: number;
+  /**
+   * Original price before sale (null if not on sale)
+   * @nullable
+   */
+  originalPriceInCents: number | null;
   isOnSale: boolean;
-  originalPriceInCents: number;
   /** For meat products — add giblets add-on ($2/bird) */
   addGiblets: boolean;
   lineTotalInCents: number;
 }
 
-export interface AppliedCouponInfo {
+export interface AppliedCoupon {
   code: string;
   discountAmountCents: number;
   description: string;
+  /** @nullable */
   stripePromotionCodeId: string | null;
 }
 
@@ -211,8 +209,9 @@ export interface Cart {
   items: CartItem[];
   subtotalInCents: number;
   itemCount: number;
-  appliedCoupon?: AppliedCouponInfo;
-  totalAfterDiscountInCents?: number;
+  appliedCoupon: AppliedCoupon | null;
+  /** @nullable */
+  totalAfterDiscountInCents: number | null;
 }
 
 export interface AddCartItemBody {
@@ -228,76 +227,6 @@ export interface CheckoutContactBody {
   phone: string;
   /** @nullable */
   notes?: string | null;
-  couponCode?: string;
-}
-
-export type CouponDiscountType = "percent" | "amount";
-
-export interface Coupon {
-  id: number;
-  code: string;
-  /** @nullable */
-  description: string | null;
-  discountType: CouponDiscountType;
-  discountValue: number;
-  /** @nullable */
-  maxRedemptions: number | null;
-  redemptionsCount: number;
-  /** @nullable */
-  startsAt: string | null;
-  /** @nullable */
-  endsAt: string | null;
-  isActive: boolean;
-  /** @nullable */
-  stripeCouponId: string | null;
-  /** @nullable */
-  stripePromotionCodeId: string | null;
-  createdAt: string;
-}
-
-export interface ApplyCartCouponBody {
-  code: string;
-}
-
-export interface ApplyCartCouponResult {
-  valid: true;
-  couponId: number;
-  code: string;
-  discountAmountCents: number;
-  totalAfterDiscountInCents: number;
-  description: string;
-  /** @nullable */
-  stripePromotionCodeId: string | null;
-}
-
-export interface ApplyCartCouponError {
-  valid: false;
-  error: string;
-}
-
-export interface CreateCouponBody {
-  code: string;
-  description?: string;
-  discountType: CouponDiscountType;
-  discountValue: number;
-  maxRedemptions?: number;
-  startsAt?: string;
-  endsAt?: string;
-}
-
-export interface CouponValidateResult {
-  valid: true;
-  couponId: number;
-  code: string;
-  discountAmountCents: number;
-  description: string;
-  /** @nullable */
-  stripeCouponId: string | null;
-}
-
-export interface CouponValidateError {
-  valid: false;
-  error: string;
 }
 
 export interface StripeCheckoutResponse {
@@ -327,6 +256,7 @@ export interface OrderSummary {
   customerEmail: string;
   status: OrderStatus;
   paymentMethod: PaymentMethod;
+  source: string;
   totalInCents: number;
   createdAt: string;
   refundedGiblets: boolean;
@@ -549,26 +479,96 @@ export interface OrderEvent {
   createdAt: string;
 }
 
+export interface AdminCreateCustomerBody {
+  name: string;
+  email?: string;
+  phone?: string;
+  notes?: string;
+}
+
 export interface AdminCustomerSummary {
   id: number;
-  email: string;
+  /** @nullable */
+  email: string | null;
   name: string;
   /** @nullable */
   phone: string | null;
+  /** @nullable */
+  notes: string | null;
   orderCount: number;
   createdAt: string;
 }
 
 export interface AdminCustomerDetail {
   id: number;
-  email: string;
+  /** @nullable */
+  email: string | null;
   name: string;
   /** @nullable */
   phone: string | null;
+  /** @nullable */
+  notes: string | null;
   emailVerified: boolean;
   orderCount: number;
   orders: OrderSummary[];
   createdAt: string;
+}
+
+export interface AdminCreateOrderBody {
+  customerId?: number;
+  customerName: string;
+  customerEmail?: string;
+  customerPhone?: string;
+  notes?: string;
+}
+
+export type AdminSetOrderItemsBodyItem = {
+  productId: number;
+  quantity: number;
+};
+
+export type AdminSetOrderItemsBody = AdminSetOrderItemsBodyItem[];
+
+export interface AdminFinalizeOrderBody {
+  paymentMethod: PaymentMethod;
+}
+
+export interface AdminFinalizeOrderResponse {
+  order: OrderDetail;
+  /** @nullable */
+  checkoutUrl: string | null;
+}
+
+export type SendOrderInvoiceBodyVariant =
+  (typeof SendOrderInvoiceBodyVariant)[keyof typeof SendOrderInvoiceBodyVariant];
+
+export const SendOrderInvoiceBodyVariant = {
+  whole: "whole",
+  half: "half",
+  quarter: "quarter",
+} as const;
+
+export interface SendOrderInvoiceBody {
+  weightLbs: number;
+  variant?: SendOrderInvoiceBodyVariant;
+}
+
+export type SendOrderInvoiceResponseStatus =
+  (typeof SendOrderInvoiceResponseStatus)[keyof typeof SendOrderInvoiceResponseStatus];
+
+export const SendOrderInvoiceResponseStatus = {
+  invoiced: "invoiced",
+  stub: "stub",
+  deposit_covers_balance: "deposit_covers_balance",
+} as const;
+
+export interface SendOrderInvoiceResponse {
+  status: SendOrderInvoiceResponseStatus;
+  remainingCents: number;
+  finalTotalCents: number;
+  depositPaidCents: number;
+  /** @nullable */
+  invoiceId?: string | null;
 }
 
 export interface UnsubscribePreferences {
@@ -756,6 +756,90 @@ export interface AllocateEggsAlreadyAllocated {
   allocations: EggAllocationDetail[];
 }
 
+/**
+ * Map of site setting keys to their string values
+ */
+export interface SiteSettings {
+  [key: string]: string;
+}
+
+export interface ApplyCartCouponResult {
+  valid: boolean;
+  /** @nullable */
+  couponId?: number | null;
+  /** @nullable */
+  code?: string | null;
+  /** @nullable */
+  discountAmountCents?: number | null;
+  /** @nullable */
+  totalAfterDiscountInCents?: number | null;
+  /** @nullable */
+  description?: string | null;
+  /** @nullable */
+  stripePromotionCodeId?: string | null;
+  /** @nullable */
+  error?: string | null;
+}
+
+export type CouponDiscountType =
+  (typeof CouponDiscountType)[keyof typeof CouponDiscountType];
+
+export const CouponDiscountType = {
+  percent: "percent",
+  amount: "amount",
+} as const;
+
+export interface Coupon {
+  id: number;
+  code: string;
+  /** @nullable */
+  description: string | null;
+  discountType: CouponDiscountType;
+  discountValue: number;
+  /** @nullable */
+  maxRedemptions: number | null;
+  redemptionsCount: number;
+  isActive: boolean;
+  /** @nullable */
+  stripeCouponId: string | null;
+  /** @nullable */
+  stripePromotionCodeId: string | null;
+  /** @nullable */
+  startsAt: string | null;
+  /** @nullable */
+  endsAt: string | null;
+  createdAt: string;
+}
+
+export type CreateCouponBodyDiscountType =
+  (typeof CreateCouponBodyDiscountType)[keyof typeof CreateCouponBodyDiscountType];
+
+export const CreateCouponBodyDiscountType = {
+  percent: "percent",
+  amount: "amount",
+} as const;
+
+export interface CreateCouponBody {
+  /**
+   * @minLength 1
+   * @maxLength 50
+   */
+  code: string;
+  /** @maxLength 200 */
+  description?: string;
+  discountType: CreateCouponBodyDiscountType;
+  /** @minimum 1 */
+  discountValue: number;
+  /** @minimum 1 */
+  maxRedemptions?: number;
+  startsAt?: string;
+  endsAt?: string;
+}
+
+export type UpdateSiteSettingsBody = {
+  value: string;
+};
+
 export type ListProductsParams = {
   /**
    * When true (admin only), include disabled products
@@ -770,6 +854,18 @@ export type AdminListOrdersParams = {
   status?: OrderStatus;
   limit?: number;
   offset?: number;
+};
+
+export type ApplyCartCouponBody = {
+  code: string;
+};
+
+export type RemoveCartCoupon200 = {
+  removed: boolean;
+};
+
+export type AdminDeleteCoupon200 = {
+  message: string;
 };
 
 export type AdminListCustomersParams = {
@@ -792,10 +888,3 @@ export type AdminListEggAdjustmentsParams = {
   fromDate?: string;
   toDate?: string;
 };
-
-export interface SiteSettingEntry {
-  key: string;
-  value: string;
-}
-
-export type SiteSettings = Record<string, string>;
