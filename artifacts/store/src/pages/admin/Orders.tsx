@@ -1,5 +1,5 @@
 import { useAdminListOrders, getAdminListOrdersQueryKey } from "@workspace/api-client-react";
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
 import { format } from "date-fns";
 import { Plus, PhoneCall } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -29,6 +29,7 @@ const STATUS_COLORS: Record<string, string> = {
 };
 
 export default function AdminOrders() {
+  const [, navigate] = useLocation();
   const { data, isLoading, isError } = useAdminListOrders(
     {},
     { query: { queryKey: getAdminListOrdersQueryKey({}) } }
@@ -87,42 +88,44 @@ export default function AdminOrders() {
             </thead>
             <tbody className="divide-y divide-border">
               {orders.map((order) => (
-                <Link key={order.id} href={`/admin/orders/${order.id}`}>
-                  <tr className="hover:bg-muted/30 transition-colors cursor-pointer">
-                    <td className="px-4 py-3">
-                      <div className="font-mono text-xs text-muted-foreground">
-                        #{String(order.id).padStart(4, "0")}
-                      </div>
-                      {order.source === "admin" && (
-                        <span className="inline-flex items-center gap-1 mt-0.5 px-1.5 py-0.5 rounded text-xs font-medium bg-amber-100 text-amber-800">
-                          <PhoneCall className="w-3 h-3" /> Admin order
-                        </span>
-                      )}
-                    </td>
-                    <td className="px-4 py-3">
-                      <div className="font-medium text-foreground">{order.customerName}</div>
-                      <div className="text-xs text-muted-foreground">{order.customerEmail || "—"}</div>
-                    </td>
-                    <td className="px-4 py-3 text-muted-foreground">
-                      {format(new Date(order.createdAt), "MMM d, yyyy")}
-                    </td>
-                    <td className="px-4 py-3 capitalize text-muted-foreground">
-                      {order.paymentMethod}
-                    </td>
-                    <td className="px-4 py-3 font-medium">
-                      ${((order.totalInCents ?? 0) / 100).toFixed(2)}
-                    </td>
-                    <td className="px-4 py-3">
-                      <span
-                        className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
-                          STATUS_COLORS[order.status] ?? "bg-gray-100 text-gray-800"
-                        }`}
-                      >
-                        {STATUS_LABELS[order.status] ?? order.status}
+                <tr
+                  key={order.id}
+                  onClick={() => navigate(`/admin/orders/${order.id}`)}
+                  className="hover:bg-muted/30 transition-colors cursor-pointer"
+                >
+                  <td className="px-4 py-3">
+                    <div className="font-mono text-xs text-muted-foreground">
+                      #{String(order.id).padStart(4, "0")}
+                    </div>
+                    {order.source === "admin" && (
+                      <span className="inline-flex items-center gap-1 mt-0.5 px-1.5 py-0.5 rounded text-xs font-medium bg-amber-100 text-amber-800">
+                        <PhoneCall className="w-3 h-3" /> Admin order
                       </span>
-                    </td>
-                  </tr>
-                </Link>
+                    )}
+                  </td>
+                  <td className="px-4 py-3">
+                    <div className="font-medium text-foreground">{order.customerName}</div>
+                    <div className="text-xs text-muted-foreground">{order.customerEmail || "—"}</div>
+                  </td>
+                  <td className="px-4 py-3 text-muted-foreground">
+                    {format(new Date(order.createdAt), "MMM d, yyyy")}
+                  </td>
+                  <td className="px-4 py-3 capitalize text-muted-foreground">
+                    {order.paymentMethod}
+                  </td>
+                  <td className="px-4 py-3 font-medium">
+                    ${((order.totalInCents ?? 0) / 100).toFixed(2)}
+                  </td>
+                  <td className="px-4 py-3">
+                    <span
+                      className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
+                        STATUS_COLORS[order.status] ?? "bg-gray-100 text-gray-800"
+                      }`}
+                    >
+                      {STATUS_LABELS[order.status] ?? order.status}
+                    </span>
+                  </td>
+                </tr>
               ))}
             </tbody>
           </table>

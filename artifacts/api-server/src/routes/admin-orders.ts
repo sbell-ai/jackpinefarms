@@ -1,7 +1,7 @@
 import "../types/session.d.ts";
 import { Router, type IRouter } from "express";
-import { desc, eq, and, SQL, sql, ne } from "drizzle-orm";
-import { db, ordersTable, orderEventsTable, orderItemsTable, preorderBatchesTable, couponsTable, productsTable } from "@workspace/db";
+import { desc, eq, and, SQL, sql } from "drizzle-orm";
+import { db, ordersTable, orderEventsTable, orderItemsTable, preorderBatchesTable, couponsTable } from "@workspace/db";
 import { requireAdmin } from "../middlewares/require-admin.js";
 import { AdminListOrdersQueryParams, AdminGetOrderParams } from "@workspace/api-zod";
 import { getOrderWithItems } from "./orders.js";
