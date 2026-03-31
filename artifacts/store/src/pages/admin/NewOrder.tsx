@@ -5,6 +5,7 @@ import {
   useAdminSetOrderItems,
   useAdminFinalizeOrder,
   useAdminListCustomers,
+  useAdminCreateCustomer,
   getAdminListCustomersQueryKey,
   useListProducts,
   PricingType,
@@ -105,6 +106,24 @@ export default function AdminNewOrder() {
     },
   });
 
+  const createCustomer = useAdminCreateCustomer({
+    mutation: {
+      onSuccess: (customer: AdminCustomerSummary) => {
+        createOrder.mutate({
+          data: {
+            customerId: customer.id,
+            customerName: customer.name,
+            customerEmail: customer.email ?? undefined,
+            customerPhone: customer.phone ?? undefined,
+          },
+        });
+      },
+      onError: (e: { response?: { data?: { error?: string } }; message?: string }) => {
+        toast({ title: "Error", description: e.response?.data?.error ?? e.message ?? "Unknown error", variant: "destructive" });
+      },
+    },
+  });
+
   const syncItems = useAdminSetOrderItems({
     mutation: {
       onSuccess: (order) => {
@@ -175,15 +194,15 @@ export default function AdminNewOrder() {
     }
     if (Object.keys(errs).length > 0) { setCustomerErrors(errs); return; }
     setCustomerErrors({});
-    createOrder.mutate({
+    createCustomer.mutate({
       data: {
-        customerName: newCustomer.name.trim(),
-        customerEmail: newCustomer.email.trim() || undefined,
-        customerPhone: newCustomer.phone.trim() || undefined,
+        name: newCustomer.name.trim(),
+        email: newCustomer.email.trim() || undefined,
+        phone: newCustomer.phone.trim() || undefined,
         notes: newCustomer.notes.trim() || undefined,
       },
     });
-  }, [selectedCustomer, newCustomer, createOrder]);
+  }, [selectedCustomer, newCustomer, createOrder, createCustomer]);
 
   const displayItems = serverOrder?.items ?? [];
   const displayTotal = serverOrder?.totalInCents ?? 0;
@@ -368,8 +387,8 @@ export default function AdminNewOrder() {
             )}
           </div>
           <div className="flex justify-end">
-            <Button type="submit" disabled={createOrder.isPending || (!selectedCustomer && customerMode === "search" && !newCustomer.name)}>
-              {createOrder.isPending ? "Creating..." : "Next: Add Items"}
+            <Button type="submit" disabled={createOrder.isPending || createCustomer.isPending || (!selectedCustomer && customerMode === "search" && !newCustomer.name)}>
+              {createCustomer.isPending ? "Creating customer..." : createOrder.isPending ? "Creating order..." : "Next: Add Items"}
             </Button>
           </div>
         </form>

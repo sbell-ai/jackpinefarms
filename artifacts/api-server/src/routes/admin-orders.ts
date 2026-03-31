@@ -38,7 +38,7 @@ const CreateAdminOrderBody = z.object({
 const SetOrderItemsBody = z.array(z.object({
   productId: z.number().int().positive(),
   quantity: z.number().int().positive(),
-})).min(1, "At least one item is required");
+}));
 
 const FinalizeOrderBody = z.object({
   paymentMethod: z.enum(["cash", "stripe"]),
@@ -141,38 +141,45 @@ router.post("/admin/orders/:id/items", requireAdmin, async (req, res): Promise<v
     return;
   }
 
-  const cart = parsed.data.map((item) => ({
-    productId: item.productId,
-    quantity: item.quantity,
-    addGiblets: false,
-  }));
-
-  const orderData = await buildOrderItems(cart);
-  if (!orderData) {
-    res.status(400).json({ error: "Could not price items — check product IDs" });
-    return;
-  }
-
   await db.delete(orderItemsTable).where(eq(orderItemsTable.orderId, id));
 
-  await db.insert(orderItemsTable).values(
-    orderData.lineItems.map((li) => ({
-      orderId: id,
-      productId: li.productId,
-      productName: li.productName,
-      quantity: li.quantity,
-      pricingType: li.pricingType,
-      unitPriceInCents: li.unitPriceInCents,
-      unitLabel: li.unitLabel,
-      isGiblets: li.isGiblets,
-      lineTotalInCents: li.lineTotalInCents,
-    }))
-  );
+  if (parsed.data.length > 0) {
+    const cart = parsed.data.map((item) => ({
+      productId: item.productId,
+      quantity: item.quantity,
+      addGiblets: false,
+    }));
 
-  await db
-    .update(ordersTable)
-    .set({ totalInCents: orderData.totalInCents })
-    .where(eq(ordersTable.id, id));
+    const orderData = await buildOrderItems(cart);
+    if (!orderData) {
+      res.status(400).json({ error: "Could not price items — check product IDs" });
+      return;
+    }
+
+    await db.insert(orderItemsTable).values(
+      orderData.lineItems.map((li) => ({
+        orderId: id,
+        productId: li.productId,
+        productName: li.productName,
+        quantity: li.quantity,
+        pricingType: li.pricingType,
+        unitPriceInCents: li.unitPriceInCents,
+        unitLabel: li.unitLabel,
+        isGiblets: li.isGiblets,
+        lineTotalInCents: li.lineTotalInCents,
+      }))
+    );
+
+    await db
+      .update(ordersTable)
+      .set({ totalInCents: orderData.totalInCents })
+      .where(eq(ordersTable.id, id));
+  } else {
+    await db
+      .update(ordersTable)
+      .set({ totalInCents: 0 })
+      .where(eq(ordersTable.id, id));
+  }
 
   const orderWithItems = await getOrderWithItems(id);
   res.json(orderWithItems);

@@ -5,6 +5,7 @@ import {
   useAdminListCustomers,
   getAdminListCustomersQueryKey,
   useAdminCreateCustomer,
+  type AdminCustomerSummary,
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
@@ -22,13 +23,13 @@ function NewCustomerModal({ onClose }: { onClose: () => void }) {
 
   const create = useAdminCreateCustomer({
     mutation: {
-      onSuccess: (customer: any) => {
+      onSuccess: (customer: AdminCustomerSummary) => {
         qc.invalidateQueries({ queryKey: getAdminListCustomersQueryKey({}) });
         toast({ title: "Customer created" });
         onClose();
         navigate(`/admin/customers/${customer.id}`);
       },
-      onError: (e: any) => {
+      onError: (e: { response?: { data?: { error?: string } }; message?: string }) => {
         const msg = e.response?.data?.error ?? e.message;
         toast({ title: "Error", description: msg, variant: "destructive" });
       },
@@ -180,7 +181,7 @@ export default function AdminCustomerList() {
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
-              {customers.map((customer: any) => (
+              {customers.map((customer) => (
                 <tr key={customer.id} className="hover:bg-muted/30 transition-colors">
                   <td className="px-4 py-3">
                     <Link href={`/admin/customers/${customer.id}`}>
