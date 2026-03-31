@@ -286,9 +286,27 @@ export async function runMigrations(): Promise<void> {
 
     // ── Customer schema evolution (Task #14) ────────────────────────────────
     // Make email nullable (storefront still requires it, admin-created customers may not have one)
-    await db.execute(sql.raw(`ALTER TABLE customers ALTER COLUMN email DROP NOT NULL`));
+    await db.execute(sql`
+      DO $$ BEGIN
+        IF EXISTS (
+          SELECT 1 FROM information_schema.columns
+          WHERE table_name = 'customers' AND column_name = 'email' AND is_nullable = 'NO'
+        ) THEN
+          ALTER TABLE customers ALTER COLUMN email DROP NOT NULL;
+        END IF;
+      END $$;
+    `);
     // Make password_hash nullable (admin-created customers don't have passwords)
-    await db.execute(sql.raw(`ALTER TABLE customers ALTER COLUMN password_hash DROP NOT NULL`));
+    await db.execute(sql`
+      DO $$ BEGIN
+        IF EXISTS (
+          SELECT 1 FROM information_schema.columns
+          WHERE table_name = 'customers' AND column_name = 'password_hash' AND is_nullable = 'NO'
+        ) THEN
+          ALTER TABLE customers ALTER COLUMN password_hash DROP NOT NULL;
+        END IF;
+      END $$;
+    `);
     // Add notes column for admin-created customers
     await db.execute(sql.raw(`ALTER TABLE customers ADD COLUMN IF NOT EXISTS notes TEXT`));
     // Replace blanket unique constraint with a partial unique index (unique only when not null)
