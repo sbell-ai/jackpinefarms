@@ -79,7 +79,7 @@ router.get("/admin/orders", requireAdmin, async (req, res): Promise<void> => {
     orders.map((o) => ({
       id: o.id,
       status: o.status,
-      source: (o as any).source ?? "storefront",
+      source: o.source,
       paymentMethod: o.paymentMethod,
       totalInCents: o.totalInCents,
       createdAt: o.createdAt,
@@ -113,7 +113,7 @@ router.post("/admin/orders", requireAdmin, async (req, res): Promise<void> => {
       status: "cash_pending",
       source: "admin",
       totalInCents: 0,
-    } as any)
+    })
     .returning();
 
   await db.insert(orderEventsTable).values({
@@ -136,7 +136,7 @@ router.post("/admin/orders/:id/items", requireAdmin, async (req, res): Promise<v
   const [order] = await db.select().from(ordersTable).where(eq(ordersTable.id, id)).limit(1);
   if (!order) { res.status(404).json({ error: "Order not found" }); return; }
 
-  if ((order as any).source !== "admin") {
+  if (order.source !== "admin") {
     res.status(403).json({ error: "Only admin-created orders can be modified this way" });
     return;
   }
@@ -188,7 +188,7 @@ router.post("/admin/orders/:id/finalize", requireAdmin, async (req, res): Promis
   const [order] = await db.select().from(ordersTable).where(eq(ordersTable.id, id)).limit(1);
   if (!order) { res.status(404).json({ error: "Order not found" }); return; }
 
-  if ((order as any).source !== "admin") {
+  if (order.source !== "admin") {
     res.status(403).json({ error: "Only admin-created orders can be finalized this way" });
     return;
   }
@@ -203,7 +203,7 @@ router.post("/admin/orders/:id/finalize", requireAdmin, async (req, res): Promis
 
   if (paymentMethod === "cash") {
     await db.update(ordersTable)
-      .set({ paymentMethod: "cash", status: "cash_pending" } as any)
+      .set({ paymentMethod: "cash", status: "cash_pending" })
       .where(eq(ordersTable.id, id));
 
     await db.insert(orderEventsTable).values({
@@ -249,8 +249,8 @@ router.post("/admin/orders/:id/finalize", requireAdmin, async (req, res): Promis
         paymentMethod: "stripe",
         status: "pending_payment",
         stripeCheckoutSessionId: checkoutSession.id,
-        stripeCheckoutUrl: checkoutSession.url,
-      } as any)
+        stripeCheckoutUrl: checkoutSession.url ?? null,
+      })
       .where(eq(ordersTable.id, id));
 
     await db.insert(orderEventsTable).values({

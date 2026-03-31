@@ -9,4 +9,8 @@
 export type AdminListCustomersParams = {
   limit?: number;
   offset?: number;
+  /**
+   * Search by name, email, or phone
+   */
+  search?: string;
 };

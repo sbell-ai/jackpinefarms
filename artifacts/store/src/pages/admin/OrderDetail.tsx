@@ -15,6 +15,8 @@ import {
   useAdminGetEggAllocations,
   getAdminGetEggAllocationsQueryKey,
   useAdminSendOrderInvoice,
+  type OrderStatus,
+  type SendOrderInvoiceResponse,
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft, RefreshCw, FileText, CheckCircle, XCircle, MessageSquare, Package, Egg, Send, DollarSign, PhoneCall } from "lucide-react";
@@ -68,7 +70,7 @@ export default function AdminOrderDetail() {
   const { toast } = useToast();
 
   const [newNote, setNewNote] = useState("");
-  const [newStatus, setNewStatus] = useState("");
+  const [newStatus, setNewStatus] = useState<OrderStatus | "">("");
   const [statusNote, setStatusNote] = useState("");
   const [selectedBatchId, setSelectedBatchId] = useState("");
   const [invoiceWeightLbs, setInvoiceWeightLbs] = useState("");
@@ -159,11 +161,11 @@ export default function AdminOrderDetail() {
 
   const sendInvoice = useAdminSendOrderInvoice({
     mutation: {
-      onSuccess: (data: any) => {
+      onSuccess: (data: SendOrderInvoiceResponse) => {
         if (data.status === "deposit_covers_balance") {
           toast({ title: "Deposit covers balance", description: "No invoice needed — deposit covered the full amount." });
         } else if (data.status === "invoiced") {
-          toast({ title: "Invoice sent", description: `Stripe invoice sent to ${(order as any)?.customerEmail}. Remaining balance: $${(data.remainingCents / 100).toFixed(2)}` });
+          toast({ title: "Invoice sent", description: `Stripe invoice sent to ${order?.customerEmail}. Remaining balance: $${(data.remainingCents / 100).toFixed(2)}` });
         } else {
           toast({ title: "Invoice queued (stub)", description: `STRIPE_SECRET_KEY not set. Remaining: $${(data.remainingCents / 100).toFixed(2)}` });
         }
@@ -191,10 +193,10 @@ export default function AdminOrderDetail() {
     );
   }
 
-  const hasGiblets = (order as any).items?.some((i: any) => i.isGiblets);
-  const refundedGiblets = (order as any).refundedGiblets;
-  const hasDepositItems = (order as any).items?.some((i: any) => i.pricingType === "deposit");
-  const invoiceAlreadySent = !!(order as any).stripeInvoiceId || order.status === "invoice_sent" || order.status === "fulfilled";
+  const hasGiblets = order.items.some((i) => i.isGiblets);
+  const refundedGiblets = order.refundedGiblets;
+  const hasDepositItems = order.items.some((i) => i.pricingType === "deposit");
+  const invoiceAlreadySent = !!order.stripeInvoiceId || order.status === "invoice_sent" || order.status === "fulfilled";
 
   return (
     <div className="space-y-6">
@@ -210,9 +212,9 @@ export default function AdminOrderDetail() {
         <span className={`inline-flex items-center px-2.5 py-0.5 rounded text-xs font-medium ${STATUS_COLORS[order.status] ?? "bg-gray-100 text-gray-800"}`}>
           {STATUS_LABELS[order.status] ?? order.status}
         </span>
-        {(order as any).source === "admin" && (
+        {order.source === "admin" && (
           <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded text-xs font-medium bg-amber-100 text-amber-800">
-            <PhoneCall className="w-3 h-3" /> Phone/Walk-in
+            <PhoneCall className="w-3 h-3" /> Admin order
           </span>
         )}
       </div>
@@ -223,8 +225,8 @@ export default function AdminOrderDetail() {
           <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2">Customer</div>
           <div className="font-medium text-foreground">{order.customerName}</div>
           <div className="text-sm text-muted-foreground">{order.customerEmail}</div>
-          {(order as any).customerPhone && (
-            <div className="text-sm text-muted-foreground">{(order as any).customerPhone}</div>
+          {order.customerPhone && (
+            <div className="text-sm text-muted-foreground">{order.customerPhone}</div>
           )}
         </div>
 
@@ -234,14 +236,14 @@ export default function AdminOrderDetail() {
           <div className="text-sm text-muted-foreground">Payment: <span className="text-foreground capitalize">{order.paymentMethod}</span></div>
           <div className="text-sm text-muted-foreground">Total: <span className="text-foreground font-medium">${((order.totalInCents ?? 0) / 100).toFixed(2)}</span></div>
           <div className="text-sm text-muted-foreground">Placed: {format(new Date(order.createdAt), "MMM d, yyyy h:mm a")}</div>
-          {(order as any).finalWeightLbs && (
-            <div className="text-sm text-muted-foreground">Final Weight: <span className="text-foreground">{(order as any).finalWeightLbs} lbs</span></div>
+          {order.finalWeightLbs != null && (
+            <div className="text-sm text-muted-foreground">Final Weight: <span className="text-foreground">{order.finalWeightLbs} lbs</span></div>
           )}
         </div>
       </div>
 
       {/* Order Items */}
-      {(order as any).items?.length > 0 && (
+      {order.items.length > 0 && (
         <div className="rounded-lg border border-border bg-card overflow-hidden">
           <div className="px-4 py-3 border-b border-border">
             <div className="text-sm font-semibold text-foreground">Items</div>
@@ -256,7 +258,7 @@ export default function AdminOrderDetail() {
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
-              {(order as any).items.map((item: any) => (
+              {order.items.map((item) => (
                 <tr key={item.id}>
                   <td className="px-4 py-2 text-foreground">
                     {item.productName}
@@ -280,7 +282,7 @@ export default function AdminOrderDetail() {
           <div className="text-sm font-semibold text-foreground flex items-center gap-2">
             <RefreshCw className="w-4 h-4" /> Update Status
           </div>
-          <Select value={newStatus} onValueChange={setNewStatus}>
+          <Select value={newStatus} onValueChange={(v) => setNewStatus(v as OrderStatus | "")}>
             <SelectTrigger>
               <SelectValue placeholder="Choose new status…" />
             </SelectTrigger>
@@ -300,7 +302,7 @@ export default function AdminOrderDetail() {
           <Button
             size="sm"
             disabled={!newStatus || updateStatus.isPending}
-            onClick={() => updateStatus.mutate({ id: orderId, data: { status: newStatus as any, note: statusNote || undefined } })}
+            onClick={() => updateStatus.mutate({ id: orderId, data: { status: newStatus as OrderStatus, note: statusNote || undefined } })}
           >
             {updateStatus.isPending ? "Saving…" : "Save Status"}
           </Button>
@@ -357,15 +359,15 @@ export default function AdminOrderDetail() {
       </div>
 
       {/* Preorder Batch Assignment */}
-      {(order as any).items?.some((i: any) => i.pricingType === "deposit") && (
+      {order.items.some((i) => i.pricingType === "deposit") && (
         <div className="rounded-lg border border-border bg-card p-4 space-y-3">
           <div className="text-sm font-semibold text-foreground flex items-center gap-2">
             <Package className="w-4 h-4" /> Preorder Batch
           </div>
-          {(order as any).batchId ? (
+          {order.batchId != null ? (
             <div className="text-sm text-muted-foreground">
               Currently assigned to batch ID{" "}
-              <span className="font-medium text-foreground">#{(order as any).batchId}</span>.
+              <span className="font-medium text-foreground">#{order.batchId}</span>.
               {" "}Reassign below if needed.
             </div>
           ) : (
@@ -379,7 +381,7 @@ export default function AdminOrderDetail() {
                 <SelectValue placeholder="Select a preorder batch…" />
               </SelectTrigger>
               <SelectContent>
-                {(batches as any[]).map((b: any) => (
+                {batches.map((b) => (
                   <SelectItem key={b.id} value={String(b.id)}>
                     {b.name} — Whole: ${(b.pricePerLbCentsWhole / 100).toFixed(2)}/lb
                   </SelectItem>
@@ -398,15 +400,14 @@ export default function AdminOrderDetail() {
       )}
 
       {/* Egg Inventory Allocation */}
-      {(order as any).items?.some((i: any) =>
-        i.productType?.startsWith("eggs_") ||
+      {order.items.some((i) =>
         i.productName?.toLowerCase().includes("egg"),
       ) && (
         <div className="rounded-lg border border-border bg-card p-4 space-y-3">
           <div className="text-sm font-semibold text-foreground flex items-center gap-2">
             <Egg className="w-4 h-4" /> Egg Inventory Allocation
           </div>
-          {(eggAllocations as any[]).length > 0 ? (
+          {eggAllocations.length > 0 ? (
             <>
               <div className="flex items-center gap-2 text-sm text-teal-700">
                 <CheckCircle className="w-4 h-4" />
@@ -422,7 +423,7 @@ export default function AdminOrderDetail() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-border">
-                    {(eggAllocations as any[]).map((a: any) => (
+                    {eggAllocations.map((a) => (
                       <tr key={a.id}>
                         <td className="px-3 py-1.5 text-foreground">{a.eggTypeName}</td>
                         <td className="px-3 py-1.5 text-muted-foreground">{a.lotDate}</td>
@@ -452,7 +453,7 @@ export default function AdminOrderDetail() {
       )}
 
       {/* Send Final Invoice */}
-      {hasDepositItems && (order as any).batchId && (
+      {hasDepositItems && order.batchId != null && (
         <div className="rounded-lg border border-border bg-card p-4 space-y-3">
           <div className="text-sm font-semibold text-foreground flex items-center gap-2">
             <Send className="w-4 h-4" /> Final Invoice
@@ -464,14 +465,14 @@ export default function AdminOrderDetail() {
                 <CheckCircle className="w-4 h-4" />
                 Invoice already sent.
               </div>
-              {(order as any).stripeInvoiceId && (
+              {order.stripeInvoiceId && (
                 <div className="text-xs text-muted-foreground">
-                  Stripe invoice ID: <span className="font-mono">{(order as any).stripeInvoiceId}</span>
+                  Stripe invoice ID: <span className="font-mono">{order.stripeInvoiceId}</span>
                 </div>
               )}
-              {(order as any).finalWeightLbs && (
+              {order.finalWeightLbs != null && (
                 <div className="text-xs text-muted-foreground">
-                  Final weight on file: {(order as any).finalWeightLbs} lbs
+                  Final weight on file: {order.finalWeightLbs} lbs
                 </div>
               )}
             </div>
@@ -497,7 +498,7 @@ export default function AdminOrderDetail() {
                 </div>
                 <div className="w-36">
                   <label className="block text-xs text-muted-foreground mb-1">Variant</label>
-                  <Select value={invoiceVariant} onValueChange={(v) => setInvoiceVariant(v as any)}>
+                  <Select value={invoiceVariant} onValueChange={(v) => setInvoiceVariant(v as "whole" | "half" | "quarter")}>
                     <SelectTrigger className="text-sm">
                       <SelectValue />
                     </SelectTrigger>
@@ -512,10 +513,10 @@ export default function AdminOrderDetail() {
 
               {/* Live balance preview */}
               {(() => {
-                const batch = (batches as any[]).find((b: any) => b.id === (order as any).batchId);
-                const depositPaid = (order as any).items
-                  ?.filter((i: any) => i.pricingType === "deposit")
-                  .reduce((s: number, i: any) => s + i.lineTotalInCents, 0) ?? 0;
+                const batch = batches.find((b) => b.id === order.batchId);
+                const depositPaid = order.items
+                  .filter((i) => i.pricingType === "deposit")
+                  .reduce((s, i) => s + i.lineTotalInCents, 0);
                 const pricePerLbCents = batch
                   ? (invoiceVariant === "half" ? batch.pricePerLbCentsHalf
                     : invoiceVariant === "quarter" ? batch.pricePerLbCentsQuarter
@@ -571,7 +572,7 @@ export default function AdminOrderDetail() {
           <div className="px-4 py-6 text-sm text-muted-foreground text-center">No events yet.</div>
         ) : (
           <div className="divide-y divide-border">
-            {events.map((ev: any) => (
+            {events.map((ev) => (
               <div key={ev.id} className="px-4 py-3 flex gap-3 items-start">
                 <span className="text-base leading-none mt-0.5">
                   {EVENT_TYPE_ICONS[ev.eventType] ?? "📌"}

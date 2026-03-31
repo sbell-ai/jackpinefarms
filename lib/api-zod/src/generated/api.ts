@@ -365,9 +365,15 @@ export const AdminSetOrderItemsResponse = zod.object({
     "no_show",
   ]),
   paymentMethod: zod.enum(["stripe", "cash"]),
+  source: zod.string().describe("Order origin — storefront or admin"),
   stripeCheckoutSessionId: zod.string().nullable(),
+  stripeCheckoutUrl: zod.string().nullable(),
+  stripeInvoiceId: zod.string().nullable(),
   totalInCents: zod.number(),
   notes: zod.string().nullable(),
+  refundedGiblets: zod.boolean(),
+  batchId: zod.number().nullable(),
+  pickupEventId: zod.number().nullable(),
   items: zod.array(
     zod.object({
       id: zod.number(),
@@ -417,9 +423,15 @@ export const AdminFinalizeOrderResponse = zod.object({
       "no_show",
     ]),
     paymentMethod: zod.enum(["stripe", "cash"]),
+    source: zod.string().describe("Order origin — storefront or admin"),
     stripeCheckoutSessionId: zod.string().nullable(),
+    stripeCheckoutUrl: zod.string().nullable(),
+    stripeInvoiceId: zod.string().nullable(),
     totalInCents: zod.number(),
     notes: zod.string().nullable(),
+    refundedGiblets: zod.boolean(),
+    batchId: zod.number().nullable(),
+    pickupEventId: zod.number().nullable(),
     items: zod.array(
       zod.object({
         id: zod.number(),
@@ -490,9 +502,15 @@ export const AdminGetOrderResponse = zod.object({
     "no_show",
   ]),
   paymentMethod: zod.enum(["stripe", "cash"]),
+  source: zod.string().describe("Order origin — storefront or admin"),
   stripeCheckoutSessionId: zod.string().nullable(),
+  stripeCheckoutUrl: zod.string().nullable(),
+  stripeInvoiceId: zod.string().nullable(),
   totalInCents: zod.number(),
   notes: zod.string().nullable(),
+  refundedGiblets: zod.boolean(),
+  batchId: zod.number().nullable(),
+  pickupEventId: zod.number().nullable(),
   items: zod.array(
     zod.object({
       id: zod.number(),
@@ -853,9 +871,15 @@ export const GetMyOrderResponse = zod.object({
     "no_show",
   ]),
   paymentMethod: zod.enum(["stripe", "cash"]),
+  source: zod.string().describe("Order origin — storefront or admin"),
   stripeCheckoutSessionId: zod.string().nullable(),
+  stripeCheckoutUrl: zod.string().nullable(),
+  stripeInvoiceId: zod.string().nullable(),
   totalInCents: zod.number(),
   notes: zod.string().nullable(),
+  refundedGiblets: zod.boolean(),
+  batchId: zod.number().nullable(),
+  pickupEventId: zod.number().nullable(),
   items: zod.array(
     zod.object({
       id: zod.number(),
@@ -1242,9 +1266,15 @@ export const AdminUpdateOrderStatusResponse = zod.object({
     "no_show",
   ]),
   paymentMethod: zod.enum(["stripe", "cash"]),
+  source: zod.string().describe("Order origin — storefront or admin"),
   stripeCheckoutSessionId: zod.string().nullable(),
+  stripeCheckoutUrl: zod.string().nullable(),
+  stripeInvoiceId: zod.string().nullable(),
   totalInCents: zod.number(),
   notes: zod.string().nullable(),
+  refundedGiblets: zod.boolean(),
+  batchId: zod.number().nullable(),
+  pickupEventId: zod.number().nullable(),
   items: zod.array(
     zod.object({
       id: zod.number(),
@@ -1340,9 +1370,15 @@ export const AdminAssignOrderBatchResponse = zod.object({
     "no_show",
   ]),
   paymentMethod: zod.enum(["stripe", "cash"]),
+  source: zod.string().describe("Order origin — storefront or admin"),
   stripeCheckoutSessionId: zod.string().nullable(),
+  stripeCheckoutUrl: zod.string().nullable(),
+  stripeInvoiceId: zod.string().nullable(),
   totalInCents: zod.number(),
   notes: zod.string().nullable(),
+  refundedGiblets: zod.boolean(),
+  batchId: zod.number().nullable(),
+  pickupEventId: zod.number().nullable(),
   items: zod.array(
     zod.object({
       id: zod.number(),
@@ -1452,6 +1488,10 @@ export const adminListCustomersQueryOffsetDefault = 0;
 export const AdminListCustomersQueryParams = zod.object({
   limit: zod.coerce.number().default(adminListCustomersQueryLimitDefault),
   offset: zod.coerce.number().default(adminListCustomersQueryOffsetDefault),
+  search: zod.coerce
+    .string()
+    .optional()
+    .describe("Search by name, email, or phone"),
 });
 
 export const AdminListCustomersResponseItem = zod.object({

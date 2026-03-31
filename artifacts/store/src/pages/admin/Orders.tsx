@@ -93,9 +93,9 @@ export default function AdminOrders() {
                       <div className="font-mono text-xs text-muted-foreground">
                         #{String(order.id).padStart(4, "0")}
                       </div>
-                      {(order as any).source === "admin" && (
+                      {order.source === "admin" && (
                         <span className="inline-flex items-center gap-1 mt-0.5 px-1.5 py-0.5 rounded text-xs font-medium bg-amber-100 text-amber-800">
-                          <PhoneCall className="w-3 h-3" /> Phone/Walk-in
+                          <PhoneCall className="w-3 h-3" /> Admin order
                         </span>
                       )}
                     </td>

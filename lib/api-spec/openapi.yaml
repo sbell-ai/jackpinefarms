@@ -1583,6 +1583,11 @@ paths:
           schema:
             type: integer
             default: 0
+        - in: query
+          name: search
+          schema:
+            type: string
+          description: Search by name, email, or phone
       responses:
         "200":
           description: Customer list
@@ -2545,12 +2550,25 @@ components:
           $ref: "#/components/schemas/OrderStatus"
         paymentMethod:
           $ref: "#/components/schemas/PaymentMethod"
+        source:
+          type: string
+          description: Order origin — storefront or admin
         stripeCheckoutSessionId:
+          type: ["string", "null"]
+        stripeCheckoutUrl:
+          type: ["string", "null"]
+        stripeInvoiceId:
           type: ["string", "null"]
         totalInCents:
           type: integer
         notes:
           type: ["string", "null"]
+        refundedGiblets:
+          type: boolean
+        batchId:
+          type: ["integer", "null"]
+        pickupEventId:
+          type: ["integer", "null"]
         items:
           type: array
           items:
@@ -2571,9 +2589,15 @@ components:
         - customerPhone
         - status
         - paymentMethod
+        - source
         - stripeCheckoutSessionId
+        - stripeCheckoutUrl
+        - stripeInvoiceId
         - totalInCents
         - notes
+        - refundedGiblets
+        - batchId
+        - pickupEventId
         - items
         - finalWeightLbs
         - createdAt

@@ -275,11 +275,22 @@ export interface OrderDetail {
   customerPhone: string;
   status: OrderStatus;
   paymentMethod: PaymentMethod;
+  /** Order origin — storefront or admin */
+  source: string;
   /** @nullable */
   stripeCheckoutSessionId: string | null;
+  /** @nullable */
+  stripeCheckoutUrl: string | null;
+  /** @nullable */
+  stripeInvoiceId: string | null;
   totalInCents: number;
   /** @nullable */
   notes: string | null;
+  refundedGiblets: boolean;
+  /** @nullable */
+  batchId: number | null;
+  /** @nullable */
+  pickupEventId: number | null;
   items: OrderItem[];
   /** @nullable */
   finalWeightLbs: number | null;
@@ -871,6 +882,10 @@ export type AdminDeleteCoupon200 = {
 export type AdminListCustomersParams = {
   limit?: number;
   offset?: number;
+  /**
+   * Search by name, email, or phone
+   */
+  search?: string;
 };
 
 export type GetUnsubscribePreferencesParams = {

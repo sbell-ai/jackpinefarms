@@ -1,6 +1,6 @@
 import "../types/session.d.ts";
 import { Router, type IRouter } from "express";
-import { eq, desc, count, inArray } from "drizzle-orm";
+import { eq, desc, count, inArray, ilike, or } from "drizzle-orm";
 import { db, customersTable, ordersTable, orderEventsTable } from "@workspace/db";
 import { requireAdmin } from "../middlewares/require-admin.js";
 import * as z from "zod";
@@ -10,6 +10,7 @@ const router: IRouter = Router();
 const ListCustomersQuery = z.object({
   limit: z.coerce.number().int().positive().default(50),
   offset: z.coerce.number().int().min(0).default(0),
+  search: z.string().optional(),
 });
 
 const CreateAdminCustomerBody = z.object({
@@ -23,9 +24,9 @@ router.get("/admin/customers", requireAdmin, async (req, res): Promise<void> => 
   const parsed = ListCustomersQuery.safeParse(req.query);
   if (!parsed.success) { res.status(400).json({ error: parsed.error.message }); return; }
 
-  const { limit, offset } = parsed.data;
+  const { limit, offset, search } = parsed.data;
 
-  const customers = await db
+  const baseQuery = db
     .select({
       id: customersTable.id,
       email: customersTable.email,
@@ -34,10 +35,24 @@ router.get("/admin/customers", requireAdmin, async (req, res): Promise<void> => 
       notes: customersTable.notes,
       createdAt: customersTable.createdAt,
     })
-    .from(customersTable)
-    .orderBy(desc(customersTable.createdAt))
-    .limit(limit)
-    .offset(offset);
+    .from(customersTable);
+
+  const customers = await (search
+    ? baseQuery
+        .where(
+          or(
+            ilike(customersTable.name, `%${search}%`),
+            ilike(customersTable.email, `%${search}%`),
+            ilike(customersTable.phone, `%${search}%`),
+          ),
+        )
+        .orderBy(desc(customersTable.createdAt))
+        .limit(limit)
+        .offset(offset)
+    : baseQuery
+        .orderBy(desc(customersTable.createdAt))
+        .limit(limit)
+        .offset(offset));
 
   const customerIds = customers.map((c) => c.id);
   let countMap = new Map<number, number>();
