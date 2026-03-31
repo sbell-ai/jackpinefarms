@@ -112,6 +112,8 @@ export const CreateProductBody = zod.object({
   availability: zod.enum(["taking_orders", "preorder", "sold_out", "disabled"]),
   imageUrl: zod.string().nullish(),
   displayOrder: zod.number(),
+  isOnSale: zod.boolean(),
+  salePriceCents: zod.number().nullable(),
 });
 
 /**
@@ -187,6 +189,8 @@ export const UpdateProductBody = zod.object({
     .optional(),
   imageUrl: zod.string().nullish(),
   displayOrder: zod.number().optional(),
+  isOnSale: zod.boolean().optional(),
+  salePriceCents: zod.number().nullish(),
 });
 
 export const UpdateProductResponse = zod.object({

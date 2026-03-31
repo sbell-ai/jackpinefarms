@@ -23,4 +23,7 @@ export interface UpdateProductBody {
   /** @nullable */
   imageUrl?: string | null;
   displayOrder?: number;
+  isOnSale?: boolean;
+  /** @nullable */
+  salePriceCents?: number | null;
 }
