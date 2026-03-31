@@ -328,6 +328,83 @@ router.post(
   },
 );
 
+router.patch(
+  "/admin/egg-adjustments/:id",
+  requireAdmin,
+  async (req, res): Promise<void> => {
+    const id = parseInt(String(req.params.id), 10);
+    if (isNaN(id)) { res.status(400).json({ error: "Invalid adjustment id" }); return; }
+
+    const bodySchema = z.object({
+      qtyEach: z.number().int(),
+      reason: z.string().min(1),
+    });
+    const parsed = bodySchema.safeParse(req.body);
+    if (!parsed.success) { res.status(400).json({ error: parsed.error.message }); return; }
+
+    const { qtyEach: newQty, reason } = parsed.data;
+
+    try {
+      const result = await db.transaction(async (tx) => {
+        const [existing] = await tx
+          .select()
+          .from(eggInventoryAdjustmentsTable)
+          .where(eq(eggInventoryAdjustmentsTable.id, id));
+
+        if (!existing) {
+          throw Object.assign(new Error("Adjustment not found"), { status: 404 });
+        }
+
+        if (existing.lotId != null) {
+          const delta = newQty - existing.qtyEach;
+          const [lot] = await tx
+            .select()
+            .from(eggInventoryLotsTable)
+            .where(eq(eggInventoryLotsTable.id, existing.lotId))
+            .for("update");
+
+          if (!lot) {
+            throw Object.assign(new Error("Associated lot not found"), { status: 404 });
+          }
+
+          const newRemaining = lot.remainingQtyEach + delta;
+          if (newRemaining < 0) {
+            throw Object.assign(
+              new Error(`Edit would make lot remaining qty negative (current: ${lot.remainingQtyEach}, delta: ${delta})`),
+              { status: 400 },
+            );
+          }
+
+          await tx
+            .update(eggInventoryLotsTable)
+            .set({
+              remainingQtyEach: newRemaining,
+              status: newRemaining === 0 ? "depleted" : "open",
+            })
+            .where(eq(eggInventoryLotsTable.id, existing.lotId));
+        }
+
+        const [updated] = await tx
+          .update(eggInventoryAdjustmentsTable)
+          .set({ qtyEach: newQty, reason })
+          .where(eq(eggInventoryAdjustmentsTable.id, id))
+          .returning();
+
+        return updated;
+      });
+
+      res.json(result);
+    } catch (err: unknown) {
+      const httpErr = err as { status?: number; message?: string };
+      if (httpErr.status) {
+        res.status(httpErr.status).json({ error: httpErr.message });
+        return;
+      }
+      throw err;
+    }
+  },
+);
+
 // ─── Inventory On Hand ────────────────────────────────────────────────────────
 
 router.get(

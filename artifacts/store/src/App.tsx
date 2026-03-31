@@ -14,6 +14,7 @@ import HowWeRaiseThem from "./pages/HowWeRaiseThem";
 import About from "./pages/About";
 import Faq from "./pages/Faq";
 import Contact from "./pages/Contact";
+import SalesReturnsPolicy from "./pages/SalesReturnsPolicy";
 import NotFound from "@/pages/not-found";
 import Unsubscribe from "./pages/Unsubscribe";
 
@@ -175,6 +176,9 @@ function Router() {
       </Route>
       <Route path="/contact">
         <PublicLayout><Contact /></PublicLayout>
+      </Route>
+      <Route path="/policies/sales-returns">
+        <PublicLayout><SalesReturnsPolicy /></PublicLayout>
       </Route>
       <Route path="/">
         <PublicLayout><Home /></PublicLayout>

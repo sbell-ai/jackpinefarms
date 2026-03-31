@@ -220,6 +220,10 @@ export async function runMigrations(): Promise<void> {
         ON contact_submissions (created_at DESC);
     `);
 
+    await db.execute(sql.raw(
+      `ALTER TABLE contact_submissions ADD COLUMN IF NOT EXISTS error TEXT`
+    ));
+
     // ── Coupons (Task #12) ───────────────────────────────────────────────────
     await db.execute(sql`
       CREATE TABLE IF NOT EXISTS coupons (

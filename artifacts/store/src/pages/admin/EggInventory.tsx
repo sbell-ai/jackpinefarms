@@ -13,8 +13,8 @@ import {
   getAdminListEggCollectionQueryKey,
   getAdminListEggAdjustmentsQueryKey,
 } from "@workspace/api-client-react";
-import { useQueryClient } from "@tanstack/react-query";
-import { Egg, TrendingDown, Plus, Settings } from "lucide-react";
+import { useQueryClient, useMutation } from "@tanstack/react-query";
+import { Egg, TrendingDown, Plus, Settings, Pencil, Check, X as XIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -65,6 +65,9 @@ export default function AdminEggInventory() {
 
   const [newEggTypeName, setNewEggTypeName] = useState("");
   const [showEggTypeForm, setShowEggTypeForm] = useState(false);
+
+  const [editingId, setEditingId] = useState<number | null>(null);
+  const [editForm, setEditForm] = useState({ qtyEach: "", reason: "" });
 
   const invalidateAll = () => {
     qc.invalidateQueries({ queryKey: getAdminGetEggInventoryOnHandQueryKey() });
@@ -127,6 +130,28 @@ export default function AdminEggInventory() {
     },
   });
 
+  const updateAdjustment = useMutation({
+    mutationFn: async ({ id, qtyEach, reason }: { id: number; qtyEach: number; reason: string }) => {
+      const res = await fetch(`/api/admin/egg-adjustments/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ qtyEach, reason }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error ?? "Failed to update adjustment");
+      }
+      return res.json();
+    },
+    onSuccess: () => {
+      toast({ title: "Adjustment updated" });
+      setEditingId(null);
+      invalidateAll();
+    },
+    onError: (e: any) =>
+      toast({ title: "Error", description: e.message, variant: "destructive" }),
+  });
+
   const handleRecordCollection = () => {
     if (!collForm.eggTypeId || !collForm.collectionDate || !collForm.countEach)
       return;
@@ -150,6 +175,18 @@ export default function AdminEggInventory() {
         reason: adjForm.reason.trim(),
       } as any,
     });
+  };
+
+  const handleStartEdit = (a: any) => {
+    setEditingId(a.id);
+    setEditForm({ qtyEach: String(a.qtyEach), reason: a.reason });
+  };
+
+  const handleSaveEdit = () => {
+    if (editingId === null) return;
+    const qty = Number(editForm.qtyEach);
+    if (!Number.isInteger(qty) || !editForm.reason.trim()) return;
+    updateAdjustment.mutate({ id: editingId, qtyEach: qty, reason: editForm.reason.trim() });
   };
 
   const eggTypeMap = new Map(
@@ -438,48 +475,103 @@ export default function AdminEggInventory() {
             Adjustment Log
           </h2>
           <div className="rounded-lg border border-border overflow-hidden overflow-x-auto">
-            <table className="w-full text-sm min-w-[400px]">
+            <table className="w-full text-sm min-w-[500px]">
               <thead className="bg-muted/40">
                 <tr>
-                  <th className="text-left px-4 py-2 font-medium text-muted-foreground">
-                    Date
-                  </th>
-                  <th className="text-left px-4 py-2 font-medium text-muted-foreground">
-                    Egg Type
-                  </th>
-                  <th className="text-right px-4 py-2 font-medium text-muted-foreground">
-                    Qty
-                  </th>
-                  <th className="text-left px-4 py-2 font-medium text-muted-foreground">
-                    Reason
-                  </th>
+                  <th className="text-left px-4 py-2 font-medium text-muted-foreground">Date</th>
+                  <th className="text-left px-4 py-2 font-medium text-muted-foreground">Egg Type</th>
+                  <th className="text-right px-4 py-2 font-medium text-muted-foreground">Qty</th>
+                  <th className="text-left px-4 py-2 font-medium text-muted-foreground">Reason</th>
+                  <th className="px-4 py-2" />
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
-                {[...(adjustments as any[])].reverse().map((a: any) => (
-                  <tr key={a.id} className="hover:bg-muted/20">
-                    <td className="px-4 py-2 text-muted-foreground text-xs">
-                      {format(new Date(a.createdAt), "MMM d, yyyy")}
-                    </td>
-                    <td className="px-4 py-2 text-muted-foreground">
-                      {eggTypeMap.get(a.eggTypeId) ?? `Type #${a.eggTypeId}`}
-                    </td>
-                    <td
-                      className={`px-4 py-2 text-right font-medium ${
-                        a.qtyEach < 0 ? "text-red-600" : "text-green-600"
-                      }`}
-                    >
-                      {a.qtyEach > 0 ? "+" : ""}
-                      {a.qtyEach}
-                    </td>
-                    <td className="px-4 py-2 text-muted-foreground text-xs">
-                      {a.reason}
-                    </td>
-                  </tr>
-                ))}
+                {[...(adjustments as any[])].reverse().map((a: any) => {
+                  const isEditing = editingId === a.id;
+                  const isSaving = updateAdjustment.isPending && editingId === a.id;
+
+                  return (
+                    <tr key={a.id} className="hover:bg-muted/20 group">
+                      <td className="px-4 py-2 text-muted-foreground text-xs whitespace-nowrap">
+                        {format(new Date(a.createdAt), "MMM d, yyyy")}
+                      </td>
+                      <td className="px-4 py-2 text-muted-foreground whitespace-nowrap">
+                        {eggTypeMap.get(a.eggTypeId) ?? `Type #${a.eggTypeId}`}
+                      </td>
+
+                      {isEditing ? (
+                        <>
+                          <td className="px-4 py-1.5 text-right">
+                            <Input
+                              type="number"
+                              value={editForm.qtyEach}
+                              onChange={(e) => setEditForm((f) => ({ ...f, qtyEach: e.target.value }))}
+                              className="h-7 w-24 text-right text-sm ml-auto"
+                              autoFocus
+                              onKeyDown={(e) => { if (e.key === "Enter") handleSaveEdit(); if (e.key === "Escape") setEditingId(null); }}
+                            />
+                          </td>
+                          <td className="px-4 py-1.5">
+                            <Input
+                              value={editForm.reason}
+                              onChange={(e) => setEditForm((f) => ({ ...f, reason: e.target.value }))}
+                              className="h-7 text-sm"
+                              onKeyDown={(e) => { if (e.key === "Enter") handleSaveEdit(); if (e.key === "Escape") setEditingId(null); }}
+                            />
+                          </td>
+                          <td className="px-4 py-1.5">
+                            <div className="flex items-center gap-1 justify-end">
+                              <Button
+                                size="icon"
+                                variant="ghost"
+                                className="h-7 w-7 text-green-600 hover:text-green-700 hover:bg-green-50"
+                                disabled={isSaving || !editForm.reason.trim() || editForm.qtyEach === ""}
+                                onClick={handleSaveEdit}
+                                title="Save"
+                              >
+                                <Check className="w-4 h-4" />
+                              </Button>
+                              <Button
+                                size="icon"
+                                variant="ghost"
+                                className="h-7 w-7 text-muted-foreground hover:text-foreground"
+                                disabled={isSaving}
+                                onClick={() => setEditingId(null)}
+                                title="Cancel"
+                              >
+                                <XIcon className="w-4 h-4" />
+                              </Button>
+                            </div>
+                          </td>
+                        </>
+                      ) : (
+                        <>
+                          <td className={`px-4 py-2 text-right font-medium whitespace-nowrap ${a.qtyEach < 0 ? "text-red-600" : "text-green-600"}`}>
+                            {a.qtyEach > 0 ? "+" : ""}{a.qtyEach}
+                          </td>
+                          <td className="px-4 py-2 text-muted-foreground text-xs">
+                            {a.reason}
+                          </td>
+                          <td className="px-4 py-2">
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              className="h-7 w-7 text-muted-foreground hover:text-foreground opacity-0 group-hover:opacity-100"
+                              onClick={() => handleStartEdit(a)}
+                              title="Edit adjustment"
+                            >
+                              <Pencil className="w-3.5 h-3.5" />
+                            </Button>
+                          </td>
+                        </>
+                      )}
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
+          <p className="text-xs text-muted-foreground mt-2">Click the pencil icon on any row to correct the quantity or reason.</p>
         </section>
       )}
     </div>

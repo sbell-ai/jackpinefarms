@@ -86,7 +86,7 @@ Express 5 API server. Routes live in `src/routes/` and use `@workspace/api-zod` 
 
 Jack Pine Farm Store — React + Vite frontend.
 
-**Public pages**: Home, Shop, ProductDetail, Cart, Checkout, OrderConfirmation, HowWeRaiseThem, About, Faq, Contact, NotFound
+**Public pages**: Home, Shop, ProductDetail, Cart, Checkout, OrderConfirmation, HowWeRaiseThem, About, Faq, Contact, SalesReturnsPolicy (`/policies/sales-returns`), NotFound
 **Auth pages**: Login, Register, ForgotPassword, ResetPassword, VerifyEmail, ClaimOrder
 **Account pages**: Profile (order history, account management), OrderDetail
 **Admin pages (FarmOps)**:

@@ -8,7 +8,7 @@ export default function Home() {
   const { data: products } = useListProducts();
   const featuredProducts = products?.slice(0, 3) || [];
   const heroBg = useSiteImage("image.hero_bg", `${import.meta.env.BASE_URL}images/hero-bg.jpg`);
-  const promisePhoto = useSiteImage("image.home_promise", "https://images.unsplash.com/photo-1500595046743-cd271d694d30?w=800&q=80");
+  const promisePhoto = useSiteImage("image.home_promise", `${import.meta.env.BASE_URL}images/turkeys-pasture.jpg`);
   const productFallback = useSiteImage("image.product_fallback", "https://images.unsplash.com/photo-1598965402089-897ce52e8355?w=600&q=80");
 
   return (
@@ -147,7 +147,7 @@ export default function Home() {
               {/* pasture landscape */}
               <img 
                 src={promisePhoto}
-                alt="Lush green pasture" 
+                alt="Turkeys on the farm"
                 className="relative rounded-2xl shadow-2xl border-4 border-primary-foreground/10 object-cover aspect-[4/3] w-full"
               />
             </div>

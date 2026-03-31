@@ -317,6 +317,13 @@ export default function Checkout() {
                 )}
               </button>
               
+              <p className="text-xs text-center text-muted-foreground">
+                All sales are final. Deposits are non-refundable.{" "}
+                <a href="/policies/sales-returns" className="underline underline-offset-2 hover:text-foreground transition-colors">
+                  See our policy.
+                </a>
+              </p>
+
               <p className="text-xs text-center text-muted-foreground flex items-center justify-center gap-1">
                 <LockIcon className="w-3 h-3" /> Secure checkout
               </p>

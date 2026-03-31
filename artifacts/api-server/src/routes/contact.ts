@@ -1,8 +1,11 @@
 import { Router, type IRouter, type Request, type Response } from "express";
 import rateLimit from "express-rate-limit";
 import { z } from "zod";
+import { desc } from "drizzle-orm";
 import { db, contactSubmissionsTable } from "@workspace/db";
 import { sendEmail } from "../lib/email.js";
+import { requireAdmin } from "../middlewares/require-admin.js";
+import { logger } from "../lib/logger.js";
 
 const router: IRouter = Router();
 
@@ -57,16 +60,15 @@ router.post("/contact", contactLimiter, async (req: Request, res: Response): Pro
     return;
   }
 
-  const contactTo = process.env.CONTACT_TO_EMAIL;
+  logger.info({ name, email: email.replace(/(?<=.{2}).(?=.*@)/g, "*"), subject }, "contact_received");
 
-  let emailResult: { sent: boolean } = { sent: false };
+  const contactTo = process.env.CONTACT_TO_EMAIL;
+  const contactFrom = process.env.CONTACT_FROM_EMAIL || process.env.SMTP_USER;
+
+  let emailResult: { sent: boolean; provider?: string; error?: string } = { sent: false };
 
   if (!contactTo) {
-    console.log(
-      `[CONTACT STUB] CONTACT_TO_EMAIL not set — submission not delivered.\n` +
-      `  From: ${name} <${email}>\n` +
-      `  Subject: ${subject}`
-    );
+    logger.info({ subject }, "[CONTACT STUB] CONTACT_TO_EMAIL not set — submission not delivered.");
   }
 
   if (contactTo) {
@@ -92,6 +94,7 @@ router.post("/contact", contactLimiter, async (req: Request, res: Response): Pro
 
     emailResult = await sendEmail({
       to: contactTo,
+      from: contactFrom,
       subject: `[Contact] ${subject}`,
       text,
       html,
@@ -100,6 +103,15 @@ router.post("/contact", contactLimiter, async (req: Request, res: Response): Pro
   }
 
   const status = emailResult.sent ? "sent" : "failed";
+  const errorSummary = emailResult.error ? emailResult.error.slice(0, 500) : undefined;
+
+  if (contactTo) {
+    if (emailResult.sent) {
+      logger.info({ provider: emailResult.provider, subject }, "contact_send_success");
+    } else {
+      logger.warn({ provider: emailResult.provider, subject, smtpError: errorSummary }, "contact_send_failed");
+    }
+  }
 
   try {
     await db.insert(contactSubmissionsTable).values({
@@ -110,12 +122,36 @@ router.post("/contact", contactLimiter, async (req: Request, res: Response): Pro
       ip: ip || null,
       userAgent,
       status,
+      error: errorSummary ?? null,
     });
   } catch (dbErr) {
-    console.error("[CONTACT] Failed to persist submission:", dbErr);
+    logger.error({ err: dbErr }, "[CONTACT] Failed to persist submission");
+  }
+
+  if (contactTo && !emailResult.sent) {
+    res.status(500).json({ error: "Failed to send message. Please try again." });
+    return;
   }
 
   res.json({ ok: true });
+});
+
+router.get("/contact/submissions", requireAdmin, async (_req: Request, res: Response): Promise<void> => {
+  const rows = await db
+    .select({
+      id: contactSubmissionsTable.id,
+      name: contactSubmissionsTable.name,
+      email: contactSubmissionsTable.email,
+      subject: contactSubmissionsTable.subject,
+      status: contactSubmissionsTable.status,
+      error: contactSubmissionsTable.error,
+      createdAt: contactSubmissionsTable.createdAt,
+    })
+    .from(contactSubmissionsTable)
+    .orderBy(desc(contactSubmissionsTable.createdAt))
+    .limit(20);
+
+  res.json(rows);
 });
 
 function escapeHtml(str: string): string {

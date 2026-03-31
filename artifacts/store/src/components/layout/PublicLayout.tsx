@@ -228,6 +228,8 @@ export function PublicLayout({ children }: { children: ReactNode }) {
           <div className="pt-8 border-t border-primary-foreground/10 text-center md:text-left text-sm text-primary-foreground/60 flex flex-col md:flex-row justify-between items-center gap-4">
             <p>© {new Date().getFullYear()} Jack Pine Farm. All rights reserved.</p>
             <div className="flex items-center gap-4">
+              <Link href="/policies/sales-returns" className="hover:text-white transition-colors">Sales &amp; Returns Policy</Link>
+              <span className="text-primary-foreground/30">·</span>
               <Link href="/admin/login" className="hover:text-white transition-colors">FarmOps Admin</Link>
             </div>
           </div>
