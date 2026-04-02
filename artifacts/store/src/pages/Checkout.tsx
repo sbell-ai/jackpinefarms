@@ -13,7 +13,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { formatMoney } from "@/lib/utils";
+import { formatMoney, formatPickupDate } from "@/lib/utils";
 import { format } from "date-fns";
 import { Loader2, CreditCard, Banknote, AlertTriangle, Lock as LockIcon, Tag, Calendar, MapPin } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
@@ -98,6 +98,11 @@ export default function Checkout() {
     }
     try {
       const payload = { ...data, pickupEventId: selectedPickupEventId };
+      const eventForStorage = pickupEvents.find(e => e.id === selectedPickupEventId) ?? null;
+      if (eventForStorage) {
+        sessionStorage.setItem("pendingPickupEventName", eventForStorage.name);
+        sessionStorage.setItem("pendingPickupEventScheduledAt", String(eventForStorage.scheduledAt));
+      }
       if (paymentMethod === 'stripe') {
         const res = await stripeMutation.mutateAsync({ data: payload });
         window.location.href = res.checkoutUrl;
@@ -238,7 +243,7 @@ export default function Checkout() {
                               <div className="font-bold text-foreground">{event.name}</div>
                               <div className="text-sm text-muted-foreground flex items-center gap-1 mt-0.5">
                                 <Calendar className="w-3.5 h-3.5 shrink-0" />
-                                {format(new Date(event.scheduledAt), "EEEE, MMMM d, yyyy")} at {format(new Date(event.scheduledAt), "h:mm a")}
+                                {formatPickupDate(event.scheduledAt, { includeTime: true })}
                               </div>
                               {event.locationNotes && (
                                 <div className="text-sm text-muted-foreground flex items-center gap-1 mt-0.5">

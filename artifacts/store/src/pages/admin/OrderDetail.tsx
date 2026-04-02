@@ -239,9 +239,12 @@ export default function AdminOrderDetail() {
           {order.finalWeightLbs != null && (
             <div className="text-sm text-muted-foreground">Final Weight: <span className="text-foreground">{order.finalWeightLbs} lbs</span></div>
           )}
-          {order.pickupEventName && (
+          {order.pickupEventName && order.pickupEventId != null && (
             <div className="text-sm text-muted-foreground">
-              Pickup Event: <span className="text-foreground font-medium">{order.pickupEventName}</span>
+              Pickup Event:{" "}
+              <Link href={`/admin/pickup-events/${order.pickupEventId}`} className="text-foreground font-medium hover:text-primary underline underline-offset-2 transition-colors">
+                {order.pickupEventName}
+              </Link>
               {order.pickupEventScheduledAt && (
                 <span className="ml-1 text-xs">({format(new Date(order.pickupEventScheduledAt), "MMM d, yyyy")})</span>
               )}

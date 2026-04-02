@@ -58,7 +58,7 @@ export async function getOrderWithItems(orderId: number) {
 router.get("/orders/by-stripe-session/:sessionId", async (req, res): Promise<void> => {
   const { sessionId } = req.params;
   const [order] = await db
-    .select({ id: ordersTable.id, status: ordersTable.status })
+    .select({ id: ordersTable.id, status: ordersTable.status, pickupEventId: ordersTable.pickupEventId })
     .from(ordersTable)
     .where(eq(ordersTable.stripeCheckoutSessionId, sessionId))
     .limit(1);
@@ -68,7 +68,21 @@ router.get("/orders/by-stripe-session/:sessionId", async (req, res): Promise<voi
     return;
   }
 
-  res.json({ id: order.id, status: order.status });
+  let pickupEventName: string | null = null;
+  let pickupEventScheduledAt: string | null = null;
+  if (order.pickupEventId != null) {
+    const [event] = await db
+      .select({ name: pickupEventsTable.name, scheduledAt: pickupEventsTable.scheduledAt })
+      .from(pickupEventsTable)
+      .where(eq(pickupEventsTable.id, order.pickupEventId))
+      .limit(1);
+    if (event) {
+      pickupEventName = event.name;
+      pickupEventScheduledAt = event.scheduledAt.toISOString();
+    }
+  }
+
+  res.json({ id: order.id, status: order.status, pickupEventName, pickupEventScheduledAt });
 });
 
 router.get("/orders", async (req, res): Promise<void> => {

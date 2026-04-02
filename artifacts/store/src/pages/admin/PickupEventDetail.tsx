@@ -129,7 +129,7 @@ export default function AdminPickupEventDetail() {
     if (!event) return;
     setEditName(event.name);
     setEditScheduledAt(new Date(event.scheduledAt).toISOString().slice(0, 16));
-    setEditLocation((event as any).locationNotes ?? "");
+    setEditLocation(event.locationNotes ?? "");
     setEditStatus(event.status);
     setEditIsPublic(event.isPublic);
     setEditCapacity(event.capacity != null ? String(event.capacity) : "");
@@ -193,7 +193,7 @@ export default function AdminPickupEventDetail() {
           <h1 className="text-2xl font-bold text-foreground">{event.name}</h1>
           <p className="text-muted-foreground text-sm">
             {format(new Date(event.scheduledAt), "EEEE, MMM d, yyyy h:mm a")}
-            {(event as any).locationNotes && ` — ${(event as any).locationNotes}`}
+            {event.locationNotes && ` — ${event.locationNotes}`}
           </p>
         </div>
         <Button variant="outline" size="sm" onClick={openEdit}>

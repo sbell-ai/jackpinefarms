@@ -24,13 +24,31 @@ export default function OrderConfirmation() {
     if (!stripeSessionId && !orderId) return;
 
     if (!stripeSessionId && orderId) {
+      const storedName = sessionStorage.getItem("pendingPickupEventName");
+      const storedDate = sessionStorage.getItem("pendingPickupEventScheduledAt");
+      sessionStorage.removeItem("pendingPickupEventName");
+      sessionStorage.removeItem("pendingPickupEventScheduledAt");
+
       fetch(`/api/orders/${orderId}`, { credentials: "include" })
         .then((r) => r.ok ? r.json() : null)
         .then((data) => {
-          if (data) setOrder(data);
+          if (data) {
+            setOrder(data);
+          } else if (storedName) {
+            setOrder({ id: Number(orderId), pickupEventName: storedName, pickupEventScheduledAt: storedDate });
+          } else {
+            setOrder({ id: Number(orderId) });
+          }
           setLookupDone(true);
         })
-        .catch(() => setLookupDone(true));
+        .catch(() => {
+          if (storedName) {
+            setOrder({ id: Number(orderId), pickupEventName: storedName, pickupEventScheduledAt: storedDate });
+          } else {
+            setOrder({ id: Number(orderId) });
+          }
+          setLookupDone(true);
+        });
       return;
     }
 
@@ -46,13 +64,7 @@ export default function OrderConfirmation() {
         const res = await fetch(`/api/orders/by-stripe-session/${stripeSessionId}`, { credentials: "include" });
         if (res.ok) {
           const data = await res.json();
-          const detailRes = await fetch(`/api/orders/${data.id}`, { credentials: "include" });
-          if (detailRes.ok) {
-            const detail = await detailRes.json();
-            setOrder(detail);
-          } else {
-            setOrder(data);
-          }
+          setOrder(data);
           setLookupDone(true);
           return;
         }

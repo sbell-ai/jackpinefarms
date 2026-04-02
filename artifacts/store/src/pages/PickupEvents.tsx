@@ -1,6 +1,6 @@
 import { Link } from "wouter";
-import { format } from "date-fns";
 import { useListPublicPickupEvents } from "@workspace/api-client-react";
+import { formatPickupDate } from "@/lib/utils";
 import { Calendar, MapPin, Users, ShoppingCart, Loader2 } from "lucide-react";
 
 export default function PickupEventsPage() {
@@ -23,9 +23,9 @@ export default function PickupEventsPage() {
         ) : events.length === 0 ? (
           <div className="text-center py-20 bg-card border border-border rounded-3xl">
             <Calendar className="w-14 h-14 mx-auto mb-4 text-muted-foreground/40" />
-            <h2 className="text-xl font-semibold text-foreground mb-2">No upcoming pickup events</h2>
+            <h2 className="text-xl font-semibold text-foreground mb-2">No pickup dates available</h2>
             <p className="text-muted-foreground mb-6">
-              Check back soon — we schedule pickups seasonally. You can still place an order and a pickup date will be arranged.
+              No pickup dates are currently scheduled. Check back soon or <Link href="/contact" className="underline underline-offset-2 hover:text-foreground transition-colors">contact us</Link> to arrange a pickup.
             </p>
             <Link href="/shop" className="inline-block px-6 py-3 rounded-xl bg-primary text-white font-bold hover:bg-primary/90 transition-all">
               Browse Products
@@ -49,9 +49,7 @@ export default function PickupEventsPage() {
                       <div>
                         <h2 className="text-lg font-bold text-foreground">{event.name}</h2>
                         <p className="text-muted-foreground text-sm mt-1">
-                          {format(new Date(event.scheduledAt), "EEEE, MMMM d, yyyy")}
-                          {" at "}
-                          {format(new Date(event.scheduledAt), "h:mm a")}
+                          {formatPickupDate(event.scheduledAt, { includeTime: true })}
                         </p>
                         {event.locationNotes && (
                           <p className="text-sm text-muted-foreground mt-1 flex items-center gap-1.5">
