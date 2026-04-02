@@ -1,6 +1,6 @@
 import "../types/session.d.ts";
 import { Router, type IRouter } from "express";
-import { eq, count, inArray, isNull, and, not, gt } from "drizzle-orm";
+import { eq, count, inArray, isNull, and, not, gt, gte } from "drizzle-orm";
 import { db, pickupEventsTable, ordersTable, orderEventsTable, orderItemsTable, preorderBatchesTable } from "@workspace/db";
 import { requireAdmin } from "../middlewares/require-admin.js";
 import { createStripeInvoice } from "../lib/stripe-invoice.js";
@@ -68,8 +68,8 @@ router.get("/pickup-events", async (req, res): Promise<void> => {
     .where(
       and(
         eq(pickupEventsTable.isPublic, true),
-        eq(pickupEventsTable.status, "scheduled"),
-        gt(pickupEventsTable.scheduledAt, now)
+        not(eq(pickupEventsTable.status, "cancelled")),
+        gte(pickupEventsTable.scheduledAt, now)
       )
     )
     .orderBy(pickupEventsTable.scheduledAt);

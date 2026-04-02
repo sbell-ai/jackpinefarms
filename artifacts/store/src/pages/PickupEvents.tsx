@@ -23,9 +23,9 @@ export default function PickupEventsPage() {
         ) : events.length === 0 ? (
           <div className="text-center py-20 bg-card border border-border rounded-3xl">
             <Calendar className="w-14 h-14 mx-auto mb-4 text-muted-foreground/40" />
-            <h2 className="text-xl font-semibold text-foreground mb-2">No pickup dates available</h2>
+            <h2 className="text-xl font-semibold text-foreground mb-2">No pickup events available</h2>
             <p className="text-muted-foreground mb-6">
-              No pickup dates are currently scheduled. Check back soon or <Link href="/contact" className="underline underline-offset-2 hover:text-foreground transition-colors">contact us</Link> to arrange a pickup.
+              No pickup events are currently scheduled. Check back soon or <Link href="/contact" className="underline underline-offset-2 hover:text-foreground transition-colors">contact us</Link> to arrange a pickup.
             </p>
             <Link href="/shop" className="inline-block px-6 py-3 rounded-xl bg-primary text-white font-bold hover:bg-primary/90 transition-all">
               Browse Products

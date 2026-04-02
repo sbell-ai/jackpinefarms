@@ -210,6 +210,7 @@ export function PublicLayout({ children }: { children: ReactNode }) {
                 <li><Link href="/how-we-raise-them" className="text-primary-foreground/80 hover:text-white transition-colors">How We Raise Them</Link></li>
                 <li><Link href="/about" className="text-primary-foreground/80 hover:text-white transition-colors">Our Story</Link></li>
                 <li><Link href="/faq" className="text-primary-foreground/80 hover:text-white transition-colors">FAQ</Link></li>
+                <li><Link href="/pickup-events" className="text-primary-foreground/80 hover:text-white transition-colors">Pickup Dates</Link></li>
               </ul>
             </div>
             
