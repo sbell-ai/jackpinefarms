@@ -6,16 +6,18 @@ import {
   useCreateStripeCheckout,
   useCreateCashOrder,
   useListPublicPickupEvents,
+  useApplyCartCoupon,
+  useRemoveCartCoupon,
 } from "@workspace/api-client-react";
 import { useSiteImage } from "@/lib/useSiteImage";
-import type { Cart } from "@workspace/api-client-react";
+import type { Cart, ApplyCartCouponResult } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { formatMoney, formatPickupDate } from "@/lib/utils";
 import { format } from "date-fns";
-import { Loader2, CreditCard, Banknote, AlertTriangle, Lock as LockIcon, Tag, Calendar, MapPin } from "lucide-react";
+import { Loader2, CreditCard, Banknote, AlertTriangle, Lock as LockIcon, Tag, Calendar, MapPin, Check, X, ChevronDown } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 const checkoutSchema = z.object({
@@ -46,6 +48,43 @@ export default function Checkout() {
   const [paymentMethod, setPaymentMethod] = useState<'stripe' | 'cash'>('cash');
   const [gibletsUpdating, setGibletsUpdating] = useState<number | null>(null);
   const [selectedPickupEventId, setSelectedPickupEventId] = useState<number | null>(null);
+  const [showCouponInput, setShowCouponInput] = useState(false);
+  const [couponInput, setCouponInput] = useState("");
+  const [couponError, setCouponError] = useState<string | null>(null);
+
+  const applyMutation = useApplyCartCoupon({
+    mutation: {
+      onSuccess: (data: ApplyCartCouponResult) => {
+        if (!data.valid) {
+          setCouponError(data.error ?? "Invalid or expired coupon code");
+          return;
+        }
+        setCouponInput("");
+        setCouponError(null);
+        queryClient.invalidateQueries({ queryKey: getGetCartQueryKey() });
+      },
+      onError: () => {
+        setCouponError("Failed to apply coupon. Please try again.");
+      },
+    },
+  });
+
+  const removeCouponMutation = useRemoveCartCoupon({
+    mutation: {
+      onSuccess: () => queryClient.invalidateQueries({ queryKey: getGetCartQueryKey() }),
+    },
+  });
+
+  const handleApplyCoupon = () => {
+    const code = couponInput.trim().toUpperCase();
+    if (!code) return;
+    setCouponError(null);
+    applyMutation.mutate({ data: { code } });
+  };
+
+  const handleRemoveCoupon = () => {
+    removeCouponMutation.mutate();
+  };
 
   const hasDeposits = cart?.items.some(item => item.pricingType === "deposit") ?? false;
 
@@ -375,15 +414,66 @@ export default function Checkout() {
                 </div>
               )}
 
-              {appliedCoupon && (
-                <div className="flex items-center gap-2 px-3 py-2 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-xl text-green-700 dark:text-green-400">
-                  <Tag className="w-3.5 h-3.5 shrink-0" />
-                  <div className="text-xs">
-                    <span className="font-bold font-mono">{appliedCoupon.code}</span>
-                    <span className="text-green-600 dark:text-green-500"> — {appliedCoupon.description}</span>
+              {/* Coupon Code */}
+              <div className="space-y-2">
+                {appliedCoupon ? (
+                  <div className="flex items-center justify-between px-3 py-2.5 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-xl">
+                    <div className="flex items-center gap-2 text-green-700 dark:text-green-400">
+                      <Check className="w-4 h-4 shrink-0" />
+                      <div>
+                        <p className="text-xs font-bold font-mono">{appliedCoupon.code}</p>
+                        <p className="text-xs">{appliedCoupon.description}</p>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleRemoveCoupon}
+                      disabled={removeCouponMutation.isPending}
+                      className="p-1 rounded hover:bg-green-100 dark:hover:bg-green-800 transition-colors disabled:opacity-50"
+                    >
+                      {removeCouponMutation.isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <X className="w-3.5 h-3.5" />}
+                    </button>
                   </div>
-                </div>
-              )}
+                ) : (
+                  <div className="space-y-1.5">
+                    <button
+                      type="button"
+                      onClick={() => { setShowCouponInput(v => !v); setCouponError(null); }}
+                      className="flex items-center gap-1.5 text-xs font-bold text-muted-foreground hover:text-foreground transition-colors w-full"
+                    >
+                      <Tag className="w-3.5 h-3.5" />
+                      Have a coupon code?
+                      <ChevronDown className={`w-3.5 h-3.5 ml-auto transition-transform ${showCouponInput ? "rotate-180" : ""}`} />
+                    </button>
+                    {showCouponInput && (
+                      <>
+                        <div className="flex gap-2">
+                          <input
+                            type="text"
+                            value={couponInput}
+                            onChange={e => { setCouponInput(e.target.value.toUpperCase()); setCouponError(null); }}
+                            onKeyDown={e => e.key === "Enter" && (e.preventDefault(), handleApplyCoupon())}
+                            placeholder="Enter code"
+                            autoFocus
+                            className="flex-1 min-w-0 px-3 py-2 rounded-lg bg-background border border-border focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all text-sm font-mono uppercase placeholder:normal-case placeholder:font-sans"
+                          />
+                          <button
+                            type="button"
+                            onClick={handleApplyCoupon}
+                            disabled={!couponInput.trim() || applyMutation.isPending}
+                            className="px-3 py-2 rounded-lg bg-muted hover:bg-muted/80 text-sm font-bold transition-colors disabled:opacity-40 shrink-0"
+                          >
+                            {applyMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : "Apply"}
+                          </button>
+                        </div>
+                        {couponError && (
+                          <p className="text-destructive text-xs font-medium">{couponError}</p>
+                        )}
+                      </>
+                    )}
+                  </div>
+                )}
+              </div>
 
               <div className="border-t border-border pt-4 space-y-2">
                 <div className="flex justify-between text-sm text-muted-foreground">
