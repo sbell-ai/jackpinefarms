@@ -13,6 +13,5 @@ export interface PublicPickupEvent {
   /** @nullable */
   locationNotes: string | null;
   /** @nullable */
-  capacity: number | null;
-  assignedOrderCount: number;
+  spotsRemaining: number | null;
 }

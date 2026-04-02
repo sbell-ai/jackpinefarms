@@ -233,8 +233,7 @@ export interface CheckoutContactBody {
   phone: string;
   /** @nullable */
   notes?: string | null;
-  /** @nullable */
-  pickupEventId?: number | null;
+  pickupEventId: number;
 }
 
 export interface StripeCheckoutResponse {
@@ -377,8 +376,7 @@ export interface PublicPickupEvent {
   /** @nullable */
   locationNotes: string | null;
   /** @nullable */
-  capacity: number | null;
-  assignedOrderCount: number;
+  spotsRemaining: number | null;
 }
 
 export interface PickupEvent {

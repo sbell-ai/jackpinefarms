@@ -1,6 +1,6 @@
 import "../types/session.d.ts";
 import { Router, type IRouter } from "express";
-import { inArray, eq, sql } from "drizzle-orm";
+import { inArray, eq, sql, count, and, gt } from "drizzle-orm";
 import crypto from "node:crypto";
 import {
   db,
@@ -10,12 +10,45 @@ import {
   stripePendingCheckoutsTable,
   customerCartsTable,
   couponsTable,
+  pickupEventsTable,
   type CartLineItem,
 } from "@workspace/db";
 import { CreateStripeCheckoutBody, CreateCashOrderBody } from "@workspace/api-zod";
 import type Stripe from "stripe";
 
 const router: IRouter = Router();
+
+async function validatePickupEvent(pickupEventId: number): Promise<{ error: string } | null> {
+  const now = new Date();
+  const [event] = await db
+    .select()
+    .from(pickupEventsTable)
+    .where(
+      and(
+        eq(pickupEventsTable.id, pickupEventId),
+        eq(pickupEventsTable.isPublic, true),
+        eq(pickupEventsTable.status, "scheduled"),
+        gt(pickupEventsTable.scheduledAt, now)
+      )
+    )
+    .limit(1);
+
+  if (!event) {
+    return { error: "The selected pickup date is no longer available. Please refresh and choose another." };
+  }
+
+  if (event.capacity != null) {
+    const [{ value: assignedCount }] = await db
+      .select({ value: count() })
+      .from(ordersTable)
+      .where(eq(ordersTable.pickupEventId, pickupEventId));
+    if (Number(assignedCount) >= event.capacity) {
+      return { error: "This pickup date is now full. Please choose a different date." };
+    }
+  }
+
+  return null;
+}
 
 function getStripe() {
   const key = process.env.STRIPE_SECRET_KEY;
@@ -181,6 +214,12 @@ router.post("/checkout/stripe", async (req, res): Promise<void> => {
 
   const { name: customerName, email: customerEmail, phone: customerPhone, notes, pickupEventId } = parsed.data;
 
+  const pickupError = await validatePickupEvent(pickupEventId);
+  if (pickupError) {
+    res.status(400).json(pickupError);
+    return;
+  }
+
   const stripe = getStripe();
 
   if (!stripe) {
@@ -297,6 +336,12 @@ router.post("/checkout/cash", async (req, res): Promise<void> => {
   }
 
   const { name: customerName, email: customerEmail, phone: customerPhone, notes, pickupEventId } = parsed.data;
+
+  const pickupErrorCash = await validatePickupEvent(pickupEventId);
+  if (pickupErrorCash) {
+    res.status(400).json(pickupErrorCash);
+    return;
+  }
 
   let discountAmountCents = 0;
   let cashCouponCode: string | null = null;

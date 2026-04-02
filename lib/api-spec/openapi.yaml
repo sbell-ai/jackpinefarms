@@ -2470,11 +2470,12 @@ components:
         notes:
           type: ["string", "null"]
         pickupEventId:
-          type: ["integer", "null"]
+          type: integer
       required:
         - name
         - email
         - phone
+        - pickupEventId
 
     StripeCheckoutResponse:
       type: object
@@ -2758,17 +2759,14 @@ components:
           format: date-time
         locationNotes:
           type: ["string", "null"]
-        capacity:
+        spotsRemaining:
           type: ["integer", "null"]
-        assignedOrderCount:
-          type: integer
       required:
         - id
         - name
         - scheduledAt
         - locationNotes
-        - capacity
-        - assignedOrderCount
+        - spotsRemaining
 
     PickupEvent:
       type: object

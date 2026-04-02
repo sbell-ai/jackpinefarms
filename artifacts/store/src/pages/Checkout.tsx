@@ -92,8 +92,12 @@ export default function Checkout() {
   }, [cart, isCartLoading, setLocation]);
 
   const onSubmit = async (data: CheckoutForm) => {
+    if (selectedPickupEventId === null) {
+      toast({ title: "Pickup date required", description: "Please select a pickup date to continue.", variant: "destructive" });
+      return;
+    }
     try {
-      const payload = { ...data, pickupEventId: selectedPickupEventId ?? null };
+      const payload = { ...data, pickupEventId: selectedPickupEventId };
       if (paymentMethod === 'stripe') {
         const res = await stripeMutation.mutateAsync({ data: payload });
         window.location.href = res.checkoutUrl;
@@ -185,83 +189,74 @@ export default function Checkout() {
                 </div>
               </div>
 
-              {/* Pickup Event Selection */}
-              {pickupEvents.length > 0 && (
-                <div className="bg-card border border-border rounded-3xl p-6 md:p-8 shadow-sm">
-                  <h2 className="text-2xl font-serif font-bold text-foreground mb-2 pb-4 border-b border-border">
-                    Select Pickup Date
-                  </h2>
-                  <p className="text-sm text-muted-foreground mb-5 pt-2">
-                    Choose a pickup date below, or leave unselected if you need a custom arrangement.
-                  </p>
-                  <div className="space-y-3">
-                    {pickupEvents.map((event) => {
-                      const spotsLeft = event.capacity != null
-                        ? event.capacity - event.assignedOrderCount
-                        : null;
-                      const isFull = spotsLeft !== null && spotsLeft <= 0;
-                      const isSelected = selectedPickupEventId === event.id;
-
-                      return (
-                        <label
-                          key={event.id}
-                          className={`
-                            relative flex items-start gap-4 p-4 rounded-2xl border-2 transition-all
-                            ${isFull
-                              ? "border-border bg-muted/20 opacity-50 cursor-not-allowed"
-                              : isSelected
-                                ? "border-primary bg-primary/5 cursor-pointer"
-                                : "border-border bg-background hover:border-primary/30 cursor-pointer"
-                            }
-                          `}
-                        >
-                          <input
-                            type="radio"
-                            name="pickupEvent"
-                            value={event.id}
-                            disabled={isFull}
-                            checked={isSelected}
-                            onChange={() => !isFull && setSelectedPickupEventId(event.id)}
-                            className="sr-only"
-                          />
-                          <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 mt-0.5 ${isSelected ? "border-primary" : "border-muted-foreground"}`}>
-                            {isSelected && <div className="w-2.5 h-2.5 rounded-full bg-primary" />}
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <div className="font-bold text-foreground">{event.name}</div>
-                            <div className="text-sm text-muted-foreground flex items-center gap-1 mt-0.5">
-                              <Calendar className="w-3.5 h-3.5 shrink-0" />
-                              {format(new Date(event.scheduledAt), "EEEE, MMMM d, yyyy")} at {format(new Date(event.scheduledAt), "h:mm a")}
-                            </div>
-                            {event.locationNotes && (
-                              <div className="text-sm text-muted-foreground flex items-center gap-1 mt-0.5">
-                                <MapPin className="w-3.5 h-3.5 shrink-0" />
-                                {event.locationNotes}
-                              </div>
-                            )}
-                            {isFull && (
-                              <div className="text-xs text-destructive font-medium mt-1">Fully booked</div>
-                            )}
-                            {spotsLeft !== null && !isFull && spotsLeft <= 5 && (
-                              <div className="text-xs text-amber-600 font-medium mt-1">Only {spotsLeft} spot{spotsLeft !== 1 ? "s" : ""} left</div>
-                            )}
-                          </div>
-                        </label>
-                      );
-                    })}
-
-                    {selectedPickupEventId !== null && (
-                      <button
-                        type="button"
-                        onClick={() => setSelectedPickupEventId(null)}
-                        className="text-xs text-muted-foreground hover:text-foreground underline underline-offset-2 transition-colors"
-                      >
-                        Clear selection
-                      </button>
-                    )}
+              {/* Pickup Event Selection — required */}
+              <div className="bg-card border border-border rounded-3xl p-6 md:p-8 shadow-sm">
+                <h2 className="text-2xl font-serif font-bold text-foreground mb-2 pb-4 border-b border-border">
+                  Select Pickup Date <span className="text-destructive text-base align-super">*</span>
+                </h2>
+                {pickupEvents.length === 0 ? (
+                  <div className="flex items-start gap-3 mt-4 p-4 bg-destructive/10 border border-destructive/20 rounded-xl">
+                    <AlertTriangle className="w-5 h-5 text-destructive shrink-0 mt-0.5" />
+                    <div>
+                      <p className="font-semibold text-destructive text-sm">No pickup dates available</p>
+                      <p className="text-sm text-foreground/80 mt-1">There are currently no pickup dates scheduled. Please check back soon or <a href="/contact" className="underline underline-offset-2 hover:text-foreground transition-colors">contact us</a> to arrange pickup.</p>
+                    </div>
                   </div>
-                </div>
-              )}
+                ) : (
+                  <>
+                    <p className="text-sm text-muted-foreground mb-5 pt-2">
+                      A pickup date is required to complete your order.
+                    </p>
+                    <div className="space-y-3">
+                      {pickupEvents.map((event) => {
+                        const spotsLeft = event.spotsRemaining;
+                        const isSelected = selectedPickupEventId === event.id;
+
+                        return (
+                          <label
+                            key={event.id}
+                            className={`
+                              relative flex items-start gap-4 p-4 rounded-2xl border-2 transition-all cursor-pointer
+                              ${isSelected
+                                ? "border-primary bg-primary/5"
+                                : "border-border bg-background hover:border-primary/30"
+                              }
+                            `}
+                          >
+                            <input
+                              type="radio"
+                              name="pickupEvent"
+                              value={event.id}
+                              checked={isSelected}
+                              onChange={() => setSelectedPickupEventId(event.id)}
+                              className="sr-only"
+                            />
+                            <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 mt-0.5 ${isSelected ? "border-primary" : "border-muted-foreground"}`}>
+                              {isSelected && <div className="w-2.5 h-2.5 rounded-full bg-primary" />}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <div className="font-bold text-foreground">{event.name}</div>
+                              <div className="text-sm text-muted-foreground flex items-center gap-1 mt-0.5">
+                                <Calendar className="w-3.5 h-3.5 shrink-0" />
+                                {format(new Date(event.scheduledAt), "EEEE, MMMM d, yyyy")} at {format(new Date(event.scheduledAt), "h:mm a")}
+                              </div>
+                              {event.locationNotes && (
+                                <div className="text-sm text-muted-foreground flex items-center gap-1 mt-0.5">
+                                  <MapPin className="w-3.5 h-3.5 shrink-0" />
+                                  {event.locationNotes}
+                                </div>
+                              )}
+                              {spotsLeft !== null && spotsLeft <= 5 && (
+                                <div className="text-xs text-amber-600 font-medium mt-1">Only {spotsLeft} spot{spotsLeft !== 1 ? "s" : ""} left</div>
+                              )}
+                            </div>
+                          </label>
+                        );
+                      })}
+                    </div>
+                  </>
+                )}
+              </div>
 
               {/* Payment Method */}
               <div className="bg-card border border-border rounded-3xl p-6 md:p-8 shadow-sm">
@@ -405,8 +400,8 @@ export default function Checkout() {
               <button 
                 type="submit" 
                 form="checkout-form"
-                disabled={isPending}
-                className="w-full py-4 rounded-xl bg-primary text-white font-bold text-lg hover:bg-primary/90 transition-all shadow-md flex items-center justify-center gap-2 disabled:opacity-50"
+                disabled={isPending || pickupEvents.length === 0 || selectedPickupEventId === null}
+                className="w-full py-4 rounded-xl bg-primary text-white font-bold text-lg hover:bg-primary/90 transition-all shadow-md flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {isPending ? (
                   <Loader2 className="w-6 h-6 animate-spin" />

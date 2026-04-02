@@ -85,14 +85,16 @@ router.get("/pickup-events", async (req, res): Promise<void> => {
     countMap = new Map(counts.map((r) => [r.pickupEventId!, Number(r.value)]));
   }
 
-  res.json(events.map((e) => ({
-    id: e.id,
-    name: e.name,
-    scheduledAt: e.scheduledAt,
-    locationNotes: e.locationNotes,
-    capacity: e.capacity,
-    assignedOrderCount: countMap.get(e.id) ?? 0,
-  })));
+  const result = events
+    .map((e) => {
+      const assignedCount = countMap.get(e.id) ?? 0;
+      const spotsRemaining: number | null =
+        e.capacity != null ? Math.max(0, e.capacity - assignedCount) : null;
+      return { id: e.id, name: e.name, scheduledAt: e.scheduledAt, locationNotes: e.locationNotes, spotsRemaining };
+    })
+    .filter((e) => e.spotsRemaining === null || e.spotsRemaining > 0);
+
+  res.json(result);
 });
 
 router.get("/admin/pickup-events", requireAdmin, async (req, res): Promise<void> => {

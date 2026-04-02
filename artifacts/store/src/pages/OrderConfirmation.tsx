@@ -2,7 +2,14 @@ import { useEffect, useState } from "react";
 import { Link } from "wouter";
 import { CheckCircle2, Package, MapPin, Calendar, Loader2 } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
+import { format } from "date-fns";
 import { getGetCartQueryKey } from "@workspace/api-client-react";
+
+interface OrderSummary {
+  id: number;
+  pickupEventName?: string | null;
+  pickupEventScheduledAt?: string | null;
+}
 
 export default function OrderConfirmation() {
   const searchParams = new URLSearchParams(window.location.search);
@@ -10,11 +17,22 @@ export default function OrderConfirmation() {
   const stripeSessionId = searchParams.get("stripe_session_id");
 
   const queryClient = useQueryClient();
-  const [stripeOrderId, setStripeOrderId] = useState<number | null>(null);
+  const [order, setOrder] = useState<OrderSummary | null>(null);
   const [lookupDone, setLookupDone] = useState(false);
 
   useEffect(() => {
-    if (!stripeSessionId) return;
+    if (!stripeSessionId && !orderId) return;
+
+    if (!stripeSessionId && orderId) {
+      fetch(`/api/orders/${orderId}`, { credentials: "include" })
+        .then((r) => r.ok ? r.json() : null)
+        .then((data) => {
+          if (data) setOrder(data);
+          setLookupDone(true);
+        })
+        .catch(() => setLookupDone(true));
+      return;
+    }
 
     fetch("/api/cart/clear", { method: "POST", credentials: "include" }).then(() => {
       queryClient.invalidateQueries({ queryKey: getGetCartQueryKey() });
@@ -28,7 +46,13 @@ export default function OrderConfirmation() {
         const res = await fetch(`/api/orders/by-stripe-session/${stripeSessionId}`, { credentials: "include" });
         if (res.ok) {
           const data = await res.json();
-          setStripeOrderId(data.id);
+          const detailRes = await fetch(`/api/orders/${data.id}`, { credentials: "include" });
+          if (detailRes.ok) {
+            const detail = await detailRes.json();
+            setOrder(detail);
+          } else {
+            setOrder(data);
+          }
           setLookupDone(true);
           return;
         }
@@ -40,10 +64,10 @@ export default function OrderConfirmation() {
       }
     };
     poll();
-  }, [stripeSessionId]);
+  }, [stripeSessionId, orderId]);
 
-  const displayOrderId = orderId ? Number(orderId) : stripeOrderId;
-  const isLoading = stripeSessionId && !lookupDone;
+  const displayOrderId = order?.id ?? (orderId ? Number(orderId) : null);
+  const isLoading = (stripeSessionId || orderId) && !lookupDone;
 
   return (
     <div className="flex-1 bg-muted/20 flex items-center justify-center py-16 px-4">
@@ -83,8 +107,19 @@ export default function OrderConfirmation() {
 
           <div className="p-5 rounded-2xl bg-background border border-border">
             <Calendar className="w-6 h-6 text-primary mb-3" />
-            <h3 className="font-bold text-sm uppercase tracking-wider mb-1">Next Steps</h3>
-            <p className="text-muted-foreground">Watch your email for pickup scheduling and any final invoices.</p>
+            <h3 className="font-bold text-sm uppercase tracking-wider mb-1">Pickup Date</h3>
+            {order?.pickupEventName ? (
+              <div>
+                <p className="font-semibold text-foreground text-sm">{order.pickupEventName}</p>
+                {order.pickupEventScheduledAt && (
+                  <p className="text-muted-foreground text-sm mt-0.5">
+                    {format(new Date(order.pickupEventScheduledAt), "EEEE, MMM d, yyyy")}
+                  </p>
+                )}
+              </div>
+            ) : (
+              <p className="text-muted-foreground">Watch your email for pickup scheduling details.</p>
+            )}
           </div>
         </div>
 

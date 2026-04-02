@@ -58,6 +58,8 @@ export default function AdminPickupEventDetail() {
   const [editScheduledAt, setEditScheduledAt] = useState("");
   const [editLocation, setEditLocation] = useState("");
   const [editStatus, setEditStatus] = useState("");
+  const [editIsPublic, setEditIsPublic] = useState(false);
+  const [editCapacity, setEditCapacity] = useState("");
 
   const { data: event, isLoading } = useAdminGetPickupEvent(eventId, {
     query: { queryKey: getAdminGetPickupEventQueryKey(eventId) },
@@ -129,6 +131,8 @@ export default function AdminPickupEventDetail() {
     setEditScheduledAt(new Date(event.scheduledAt).toISOString().slice(0, 16));
     setEditLocation((event as any).locationNotes ?? "");
     setEditStatus(event.status);
+    setEditIsPublic(event.isPublic);
+    setEditCapacity(event.capacity != null ? String(event.capacity) : "");
     setEditOpen(true);
   }
 
@@ -420,6 +424,26 @@ export default function AdminPickupEventDetail() {
                 </SelectContent>
               </Select>
             </div>
+            <div className="space-y-1">
+              <Label>Capacity (optional)</Label>
+              <Input
+                type="number"
+                min="1"
+                placeholder="Leave blank for unlimited"
+                value={editCapacity}
+                onChange={(e) => setEditCapacity(e.target.value)}
+              />
+            </div>
+            <div className="flex items-center gap-2 pt-1">
+              <input
+                id="editIsPublic"
+                type="checkbox"
+                checked={editIsPublic}
+                onChange={(e) => setEditIsPublic(e.target.checked)}
+                className="w-4 h-4 rounded border-border accent-primary cursor-pointer"
+              />
+              <Label htmlFor="editIsPublic" className="cursor-pointer">Visible to customers (published)</Label>
+            </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setEditOpen(false)}>Cancel</Button>
@@ -432,6 +456,8 @@ export default function AdminPickupEventDetail() {
                   scheduledAt: editScheduledAt,
                   locationNotes: editLocation || null,
                   status: editStatus as any,
+                  isPublic: editIsPublic,
+                  capacity: editCapacity ? Number(editCapacity) : null,
                 }
               })}
             >

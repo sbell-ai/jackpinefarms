@@ -811,7 +811,7 @@ export const CreateStripeCheckoutBody = zod.object({
   email: zod.string().email(),
   phone: zod.string(),
   notes: zod.string().nullish(),
-  pickupEventId: zod.number().nullish(),
+  pickupEventId: zod.number(),
 });
 
 export const CreateStripeCheckoutResponse = zod.object({
@@ -827,7 +827,7 @@ export const CreateCashOrderBody = zod.object({
   email: zod.string().email(),
   phone: zod.string(),
   notes: zod.string().nullish(),
-  pickupEventId: zod.number().nullish(),
+  pickupEventId: zod.number(),
 });
 
 /**
@@ -1040,8 +1040,7 @@ export const ListPublicPickupEventsResponseItem = zod.object({
   name: zod.string(),
   scheduledAt: zod.date(),
   locationNotes: zod.string().nullable(),
-  capacity: zod.number().nullable(),
-  assignedOrderCount: zod.number(),
+  spotsRemaining: zod.number().nullable(),
 });
 export const ListPublicPickupEventsResponse = zod.array(
   ListPublicPickupEventsResponseItem,
