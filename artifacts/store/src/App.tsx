@@ -28,6 +28,7 @@ import ClaimOrder from "./pages/auth/ClaimOrder";
 import Cart from "./pages/Cart";
 import Checkout from "./pages/Checkout";
 import OrderConfirmation from "./pages/OrderConfirmation";
+import PickupEvents from "./pages/PickupEvents";
 import AccountProfile from "./pages/account/Profile";
 import AccountOrderDetail from "./pages/account/OrderDetail";
 
@@ -146,6 +147,10 @@ function Router() {
         <ClaimOrder />
       </Route>
       
+      <Route path="/pickup-events">
+        <PublicLayout><PickupEvents /></PublicLayout>
+      </Route>
+
       <Route path="/cart">
         <PublicLayout><Cart /></PublicLayout>
       </Route>

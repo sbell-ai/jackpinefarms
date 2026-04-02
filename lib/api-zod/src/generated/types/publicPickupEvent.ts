@@ -5,19 +5,14 @@
  * Jack Pine Farm Store API
  * OpenAPI spec version: 0.1.0
  */
-import type { PickupEventStatus } from "./pickupEventStatus";
 
-export interface PickupEvent {
+export interface PublicPickupEvent {
   id: number;
   name: string;
   scheduledAt: Date;
   /** @nullable */
   locationNotes: string | null;
-  status: PickupEventStatus;
-  isPublic: boolean;
   /** @nullable */
   capacity: number | null;
   assignedOrderCount: number;
-  createdAt: Date;
-  updatedAt: Date;
 }

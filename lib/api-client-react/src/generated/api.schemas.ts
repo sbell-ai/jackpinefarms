@@ -233,6 +233,8 @@ export interface CheckoutContactBody {
   phone: string;
   /** @nullable */
   notes?: string | null;
+  /** @nullable */
+  pickupEventId?: number | null;
 }
 
 export interface StripeCheckoutResponse {
@@ -297,6 +299,10 @@ export interface OrderDetail {
   batchId: number | null;
   /** @nullable */
   pickupEventId: number | null;
+  /** @nullable */
+  pickupEventName: string | null;
+  /** @nullable */
+  pickupEventScheduledAt: string | null;
   items: OrderItem[];
   /** @nullable */
   finalWeightLbs: number | null;
@@ -364,6 +370,17 @@ export const PickupEventStatus = {
   cancelled: "cancelled",
 } as const;
 
+export interface PublicPickupEvent {
+  id: number;
+  name: string;
+  scheduledAt: string;
+  /** @nullable */
+  locationNotes: string | null;
+  /** @nullable */
+  capacity: number | null;
+  assignedOrderCount: number;
+}
+
 export interface PickupEvent {
   id: number;
   name: string;
@@ -371,6 +388,9 @@ export interface PickupEvent {
   /** @nullable */
   locationNotes: string | null;
   status: PickupEventStatus;
+  isPublic: boolean;
+  /** @nullable */
+  capacity: number | null;
   assignedOrderCount: number;
   createdAt: string;
   updatedAt: string;
@@ -381,6 +401,9 @@ export interface CreatePickupEventBody {
   scheduledAt: string;
   /** @nullable */
   locationNotes?: string | null;
+  isPublic?: boolean;
+  /** @nullable */
+  capacity?: number | null;
 }
 
 export interface UpdatePickupEventBody {
@@ -389,6 +412,9 @@ export interface UpdatePickupEventBody {
   /** @nullable */
   locationNotes?: string | null;
   status?: PickupEventStatus;
+  isPublic?: boolean;
+  /** @nullable */
+  capacity?: number | null;
 }
 
 export interface AssignOrderBody {

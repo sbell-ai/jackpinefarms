@@ -4,6 +4,8 @@ import {
   serial,
   timestamp,
   pgEnum,
+  boolean,
+  integer,
 } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
@@ -20,6 +22,8 @@ export const pickupEventsTable = pgTable("pickup_events", {
   scheduledAt: timestamp("scheduled_at", { withTimezone: true }).notNull(),
   locationNotes: text("location_notes"),
   status: pickupEventStatusEnum("status").notNull().default("scheduled"),
+  isPublic: boolean("is_public").notNull().default(false),
+  capacity: integer("capacity"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true })
     .notNull()

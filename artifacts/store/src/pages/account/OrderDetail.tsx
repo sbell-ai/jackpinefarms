@@ -2,7 +2,7 @@ import { useRoute, Link, useLocation } from "wouter";
 import { useGetMyOrder, getGetMyOrderQueryKey, useAuthMe, getAuthMeQueryKey } from "@workspace/api-client-react";
 import { formatMoney } from "@/lib/utils";
 import { format } from "date-fns";
-import { Loader2, ArrowLeft, Package, MapPin, AlertCircle } from "lucide-react";
+import { Loader2, ArrowLeft, Package, MapPin, AlertCircle, Calendar } from "lucide-react";
 import { useEffect } from "react";
 
 export default function OrderDetail() {
@@ -81,7 +81,21 @@ export default function OrderDetail() {
           <p className="font-medium text-foreground flex items-center gap-2">
             <MapPin className="w-4 h-4 text-primary" /> Local Pickup
           </p>
-          <p className="text-sm text-foreground/80 mt-2">Watch your email for scheduling.</p>
+          {order.pickupEventName ? (
+            <div className="mt-2 flex items-start gap-1.5 text-sm text-foreground/80">
+              <Calendar className="w-3.5 h-3.5 shrink-0 mt-0.5 text-primary" />
+              <div>
+                <div className="font-medium">{order.pickupEventName}</div>
+                {order.pickupEventScheduledAt && (
+                  <div className="text-xs text-muted-foreground">
+                    {format(new Date(order.pickupEventScheduledAt), "EEEE, MMM d, yyyy")}
+                  </div>
+                )}
+              </div>
+            </div>
+          ) : (
+            <p className="text-sm text-foreground/80 mt-2">Watch your email for scheduling.</p>
+          )}
         </div>
       </div>
 

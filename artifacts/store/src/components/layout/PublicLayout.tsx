@@ -34,6 +34,7 @@ export function PublicLayout({ children }: { children: ReactNode }) {
 
   const navLinks = [
     { href: "/shop", label: "Shop" },
+    { href: "/pickup-events", label: "Pickup Dates" },
     { href: "/how-we-raise-them", label: "How We Raise Them" },
     { href: "/about", label: "Our Story" },
     { href: "/faq", label: "FAQ" },

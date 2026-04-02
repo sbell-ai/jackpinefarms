@@ -1,6 +1,6 @@
 import "../types/session.d.ts";
 import { Router, type IRouter } from "express";
-import { eq, count, inArray, isNull, and, not } from "drizzle-orm";
+import { eq, count, inArray, isNull, and, not, gt } from "drizzle-orm";
 import { db, pickupEventsTable, ordersTable, orderEventsTable, orderItemsTable, preorderBatchesTable } from "@workspace/db";
 import { requireAdmin } from "../middlewares/require-admin.js";
 import { createStripeInvoice } from "../lib/stripe-invoice.js";
@@ -12,6 +12,8 @@ const CreatePickupEventBody = z.object({
   name: z.string().min(1),
   scheduledAt: z.string().transform((s: string) => new Date(s)),
   locationNotes: z.string().nullable().optional(),
+  isPublic: z.boolean().optional().default(false),
+  capacity: z.number().int().positive().nullable().optional(),
 });
 
 const UpdatePickupEventBody = z.object({
@@ -19,6 +21,8 @@ const UpdatePickupEventBody = z.object({
   scheduledAt: z.string().transform((s: string) => new Date(s)).optional(),
   locationNotes: z.string().nullable().optional(),
   status: z.enum(["scheduled", "completed", "cancelled"]).optional(),
+  isPublic: z.boolean().optional(),
+  capacity: z.number().int().positive().nullable().optional(),
 });
 
 const AssignOrderBody = z.object({
@@ -55,6 +59,41 @@ async function getEventWithCount(eventId: number) {
 
   return { ...event, assignedOrderCount: Number(assignedOrderCount) };
 }
+
+router.get("/pickup-events", async (req, res): Promise<void> => {
+  const now = new Date();
+  const events = await db
+    .select()
+    .from(pickupEventsTable)
+    .where(
+      and(
+        eq(pickupEventsTable.isPublic, true),
+        eq(pickupEventsTable.status, "scheduled"),
+        gt(pickupEventsTable.scheduledAt, now)
+      )
+    )
+    .orderBy(pickupEventsTable.scheduledAt);
+
+  const eventIds = events.map((e) => e.id);
+  let countMap = new Map<number, number>();
+  if (eventIds.length > 0) {
+    const counts = await db
+      .select({ pickupEventId: ordersTable.pickupEventId, value: count() })
+      .from(ordersTable)
+      .where(inArray(ordersTable.pickupEventId, eventIds))
+      .groupBy(ordersTable.pickupEventId);
+    countMap = new Map(counts.map((r) => [r.pickupEventId!, Number(r.value)]));
+  }
+
+  res.json(events.map((e) => ({
+    id: e.id,
+    name: e.name,
+    scheduledAt: e.scheduledAt,
+    locationNotes: e.locationNotes,
+    capacity: e.capacity,
+    assignedOrderCount: countMap.get(e.id) ?? 0,
+  })));
+});
 
 router.get("/admin/pickup-events", requireAdmin, async (req, res): Promise<void> => {
   const events = await db

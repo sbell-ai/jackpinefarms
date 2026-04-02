@@ -1,0 +1,96 @@
+import { Link } from "wouter";
+import { format } from "date-fns";
+import { useListPublicPickupEvents } from "@workspace/api-client-react";
+import { Calendar, MapPin, Users, ShoppingCart, Loader2 } from "lucide-react";
+
+export default function PickupEventsPage() {
+  const { data: events = [], isLoading } = useListPublicPickupEvents();
+
+  return (
+    <div className="flex-1 bg-muted/20">
+      <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+        <div className="mb-10 text-center">
+          <h1 className="text-4xl font-serif font-bold text-foreground mb-3">Pickup Events</h1>
+          <p className="text-lg text-muted-foreground max-w-xl mx-auto">
+            All orders from Jack Pine Farm are pickup-only. Browse upcoming pickup dates below and select one during checkout.
+          </p>
+        </div>
+
+        {isLoading ? (
+          <div className="flex justify-center py-20">
+            <Loader2 className="w-10 h-10 animate-spin text-primary" />
+          </div>
+        ) : events.length === 0 ? (
+          <div className="text-center py-20 bg-card border border-border rounded-3xl">
+            <Calendar className="w-14 h-14 mx-auto mb-4 text-muted-foreground/40" />
+            <h2 className="text-xl font-semibold text-foreground mb-2">No upcoming pickup events</h2>
+            <p className="text-muted-foreground mb-6">
+              Check back soon — we schedule pickups seasonally. You can still place an order and a pickup date will be arranged.
+            </p>
+            <Link href="/shop" className="inline-block px-6 py-3 rounded-xl bg-primary text-white font-bold hover:bg-primary/90 transition-all">
+              Browse Products
+            </Link>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {events.map((event) => {
+              const spotsLeft = event.capacity != null
+                ? event.capacity - event.assignedOrderCount
+                : null;
+              const isFull = spotsLeft !== null && spotsLeft <= 0;
+
+              return (
+                <div
+                  key={event.id}
+                  className={`bg-card border rounded-2xl p-6 shadow-sm ${isFull ? "opacity-60 border-border" : "border-border hover:border-primary/30 transition-colors"}`}
+                >
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="flex gap-4">
+                      <div className="w-12 h-12 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0">
+                        <Calendar className="w-6 h-6" />
+                      </div>
+                      <div>
+                        <h2 className="text-lg font-bold text-foreground">{event.name}</h2>
+                        <p className="text-muted-foreground text-sm mt-1">
+                          {format(new Date(event.scheduledAt), "EEEE, MMMM d, yyyy")}
+                          {" at "}
+                          {format(new Date(event.scheduledAt), "h:mm a")}
+                        </p>
+                        {event.locationNotes && (
+                          <p className="text-sm text-muted-foreground mt-1 flex items-center gap-1.5">
+                            <MapPin className="w-3.5 h-3.5 shrink-0" />
+                            {event.locationNotes}
+                          </p>
+                        )}
+                        {spotsLeft !== null && (
+                          <p className={`text-sm mt-1 flex items-center gap-1.5 font-medium ${isFull ? "text-destructive" : spotsLeft <= 5 ? "text-amber-600" : "text-muted-foreground"}`}>
+                            <Users className="w-3.5 h-3.5 shrink-0" />
+                            {isFull ? "Fully booked" : `${spotsLeft} spot${spotsLeft !== 1 ? "s" : ""} remaining`}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                    {!isFull && (
+                      <Link
+                        href="/shop"
+                        className="shrink-0 inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-primary text-white text-sm font-bold hover:bg-primary/90 transition-all"
+                      >
+                        <ShoppingCart className="w-4 h-4" />
+                        Order Now
+                      </Link>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+
+            <div className="mt-8 p-5 bg-background border border-border rounded-2xl text-sm text-muted-foreground">
+              <p className="font-semibold text-foreground mb-1">How it works</p>
+              <p>Select a pickup event during checkout to reserve your slot. You will receive an email confirmation with full pickup details.</p>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}

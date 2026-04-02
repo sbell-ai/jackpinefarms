@@ -13,4 +13,7 @@ export interface UpdatePickupEventBody {
   /** @nullable */
   locationNotes?: string | null;
   status?: PickupEventStatus;
+  isPublic?: boolean;
+  /** @nullable */
+  capacity?: number | null;
 }

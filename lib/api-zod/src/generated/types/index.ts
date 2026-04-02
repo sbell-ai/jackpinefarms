@@ -85,6 +85,7 @@ export * from "./pricingType";
 export * from "./product";
 export * from "./productImage";
 export * from "./productType";
+export * from "./publicPickupEvent";
 export * from "./registerBody";
 export * from "./removeCartCoupon200";
 export * from "./sendInvoicesBody";

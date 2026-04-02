@@ -378,6 +378,8 @@ export const AdminSetOrderItemsResponse = zod.object({
   refundedGiblets: zod.boolean(),
   batchId: zod.number().nullable(),
   pickupEventId: zod.number().nullable(),
+  pickupEventName: zod.string().nullable(),
+  pickupEventScheduledAt: zod.string().nullable(),
   items: zod.array(
     zod.object({
       id: zod.number(),
@@ -436,6 +438,8 @@ export const AdminFinalizeOrderResponse = zod.object({
     refundedGiblets: zod.boolean(),
     batchId: zod.number().nullable(),
     pickupEventId: zod.number().nullable(),
+    pickupEventName: zod.string().nullable(),
+    pickupEventScheduledAt: zod.string().nullable(),
     items: zod.array(
       zod.object({
         id: zod.number(),
@@ -515,6 +519,8 @@ export const AdminGetOrderResponse = zod.object({
   refundedGiblets: zod.boolean(),
   batchId: zod.number().nullable(),
   pickupEventId: zod.number().nullable(),
+  pickupEventName: zod.string().nullable(),
+  pickupEventScheduledAt: zod.string().nullable(),
   items: zod.array(
     zod.object({
       id: zod.number(),
@@ -805,6 +811,7 @@ export const CreateStripeCheckoutBody = zod.object({
   email: zod.string().email(),
   phone: zod.string(),
   notes: zod.string().nullish(),
+  pickupEventId: zod.number().nullish(),
 });
 
 export const CreateStripeCheckoutResponse = zod.object({
@@ -820,6 +827,7 @@ export const CreateCashOrderBody = zod.object({
   email: zod.string().email(),
   phone: zod.string(),
   notes: zod.string().nullish(),
+  pickupEventId: zod.number().nullish(),
 });
 
 /**
@@ -884,6 +892,8 @@ export const GetMyOrderResponse = zod.object({
   refundedGiblets: zod.boolean(),
   batchId: zod.number().nullable(),
   pickupEventId: zod.number().nullable(),
+  pickupEventName: zod.string().nullable(),
+  pickupEventScheduledAt: zod.string().nullable(),
   items: zod.array(
     zod.object({
       id: zod.number(),
@@ -1022,6 +1032,22 @@ export const AdminUpdateBatchResponse = zod.object({
 });
 
 /**
+ * Returns scheduled events where isPublic is true and scheduledAt is in the future.
+ * @summary List upcoming public pickup events (storefront)
+ */
+export const ListPublicPickupEventsResponseItem = zod.object({
+  id: zod.number(),
+  name: zod.string(),
+  scheduledAt: zod.date(),
+  locationNotes: zod.string().nullable(),
+  capacity: zod.number().nullable(),
+  assignedOrderCount: zod.number(),
+});
+export const ListPublicPickupEventsResponse = zod.array(
+  ListPublicPickupEventsResponseItem,
+);
+
+/**
  * @summary List all pickup events (admin)
  */
 export const AdminListPickupEventsResponseItem = zod.object({
@@ -1030,6 +1056,8 @@ export const AdminListPickupEventsResponseItem = zod.object({
   scheduledAt: zod.date(),
   locationNotes: zod.string().nullable(),
   status: zod.enum(["scheduled", "completed", "cancelled"]),
+  isPublic: zod.boolean(),
+  capacity: zod.number().nullable(),
   assignedOrderCount: zod.number(),
   createdAt: zod.date(),
   updatedAt: zod.date(),
@@ -1045,6 +1073,8 @@ export const AdminCreatePickupEventBody = zod.object({
   name: zod.string(),
   scheduledAt: zod.date(),
   locationNotes: zod.string().nullish(),
+  isPublic: zod.boolean().optional(),
+  capacity: zod.number().nullish(),
 });
 
 /**
@@ -1061,6 +1091,8 @@ export const AdminGetPickupEventResponse = zod
     scheduledAt: zod.date(),
     locationNotes: zod.string().nullable(),
     status: zod.enum(["scheduled", "completed", "cancelled"]),
+    isPublic: zod.boolean(),
+    capacity: zod.number().nullable(),
     assignedOrderCount: zod.number(),
     createdAt: zod.date(),
     updatedAt: zod.date(),
@@ -1158,6 +1190,8 @@ export const AdminUpdatePickupEventBody = zod.object({
   scheduledAt: zod.date().optional(),
   locationNotes: zod.string().nullish(),
   status: zod.enum(["scheduled", "completed", "cancelled"]).optional(),
+  isPublic: zod.boolean().optional(),
+  capacity: zod.number().nullish(),
 });
 
 export const AdminUpdatePickupEventResponse = zod.object({
@@ -1166,6 +1200,8 @@ export const AdminUpdatePickupEventResponse = zod.object({
   scheduledAt: zod.date(),
   locationNotes: zod.string().nullable(),
   status: zod.enum(["scheduled", "completed", "cancelled"]),
+  isPublic: zod.boolean(),
+  capacity: zod.number().nullable(),
   assignedOrderCount: zod.number(),
   createdAt: zod.date(),
   updatedAt: zod.date(),
@@ -1279,6 +1315,8 @@ export const AdminUpdateOrderStatusResponse = zod.object({
   refundedGiblets: zod.boolean(),
   batchId: zod.number().nullable(),
   pickupEventId: zod.number().nullable(),
+  pickupEventName: zod.string().nullable(),
+  pickupEventScheduledAt: zod.string().nullable(),
   items: zod.array(
     zod.object({
       id: zod.number(),
@@ -1383,6 +1421,8 @@ export const AdminAssignOrderBatchResponse = zod.object({
   refundedGiblets: zod.boolean(),
   batchId: zod.number().nullable(),
   pickupEventId: zod.number().nullable(),
+  pickupEventName: zod.string().nullable(),
+  pickupEventScheduledAt: zod.string().nullable(),
   items: zod.array(
     zod.object({
       id: zod.number(),

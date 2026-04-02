@@ -11,4 +11,7 @@ export interface CreatePickupEventBody {
   scheduledAt: Date;
   /** @nullable */
   locationNotes?: string | null;
+  isPublic?: boolean;
+  /** @nullable */
+  capacity?: number | null;
 }

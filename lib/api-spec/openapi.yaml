@@ -1019,6 +1019,22 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
 
+  /pickup-events:
+    get:
+      operationId: listPublicPickupEvents
+      tags: [pickup-events]
+      summary: List upcoming public pickup events (storefront)
+      description: Returns scheduled events where isPublic is true and scheduledAt is in the future.
+      responses:
+        "200":
+          description: Public pickup event list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/PublicPickupEvent"
+
   /admin/pickup-events:
     get:
       operationId: adminListPickupEvents
@@ -2453,6 +2469,8 @@ components:
           type: string
         notes:
           type: ["string", "null"]
+        pickupEventId:
+          type: ["integer", "null"]
       required:
         - name
         - email
@@ -2579,6 +2597,10 @@ components:
           type: ["integer", "null"]
         pickupEventId:
           type: ["integer", "null"]
+        pickupEventName:
+          type: ["string", "null"]
+        pickupEventScheduledAt:
+          type: ["string", "null"]
         items:
           type: array
           items:
@@ -2608,6 +2630,8 @@ components:
         - refundedGiblets
         - batchId
         - pickupEventId
+        - pickupEventName
+        - pickupEventScheduledAt
         - items
         - finalWeightLbs
         - createdAt
@@ -2722,6 +2746,30 @@ components:
         - completed
         - cancelled
 
+    PublicPickupEvent:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        scheduledAt:
+          type: string
+          format: date-time
+        locationNotes:
+          type: ["string", "null"]
+        capacity:
+          type: ["integer", "null"]
+        assignedOrderCount:
+          type: integer
+      required:
+        - id
+        - name
+        - scheduledAt
+        - locationNotes
+        - capacity
+        - assignedOrderCount
+
     PickupEvent:
       type: object
       properties:
@@ -2736,6 +2784,10 @@ components:
           type: ["string", "null"]
         status:
           $ref: "#/components/schemas/PickupEventStatus"
+        isPublic:
+          type: boolean
+        capacity:
+          type: ["integer", "null"]
         assignedOrderCount:
           type: integer
         createdAt:
@@ -2750,6 +2802,8 @@ components:
         - scheduledAt
         - locationNotes
         - status
+        - isPublic
+        - capacity
         - assignedOrderCount
         - createdAt
         - updatedAt
@@ -2764,6 +2818,10 @@ components:
           format: date-time
         locationNotes:
           type: ["string", "null"]
+        isPublic:
+          type: boolean
+        capacity:
+          type: ["integer", "null"]
       required:
         - name
         - scheduledAt
@@ -2780,6 +2838,10 @@ components:
           type: ["string", "null"]
         status:
           $ref: "#/components/schemas/PickupEventStatus"
+        isPublic:
+          type: boolean
+        capacity:
+          type: ["integer", "null"]
 
     AssignOrderBody:
       type: object

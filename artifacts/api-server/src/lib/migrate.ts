@@ -319,6 +319,11 @@ export async function runMigrations(): Promise<void> {
       `CREATE UNIQUE INDEX IF NOT EXISTS customers_email_unique_partial ON customers (email) WHERE email IS NOT NULL`
     ));
 
+    // ── Pickup events schema evolution (Task #15) ────────────────────────────
+    await db.execute(sql.raw(`ALTER TABLE pickup_events ADD COLUMN IF NOT EXISTS is_public BOOLEAN NOT NULL DEFAULT FALSE`));
+    await db.execute(sql.raw(`ALTER TABLE pickup_events ADD COLUMN IF NOT EXISTS capacity INTEGER`));
+    await db.execute(sql.raw(`ALTER TABLE stripe_pending_checkouts ADD COLUMN IF NOT EXISTS pickup_event_id INTEGER REFERENCES pickup_events(id)`));
+
     // ── Orders schema evolution (Task #14) ──────────────────────────────────
     // Add source column to distinguish storefront vs admin-created orders
     await db.execute(sql.raw(

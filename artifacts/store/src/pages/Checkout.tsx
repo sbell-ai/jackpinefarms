@@ -4,7 +4,8 @@ import {
   useGetCart, getGetCartQueryKey, 
   useAuthMe, getAuthMeQueryKey,
   useCreateStripeCheckout,
-  useCreateCashOrder
+  useCreateCashOrder,
+  useListPublicPickupEvents,
 } from "@workspace/api-client-react";
 import { useSiteImage } from "@/lib/useSiteImage";
 import type { Cart } from "@workspace/api-client-react";
@@ -13,7 +14,8 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { formatMoney } from "@/lib/utils";
-import { Loader2, CreditCard, Banknote, AlertTriangle, Lock as LockIcon, Tag } from "lucide-react";
+import { format } from "date-fns";
+import { Loader2, CreditCard, Banknote, AlertTriangle, Lock as LockIcon, Tag, Calendar, MapPin } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 const checkoutSchema = z.object({
@@ -39,8 +41,11 @@ export default function Checkout() {
     query: { queryKey: getAuthMeQueryKey(), retry: false }
   });
 
+  const { data: pickupEvents = [] } = useListPublicPickupEvents();
+
   const [paymentMethod, setPaymentMethod] = useState<'stripe' | 'cash'>('cash');
   const [gibletsUpdating, setGibletsUpdating] = useState<number | null>(null);
+  const [selectedPickupEventId, setSelectedPickupEventId] = useState<number | null>(null);
 
   const hasDeposits = cart?.items.some(item => item.pricingType === "deposit") ?? false;
 
@@ -88,11 +93,12 @@ export default function Checkout() {
 
   const onSubmit = async (data: CheckoutForm) => {
     try {
+      const payload = { ...data, pickupEventId: selectedPickupEventId ?? null };
       if (paymentMethod === 'stripe') {
-        const res = await stripeMutation.mutateAsync({ data });
+        const res = await stripeMutation.mutateAsync({ data: payload });
         window.location.href = res.checkoutUrl;
       } else {
-        const res = await cashMutation.mutateAsync({ data });
+        const res = await cashMutation.mutateAsync({ data: payload });
         queryClient.invalidateQueries({ queryKey: getGetCartQueryKey() });
         setLocation(`/order-confirmation?id=${res.id}`);
       }
@@ -114,6 +120,8 @@ export default function Checkout() {
   const appliedCoupon = cart.appliedCoupon;
   const discount = appliedCoupon?.discountAmountCents ?? 0;
   const total = cart.totalAfterDiscountInCents ?? subtotal;
+
+  const selectedEvent = pickupEvents.find(e => e.id === selectedPickupEventId) ?? null;
 
   return (
     <div className="flex-1 bg-muted/30">
@@ -176,6 +184,84 @@ export default function Checkout() {
                   </div>
                 </div>
               </div>
+
+              {/* Pickup Event Selection */}
+              {pickupEvents.length > 0 && (
+                <div className="bg-card border border-border rounded-3xl p-6 md:p-8 shadow-sm">
+                  <h2 className="text-2xl font-serif font-bold text-foreground mb-2 pb-4 border-b border-border">
+                    Select Pickup Date
+                  </h2>
+                  <p className="text-sm text-muted-foreground mb-5 pt-2">
+                    Choose a pickup date below, or leave unselected if you need a custom arrangement.
+                  </p>
+                  <div className="space-y-3">
+                    {pickupEvents.map((event) => {
+                      const spotsLeft = event.capacity != null
+                        ? event.capacity - event.assignedOrderCount
+                        : null;
+                      const isFull = spotsLeft !== null && spotsLeft <= 0;
+                      const isSelected = selectedPickupEventId === event.id;
+
+                      return (
+                        <label
+                          key={event.id}
+                          className={`
+                            relative flex items-start gap-4 p-4 rounded-2xl border-2 transition-all
+                            ${isFull
+                              ? "border-border bg-muted/20 opacity-50 cursor-not-allowed"
+                              : isSelected
+                                ? "border-primary bg-primary/5 cursor-pointer"
+                                : "border-border bg-background hover:border-primary/30 cursor-pointer"
+                            }
+                          `}
+                        >
+                          <input
+                            type="radio"
+                            name="pickupEvent"
+                            value={event.id}
+                            disabled={isFull}
+                            checked={isSelected}
+                            onChange={() => !isFull && setSelectedPickupEventId(event.id)}
+                            className="sr-only"
+                          />
+                          <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 mt-0.5 ${isSelected ? "border-primary" : "border-muted-foreground"}`}>
+                            {isSelected && <div className="w-2.5 h-2.5 rounded-full bg-primary" />}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="font-bold text-foreground">{event.name}</div>
+                            <div className="text-sm text-muted-foreground flex items-center gap-1 mt-0.5">
+                              <Calendar className="w-3.5 h-3.5 shrink-0" />
+                              {format(new Date(event.scheduledAt), "EEEE, MMMM d, yyyy")} at {format(new Date(event.scheduledAt), "h:mm a")}
+                            </div>
+                            {event.locationNotes && (
+                              <div className="text-sm text-muted-foreground flex items-center gap-1 mt-0.5">
+                                <MapPin className="w-3.5 h-3.5 shrink-0" />
+                                {event.locationNotes}
+                              </div>
+                            )}
+                            {isFull && (
+                              <div className="text-xs text-destructive font-medium mt-1">Fully booked</div>
+                            )}
+                            {spotsLeft !== null && !isFull && spotsLeft <= 5 && (
+                              <div className="text-xs text-amber-600 font-medium mt-1">Only {spotsLeft} spot{spotsLeft !== 1 ? "s" : ""} left</div>
+                            )}
+                          </div>
+                        </label>
+                      );
+                    })}
+
+                    {selectedPickupEventId !== null && (
+                      <button
+                        type="button"
+                        onClick={() => setSelectedPickupEventId(null)}
+                        className="text-xs text-muted-foreground hover:text-foreground underline underline-offset-2 transition-colors"
+                      >
+                        Clear selection
+                      </button>
+                    )}
+                  </div>
+                </div>
+              )}
 
               {/* Payment Method */}
               <div className="bg-card border border-border rounded-3xl p-6 md:p-8 shadow-sm">
@@ -277,6 +363,18 @@ export default function Checkout() {
                 ))}
               </div>
 
+              {selectedEvent && (
+                <div className="flex items-start gap-2 px-3 py-2 bg-primary/5 border border-primary/20 rounded-xl text-sm">
+                  <Calendar className="w-3.5 h-3.5 text-primary shrink-0 mt-0.5" />
+                  <div>
+                    <div className="font-semibold text-foreground text-xs">{selectedEvent.name}</div>
+                    <div className="text-xs text-muted-foreground">
+                      {format(new Date(selectedEvent.scheduledAt), "MMM d, yyyy")}
+                    </div>
+                  </div>
+                </div>
+              )}
+
               {appliedCoupon && (
                 <div className="flex items-center gap-2 px-3 py-2 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-xl text-green-700 dark:text-green-400">
                   <Tag className="w-3.5 h-3.5 shrink-0" />
@@ -295,7 +393,7 @@ export default function Checkout() {
                 {discount > 0 && (
                   <div className="flex justify-between text-sm text-green-600 dark:text-green-400 font-semibold">
                     <span>Discount</span>
-                    <span>−{formatMoney(discount)}</span>
+                    <span>-{formatMoney(discount)}</span>
                   </div>
                 )}
                 <div className="flex justify-between items-baseline pt-1 border-t border-border">

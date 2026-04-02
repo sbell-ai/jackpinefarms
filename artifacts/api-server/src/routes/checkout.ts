@@ -119,6 +119,7 @@ export async function createOrderFromData(data: {
   claimToken?: string | null;
   claimTokenExpiresAt?: Date | null;
   appliedCouponCode?: string | null;
+  pickupEventId?: number | null;
 }) {
   const [order] = await db
     .insert(ordersTable)
@@ -136,6 +137,7 @@ export async function createOrderFromData(data: {
       claimToken: data.claimToken ?? null,
       claimTokenExpiresAt: data.claimTokenExpiresAt ?? null,
       appliedCouponCode: data.appliedCouponCode ?? null,
+      pickupEventId: data.pickupEventId ?? null,
     })
     .returning();
 
@@ -177,7 +179,7 @@ router.post("/checkout/stripe", async (req, res): Promise<void> => {
     return;
   }
 
-  const { name: customerName, email: customerEmail, phone: customerPhone, notes } = parsed.data;
+  const { name: customerName, email: customerEmail, phone: customerPhone, notes, pickupEventId } = parsed.data;
 
   const stripe = getStripe();
 
@@ -259,6 +261,7 @@ router.post("/checkout/stripe", async (req, res): Promise<void> => {
     cartSnapshot: orderData.lineItems,
     totalInCents: totalAfterDiscount,
     appliedCouponCode,
+    pickupEventId: pickupEventId ?? null,
   });
 
   res.json({ checkoutUrl: checkoutSession.url, sessionId: checkoutSession.id });
@@ -293,7 +296,7 @@ router.post("/checkout/cash", async (req, res): Promise<void> => {
     return;
   }
 
-  const { name: customerName, email: customerEmail, phone: customerPhone, notes } = parsed.data;
+  const { name: customerName, email: customerEmail, phone: customerPhone, notes, pickupEventId } = parsed.data;
 
   let discountAmountCents = 0;
   let cashCouponCode: string | null = null;
@@ -326,6 +329,7 @@ router.post("/checkout/cash", async (req, res): Promise<void> => {
     claimToken,
     claimTokenExpiresAt,
     appliedCouponCode: cashCouponCode,
+    pickupEventId: pickupEventId ?? null,
   });
   // Note: cash coupon redemption is counted when admin marks the order fulfilled
 

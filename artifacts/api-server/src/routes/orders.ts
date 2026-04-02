@@ -1,7 +1,7 @@
 import "../types/session.d.ts";
 import { Router, type IRouter } from "express";
 import { eq, desc } from "drizzle-orm";
-import { db, ordersTable, orderItemsTable } from "@workspace/db";
+import { db, ordersTable, orderItemsTable, pickupEventsTable } from "@workspace/db";
 
 const router: IRouter = Router();
 
@@ -38,7 +38,21 @@ export async function getOrderWithItems(orderId: number) {
     .from(orderItemsTable)
     .where(eq(orderItemsTable.orderId, orderId));
 
-  return { ...order, items };
+  let pickupEventName: string | null = null;
+  let pickupEventScheduledAt: string | null = null;
+  if (order.pickupEventId != null) {
+    const [event] = await db
+      .select({ name: pickupEventsTable.name, scheduledAt: pickupEventsTable.scheduledAt })
+      .from(pickupEventsTable)
+      .where(eq(pickupEventsTable.id, order.pickupEventId))
+      .limit(1);
+    if (event) {
+      pickupEventName = event.name;
+      pickupEventScheduledAt = event.scheduledAt.toISOString();
+    }
+  }
+
+  return { ...order, items, pickupEventName, pickupEventScheduledAt };
 }
 
 router.get("/orders/by-stripe-session/:sessionId", async (req, res): Promise<void> => {

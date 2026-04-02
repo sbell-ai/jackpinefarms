@@ -12,4 +12,6 @@ export interface CheckoutContactBody {
   phone: string;
   /** @nullable */
   notes?: string | null;
+  /** @nullable */
+  pickupEventId?: number | null;
 }

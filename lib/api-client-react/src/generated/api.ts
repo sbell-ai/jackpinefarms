@@ -74,6 +74,7 @@ import type {
   PickupEventDetail,
   PreorderBatch,
   Product,
+  PublicPickupEvent,
   RegisterBody,
   RemoveCartCoupon200,
   SendInvoicesBody,
@@ -3188,6 +3189,83 @@ export const useAdminUpdateBatch = <
 > => {
   return useMutation(getAdminUpdateBatchMutationOptions(options));
 };
+
+/**
+ * Returns scheduled events where isPublic is true and scheduledAt is in the future.
+ * @summary List upcoming public pickup events (storefront)
+ */
+export const getListPublicPickupEventsUrl = () => {
+  return `/api/pickup-events`;
+};
+
+export const listPublicPickupEvents = async (
+  options?: RequestInit,
+): Promise<PublicPickupEvent[]> => {
+  return customFetch<PublicPickupEvent[]>(getListPublicPickupEventsUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getListPublicPickupEventsQueryKey = () => {
+  return [`/api/pickup-events`] as const;
+};
+
+export const getListPublicPickupEventsQueryOptions = <
+  TData = Awaited<ReturnType<typeof listPublicPickupEvents>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof listPublicPickupEvents>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getListPublicPickupEventsQueryKey();
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof listPublicPickupEvents>>
+  > = ({ signal }) => listPublicPickupEvents({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof listPublicPickupEvents>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type ListPublicPickupEventsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listPublicPickupEvents>>
+>;
+export type ListPublicPickupEventsQueryError = ErrorType<unknown>;
+
+/**
+ * @summary List upcoming public pickup events (storefront)
+ */
+
+export function useListPublicPickupEvents<
+  TData = Awaited<ReturnType<typeof listPublicPickupEvents>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof listPublicPickupEvents>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getListPublicPickupEventsQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
 
 /**
  * @summary List all pickup events (admin)

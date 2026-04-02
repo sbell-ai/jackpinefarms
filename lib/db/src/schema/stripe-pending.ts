@@ -1,5 +1,6 @@
 import { pgTable, text, integer, timestamp, jsonb } from "drizzle-orm/pg-core";
 import { customersTable } from "./customers";
+import { pickupEventsTable } from "./pickup-events";
 
 export type CartLineItem = {
   productId: number;
@@ -22,6 +23,7 @@ export const stripePendingCheckoutsTable = pgTable("stripe_pending_checkouts", {
   cartSnapshot: jsonb("cart_snapshot").notNull().$type<CartLineItem[]>(),
   totalInCents: integer("total_in_cents").notNull(),
   appliedCouponCode: text("applied_coupon_code"),
+  pickupEventId: integer("pickup_event_id").references(() => pickupEventsTable.id),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 

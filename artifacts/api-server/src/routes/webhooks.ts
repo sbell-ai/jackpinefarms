@@ -95,6 +95,7 @@ router.post("/webhooks/stripe", async (req, res): Promise<void> => {
         claimToken,
         claimTokenExpiresAt,
         appliedCouponCode: pending.appliedCouponCode ?? null,
+        pickupEventId: pending.pickupEventId ?? null,
       });
 
       await db

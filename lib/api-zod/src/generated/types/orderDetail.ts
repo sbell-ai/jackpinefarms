@@ -34,6 +34,10 @@ export interface OrderDetail {
   batchId: number | null;
   /** @nullable */
   pickupEventId: number | null;
+  /** @nullable */
+  pickupEventName: string | null;
+  /** @nullable */
+  pickupEventScheduledAt: string | null;
   items: OrderItem[];
   /** @nullable */
   finalWeightLbs: number | null;
