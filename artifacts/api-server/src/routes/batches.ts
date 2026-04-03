@@ -2,7 +2,7 @@ import "../types/session.d.ts";
 import { Router, type IRouter } from "express";
 import { eq, count, inArray } from "drizzle-orm";
 import { db, preorderBatchesTable, ordersTable } from "@workspace/db";
-import { requireAdmin } from "../middlewares/require-admin.js";
+import { requirePlatformAdmin } from "../middlewares/require-admin.js";
 import * as z from "zod";
 
 const router: IRouter = Router();
@@ -45,7 +45,7 @@ async function getBatchWithCount(batchId: number) {
   return { ...batch, orderCount: Number(orderCount) };
 }
 
-router.get("/admin/batches", requireAdmin, async (req, res): Promise<void> => {
+router.get("/admin/batches", requirePlatformAdmin, async (req, res): Promise<void> => {
   const batches = await db
     .select({
       id: preorderBatchesTable.id,
@@ -77,7 +77,7 @@ router.get("/admin/batches", requireAdmin, async (req, res): Promise<void> => {
   res.json(batches.map((b) => ({ ...b, orderCount: countMap.get(b.id) ?? 0 })));
 });
 
-router.get("/admin/batches/:id", requireAdmin, async (req, res): Promise<void> => {
+router.get("/admin/batches/:id", requirePlatformAdmin, async (req, res): Promise<void> => {
   const id = Number(req.params.id);
   if (isNaN(id)) { res.status(400).json({ error: "Invalid id" }); return; }
 
@@ -87,7 +87,7 @@ router.get("/admin/batches/:id", requireAdmin, async (req, res): Promise<void> =
   res.json(batch);
 });
 
-router.post("/admin/batches", requireAdmin, async (req, res): Promise<void> => {
+router.post("/admin/batches", requirePlatformAdmin, async (req, res): Promise<void> => {
   const parsed = CreateBatchBody.safeParse(req.body);
   if (!parsed.success) { res.status(400).json({ error: parsed.error.message }); return; }
 
@@ -99,7 +99,7 @@ router.post("/admin/batches", requireAdmin, async (req, res): Promise<void> => {
   res.status(201).json({ ...batch, orderCount: 0 });
 });
 
-router.patch("/admin/batches/:id", requireAdmin, async (req, res): Promise<void> => {
+router.patch("/admin/batches/:id", requirePlatformAdmin, async (req, res): Promise<void> => {
   const id = Number(req.params.id);
   if (isNaN(id)) { res.status(400).json({ error: "Invalid id" }); return; }
 

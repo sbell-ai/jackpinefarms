@@ -1,7 +1,7 @@
 import { Router, type IRouter } from "express";
 import { eq, desc } from "drizzle-orm";
 import { db, couponsTable } from "@workspace/db";
-import { requireAdmin } from "../middlewares/require-admin.js";
+import { requirePlatformAdmin } from "../middlewares/require-platform-admin.js";
 import { logger } from "../lib/logger.js";
 import { z } from "zod";
 
@@ -67,7 +67,7 @@ async function createStripeObjects(
   return { stripeCouponId: stripeCoupon.id, stripePromotionCodeId: promoCode.id };
 }
 
-router.get("/admin/coupons", requireAdmin, async (_req, res): Promise<void> => {
+router.get("/admin/coupons", requirePlatformAdmin, async (_req, res): Promise<void> => {
   const coupons = await db
     .select()
     .from(couponsTable)
@@ -75,7 +75,7 @@ router.get("/admin/coupons", requireAdmin, async (_req, res): Promise<void> => {
   res.json(coupons);
 });
 
-router.post("/admin/coupons", requireAdmin, async (req, res): Promise<void> => {
+router.post("/admin/coupons", requirePlatformAdmin, async (req, res): Promise<void> => {
   const parsed = CreateCouponBody.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: parsed.error.issues[0]?.message ?? "Invalid request" });
@@ -130,7 +130,7 @@ router.post("/admin/coupons", requireAdmin, async (req, res): Promise<void> => {
   res.status(201).json(coupon);
 });
 
-router.patch("/admin/coupons/:id/toggle", requireAdmin, async (req, res): Promise<void> => {
+router.patch("/admin/coupons/:id/toggle", requirePlatformAdmin, async (req, res): Promise<void> => {
   const id = parseInt(req.params["id"] as string, 10);
   if (isNaN(id)) {
     res.status(400).json({ error: "Invalid coupon ID" });
@@ -201,7 +201,7 @@ router.patch("/admin/coupons/:id/toggle", requireAdmin, async (req, res): Promis
   res.json(updated);
 });
 
-router.delete("/admin/coupons/:id", requireAdmin, async (req, res): Promise<void> => {
+router.delete("/admin/coupons/:id", requirePlatformAdmin, async (req, res): Promise<void> => {
   const id = parseInt(req.params["id"] as string, 10);
   if (isNaN(id)) {
     res.status(400).json({ error: "Invalid coupon ID" });

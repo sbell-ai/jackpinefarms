@@ -22,7 +22,7 @@ import {
   insertDailyEggCollectionSchema,
   insertEggInventoryAdjustmentSchema,
 } from "@workspace/db";
-import { requireAdmin } from "../middlewares/require-admin.js";
+import { requirePlatformAdmin } from "../middlewares/require-admin.js";
 import {
   AdminAllocateEggsParams,
   AdminGetEggAllocationsParams,
@@ -39,12 +39,12 @@ const dateRangeQuery = z.object({
 
 // ─── Flocks ───────────────────────────────────────────────────────────────────
 
-router.get("/admin/flocks", requireAdmin, async (_req, res): Promise<void> => {
+router.get("/admin/flocks", requirePlatformAdmin, async (_req, res): Promise<void> => {
   const flocks = await db.select().from(flocksTable).orderBy(flocksTable.name);
   res.json(flocks);
 });
 
-router.post("/admin/flocks", requireAdmin, async (req, res): Promise<void> => {
+router.post("/admin/flocks", requirePlatformAdmin, async (req, res): Promise<void> => {
   const parsed = insertFlockSchema.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: parsed.error.message });
@@ -54,7 +54,7 @@ router.post("/admin/flocks", requireAdmin, async (req, res): Promise<void> => {
   res.status(201).json(flock);
 });
 
-router.put("/admin/flocks/:id", requireAdmin, async (req, res): Promise<void> => {
+router.put("/admin/flocks/:id", requirePlatformAdmin, async (req, res): Promise<void> => {
   const id = parseInt(String(req.params.id), 10);
   if (isNaN(id)) { res.status(400).json({ error: "Invalid flock id" }); return; }
   const parsed = insertFlockSchema.partial().safeParse(req.body);
@@ -72,7 +72,7 @@ router.put("/admin/flocks/:id", requireAdmin, async (req, res): Promise<void> =>
 
 router.get(
   "/admin/flocks/:id/events",
-  requireAdmin,
+  requirePlatformAdmin,
   async (req, res): Promise<void> => {
     const flockId = parseInt(String(req.params.id), 10);
     if (isNaN(flockId)) { res.status(400).json({ error: "Invalid flock id" }); return; }
@@ -87,7 +87,7 @@ router.get(
 
 router.post(
   "/admin/flocks/:id/events",
-  requireAdmin,
+  requirePlatformAdmin,
   async (req, res): Promise<void> => {
     const flockId = parseInt(String(req.params.id), 10);
     if (isNaN(flockId)) { res.status(400).json({ error: "Invalid flock id" }); return; }
@@ -100,7 +100,7 @@ router.post(
 
 // ─── Animals ──────────────────────────────────────────────────────────────────
 
-router.get("/admin/animals", requireAdmin, async (req, res): Promise<void> => {
+router.get("/admin/animals", requirePlatformAdmin, async (req, res): Promise<void> => {
   const flockIdParam = req.query.flockId ? parseInt(String(req.query.flockId), 10) : undefined;
   const rows = await db
     .select()
@@ -110,7 +110,7 @@ router.get("/admin/animals", requireAdmin, async (req, res): Promise<void> => {
   res.json(rows);
 });
 
-router.post("/admin/animals", requireAdmin, async (req, res): Promise<void> => {
+router.post("/admin/animals", requirePlatformAdmin, async (req, res): Promise<void> => {
   const parsed = insertAnimalSchema.safeParse(req.body);
   if (!parsed.success) { res.status(400).json({ error: parsed.error.message }); return; }
   const [animal] = await db.insert(animalsTable).values(parsed.data).returning();
@@ -121,7 +121,7 @@ router.post("/admin/animals", requireAdmin, async (req, res): Promise<void> => {
 
 router.get(
   "/admin/egg-types",
-  requireAdmin,
+  requirePlatformAdmin,
   async (_req, res): Promise<void> => {
     const eggTypes = await db
       .select()
@@ -133,7 +133,7 @@ router.get(
 
 router.post(
   "/admin/egg-types",
-  requireAdmin,
+  requirePlatformAdmin,
   async (req, res): Promise<void> => {
     const parsed = insertEggTypeSchema.safeParse(req.body);
     if (!parsed.success) {
@@ -152,7 +152,7 @@ router.post(
 
 router.get(
   "/admin/egg-collection",
-  requireAdmin,
+  requirePlatformAdmin,
   async (req, res): Promise<void> => {
     const parsed = dateRangeQuery.safeParse(req.query);
     if (!parsed.success) {
@@ -181,7 +181,7 @@ router.get(
 
 router.post(
   "/admin/egg-collection",
-  requireAdmin,
+  requirePlatformAdmin,
   async (req, res): Promise<void> => {
     const parsed = insertDailyEggCollectionSchema.safeParse(req.body);
     if (!parsed.success) {
@@ -229,7 +229,7 @@ router.post(
 
 router.get(
   "/admin/egg-adjustments",
-  requireAdmin,
+  requirePlatformAdmin,
   async (req, res): Promise<void> => {
     const parsed = dateRangeQuery.safeParse(req.query);
     if (!parsed.success) {
@@ -268,7 +268,7 @@ router.get(
 
 router.post(
   "/admin/egg-adjustments",
-  requireAdmin,
+  requirePlatformAdmin,
   async (req, res): Promise<void> => {
     const parsed = insertEggInventoryAdjustmentSchema.safeParse(req.body);
     if (!parsed.success) {
@@ -330,7 +330,7 @@ router.post(
 
 router.patch(
   "/admin/egg-adjustments/:id",
-  requireAdmin,
+  requirePlatformAdmin,
   async (req, res): Promise<void> => {
     const id = parseInt(String(req.params.id), 10);
     if (isNaN(id)) { res.status(400).json({ error: "Invalid adjustment id" }); return; }
@@ -409,7 +409,7 @@ router.patch(
 
 router.get(
   "/admin/egg-inventory/on-hand",
-  requireAdmin,
+  requirePlatformAdmin,
   async (_req, res): Promise<void> => {
     const [eggTypes, lotTotals, adjTotals] = await Promise.all([
       db.select().from(eggTypesTable),
@@ -452,7 +452,7 @@ router.get(
 
 router.post(
   "/admin/orders/:orderId/allocate-eggs",
-  requireAdmin,
+  requirePlatformAdmin,
   async (req, res): Promise<void> => {
     const parsed = AdminAllocateEggsParams.safeParse(req.params);
     if (!parsed.success) {
@@ -657,7 +657,7 @@ router.post(
 
 router.get(
   "/admin/orders/:orderId/egg-allocations",
-  requireAdmin,
+  requirePlatformAdmin,
   async (req, res): Promise<void> => {
     const parsed = AdminGetEggAllocationsParams.safeParse(req.params);
     if (!parsed.success) {

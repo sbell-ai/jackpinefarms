@@ -2,7 +2,7 @@ import "../types/session.d.ts";
 import { Router, type IRouter } from "express";
 import { eq, desc, count, inArray, ilike, or } from "drizzle-orm";
 import { db, customersTable, ordersTable, orderEventsTable } from "@workspace/db";
-import { requireAdmin } from "../middlewares/require-admin.js";
+import { requirePlatformAdmin } from "../middlewares/require-platform-admin.js";
 import * as z from "zod";
 
 const router: IRouter = Router();
@@ -20,7 +20,7 @@ const CreateAdminCustomerBody = z.object({
   notes: z.string().optional(),
 });
 
-router.get("/admin/customers", requireAdmin, async (req, res): Promise<void> => {
+router.get("/admin/customers", requirePlatformAdmin, async (req, res): Promise<void> => {
   const parsed = ListCustomersQuery.safeParse(req.query);
   if (!parsed.success) { res.status(400).json({ error: parsed.error.message }); return; }
 
@@ -72,7 +72,7 @@ router.get("/admin/customers", requireAdmin, async (req, res): Promise<void> => 
   })));
 });
 
-router.post("/admin/customers", requireAdmin, async (req, res): Promise<void> => {
+router.post("/admin/customers", requirePlatformAdmin, async (req, res): Promise<void> => {
   const parsed = CreateAdminCustomerBody.safeParse(req.body);
   if (!parsed.success) { res.status(400).json({ error: parsed.error.message }); return; }
 
@@ -111,7 +111,7 @@ router.post("/admin/customers", requireAdmin, async (req, res): Promise<void> =>
   res.status(201).json({ ...customer, orderCount: 0 });
 });
 
-router.get("/admin/customers/:id", requireAdmin, async (req, res): Promise<void> => {
+router.get("/admin/customers/:id", requirePlatformAdmin, async (req, res): Promise<void> => {
   const id = Number(req.params.id);
   if (isNaN(id)) { res.status(400).json({ error: "Invalid id" }); return; }
 
@@ -179,7 +179,7 @@ const UpdateCustomerBody = z.object({
   notes: z.string().nullable().optional(),
 });
 
-router.patch("/admin/customers/:id", requireAdmin, async (req, res): Promise<void> => {
+router.patch("/admin/customers/:id", requirePlatformAdmin, async (req, res): Promise<void> => {
   const id = Number(req.params.id);
   if (isNaN(id)) { res.status(400).json({ error: "Invalid id" }); return; }
 
@@ -237,7 +237,7 @@ router.patch("/admin/customers/:id", requireAdmin, async (req, res): Promise<voi
   res.json({ ...updated, orderCount: Number(orderCount?.value ?? 0) });
 });
 
-router.delete("/admin/customers/:id", requireAdmin, async (req, res): Promise<void> => {
+router.delete("/admin/customers/:id", requirePlatformAdmin, async (req, res): Promise<void> => {
   const id = Number(req.params.id);
   if (isNaN(id)) { res.status(400).json({ error: "Invalid id" }); return; }
 

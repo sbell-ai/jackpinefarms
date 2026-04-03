@@ -2,7 +2,7 @@ import { Router, type IRouter } from "express";
 import { eq, desc, gte, lte, and, sql } from "drizzle-orm";
 import { z } from "zod";
 import { db, expensesTable, insertExpenseSchema } from "@workspace/db";
-import { requireAdmin } from "../middlewares/require-admin.js";
+import { requirePlatformAdmin } from "../middlewares/require-admin.js";
 
 const router: IRouter = Router();
 
@@ -14,7 +14,7 @@ const listQuery = z.object({
 
 const idParam = z.object({ id: z.coerce.number().int().positive() });
 
-router.get("/admin/expenses", requireAdmin, async (req, res): Promise<void> => {
+router.get("/admin/expenses", requirePlatformAdmin, async (req, res): Promise<void> => {
   const parsed = listQuery.safeParse(req.query);
   if (!parsed.success) {
     res.status(400).json({ error: "Invalid query parameters" });
@@ -36,7 +36,7 @@ router.get("/admin/expenses", requireAdmin, async (req, res): Promise<void> => {
   res.json(expenses);
 });
 
-router.get("/admin/expenses/summary", requireAdmin, async (req, res): Promise<void> => {
+router.get("/admin/expenses/summary", requirePlatformAdmin, async (req, res): Promise<void> => {
   const parsed = listQuery.safeParse(req.query);
   if (!parsed.success) {
     res.status(400).json({ error: "Invalid query parameters" });
@@ -64,7 +64,7 @@ router.get("/admin/expenses/summary", requireAdmin, async (req, res): Promise<vo
   res.json({ byCategory: rows, totalCents: grandTotal });
 });
 
-router.post("/admin/expenses", requireAdmin, async (req, res): Promise<void> => {
+router.post("/admin/expenses", requirePlatformAdmin, async (req, res): Promise<void> => {
   const parsed = insertExpenseSchema.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: parsed.error.message });
@@ -75,7 +75,7 @@ router.post("/admin/expenses", requireAdmin, async (req, res): Promise<void> => 
   res.status(201).json(expense);
 });
 
-router.patch("/admin/expenses/:id", requireAdmin, async (req, res): Promise<void> => {
+router.patch("/admin/expenses/:id", requirePlatformAdmin, async (req, res): Promise<void> => {
   const params = idParam.safeParse({ id: req.params.id });
   if (!params.success) {
     res.status(400).json({ error: "Invalid expense ID" });
@@ -102,7 +102,7 @@ router.patch("/admin/expenses/:id", requireAdmin, async (req, res): Promise<void
   res.json(expense);
 });
 
-router.delete("/admin/expenses/:id", requireAdmin, async (req, res): Promise<void> => {
+router.delete("/admin/expenses/:id", requirePlatformAdmin, async (req, res): Promise<void> => {
   const params = idParam.safeParse({ id: req.params.id });
   if (!params.success) {
     res.status(400).json({ error: "Invalid expense ID" });

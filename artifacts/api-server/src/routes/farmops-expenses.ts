@@ -6,6 +6,7 @@ import {
   requireFarmopsTenant,
   requireFarmopsPlan,
 } from "../middlewares/require-farmops-tenant.js";
+import { requireFarmopsRole } from "../middlewares/require-farmops-role.js";
 
 const router: IRouter = Router();
 
@@ -71,7 +72,7 @@ router.get("/farmops/expenses/summary", requireFarmopsTenant, async (req, res): 
   res.json({ byCategory: rows, totalCents: grandTotal });
 });
 
-router.post("/farmops/expenses", requireFarmopsTenant, async (req, res): Promise<void> => {
+router.post("/farmops/expenses", requireFarmopsTenant, requireFarmopsRole("admin"), async (req, res): Promise<void> => {
   const tenantId = req.farmopsTenant!.id;
   const parsed = insertExpenseSchema.safeParse({ ...req.body, tenantId });
   if (!parsed.success) {
@@ -86,6 +87,7 @@ router.post("/farmops/expenses", requireFarmopsTenant, async (req, res): Promise
 router.patch(
   "/farmops/expenses/:id",
   requireFarmopsTenant,
+  requireFarmopsRole("admin"),
   async (req, res): Promise<void> => {
     const tenantId = req.farmopsTenant!.id;
     const params = idParam.safeParse({ id: req.params.id });
@@ -118,6 +120,7 @@ router.patch(
 router.delete(
   "/farmops/expenses/:id",
   requireFarmopsTenant,
+  requireFarmopsRole("admin"),
   async (req, res): Promise<void> => {
     const tenantId = req.farmopsTenant!.id;
     const params = idParam.safeParse({ id: req.params.id });

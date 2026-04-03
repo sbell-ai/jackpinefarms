@@ -6,6 +6,7 @@
  */
 import { db } from "@workspace/db";
 import { sql } from "drizzle-orm";
+import bcrypt from "bcryptjs";
 import { logger } from "./logger.js";
 
 export async function runMigrations(): Promise<void> {
@@ -560,6 +561,36 @@ export async function runMigrations(): Promise<void> {
     await db.execute(sql`CREATE INDEX IF NOT EXISTS idx_egg_types_tenant          ON egg_types          (tenant_id)`);
     await db.execute(sql`CREATE INDEX IF NOT EXISTS idx_egg_inventory_lots_tenant ON egg_inventory_lots (tenant_id)`);
     await db.execute(sql`CREATE INDEX IF NOT EXISTS idx_expenses_tenant           ON expenses           (tenant_id)`);
+
+    // ── Platform admins ───────────────────────────────────────────────────────
+    // Replaces the shared ADMIN_PASSWORD env-var credential with a real user row.
+    // The seed only runs once (ON CONFLICT DO NOTHING).
+    // ADMIN_PASSWORD is bcrypt-hashed here — the raw value is never stored.
+
+    await db.execute(sql`
+      CREATE TABLE IF NOT EXISTS platform_admins (
+        id              SERIAL PRIMARY KEY,
+        email           TEXT NOT NULL UNIQUE,
+        name            TEXT NOT NULL,
+        password_hash   TEXT NOT NULL,
+        is_active       BOOLEAN NOT NULL DEFAULT TRUE,
+        last_login_at   TIMESTAMPTZ,
+        created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      )
+    `);
+
+    const rawAdminPassword = process.env.ADMIN_PASSWORD;
+    if (rawAdminPassword) {
+      const hash = await bcrypt.hash(rawAdminPassword, 12);
+      await db.execute(sql`
+        INSERT INTO platform_admins (email, name, password_hash)
+        VALUES ('admin@jackpinefarms.farm', 'Jack Pine Admin', ${hash})
+        ON CONFLICT (email) DO NOTHING
+      `);
+      logger.info("Platform admin seed: row ensured for admin@jackpinefarms.farm");
+    } else {
+      logger.warn("ADMIN_PASSWORD not set — platform_admins table seeded empty. Set the env var and restart to create the first admin.");
+    }
 
     logger.info("Startup migrations complete.");
   } catch (err) {

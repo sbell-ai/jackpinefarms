@@ -1,7 +1,7 @@
 import { Router, type IRouter } from "express";
 import { eq, asc } from "drizzle-orm";
 import { db, cmsMenusTable, cmsMenuItemsTable } from "@workspace/db";
-import { requireAdmin } from "../middlewares/require-admin.js";
+import { requirePlatformAdmin } from "../middlewares/require-platform-admin.js";
 import { z } from "zod";
 
 const router: IRouter = Router();
@@ -35,7 +35,7 @@ async function getMenuWithItems(name: string) {
 // ── Admin routes ──────────────────────────────────────────────────────────────
 
 // GET /admin/cms/menus — list all menus with items
-router.get("/admin/cms/menus", requireAdmin, async (_req, res) => {
+router.get("/admin/cms/menus", requirePlatformAdmin, async (_req, res) => {
   const menus = await db.select().from(cmsMenusTable).orderBy(asc(cmsMenusTable.name));
   const result = await Promise.all(
     menus.map(async (menu) => {
@@ -51,7 +51,7 @@ router.get("/admin/cms/menus", requireAdmin, async (_req, res) => {
 });
 
 // GET /admin/cms/menus/:name — single menu with items
-router.get("/admin/cms/menus/:name", requireAdmin, async (req, res) => {
+router.get("/admin/cms/menus/:name", requirePlatformAdmin, async (req, res) => {
   const menu = await getMenuWithItems(req.params["name"] as string);
   if (!menu) {
     res.status(404).json({ error: "Menu not found" });
@@ -61,7 +61,7 @@ router.get("/admin/cms/menus/:name", requireAdmin, async (req, res) => {
 });
 
 // PUT /admin/cms/menus/:name/items — replace all items for a menu
-router.put("/admin/cms/menus/:name/items", requireAdmin, async (req, res) => {
+router.put("/admin/cms/menus/:name/items", requirePlatformAdmin, async (req, res) => {
   const parsed = PutMenuItemsBody.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: parsed.error.flatten() });

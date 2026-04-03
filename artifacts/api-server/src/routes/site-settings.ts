@@ -1,7 +1,7 @@
 import { Router, type IRouter, type Request, type Response } from "express";
 import { db, siteSettingsTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
-import { requireAdmin } from "../middlewares/require-admin.js";
+import { requirePlatformAdmin } from "../middlewares/require-admin.js";
 
 const router: IRouter = Router();
 
@@ -27,7 +27,7 @@ router.get("/site-settings", async (_req: Request, res: Response) => {
 
 router.put(
   "/admin/site-settings/:key",
-  requireAdmin,
+  requirePlatformAdmin,
   async (req: Request, res: Response) => {
     const { key } = req.params as { key: string };
     if (!ALLOWED_KEYS.has(key)) {

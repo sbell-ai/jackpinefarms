@@ -2,7 +2,7 @@ import { Router, type IRouter } from "express";
 import { eq, asc, count } from "drizzle-orm";
 import { db, productsTable, productImagesTable } from "@workspace/db";
 import { GetProductParams } from "@workspace/api-zod";
-import { requireAdmin } from "../middlewares/require-admin.js";
+import { requirePlatformAdmin } from "../middlewares/require-admin.js";
 import { deleteStorageObject } from "../lib/objectStorage.js";
 import * as z from "zod";
 
@@ -31,7 +31,7 @@ function isAllowedMimeType(contentType: string | undefined): boolean {
 
 router.get(
   "/admin/products/:productId/images",
-  requireAdmin,
+  requirePlatformAdmin,
   async (req, res): Promise<void> => {
     const productId = parseInt(req.params["productId"] as string, 10);
     if (isNaN(productId)) {
@@ -61,7 +61,7 @@ router.get(
 
 router.post(
   "/admin/products/:productId/images",
-  requireAdmin,
+  requirePlatformAdmin,
   async (req, res): Promise<void> => {
     const params = GetProductParams.safeParse({
       id: parseInt(req.params["productId"] as string, 10),
@@ -124,7 +124,7 @@ router.post(
 
 router.delete(
   "/admin/products/:productId/images/:imageId",
-  requireAdmin,
+  requirePlatformAdmin,
   async (req, res): Promise<void> => {
     const productId = parseInt(req.params["productId"] as string, 10);
     const imageId = parseInt(req.params["imageId"] as string, 10);
@@ -159,7 +159,7 @@ router.delete(
 
 router.patch(
   "/admin/products/:productId/images/reorder",
-  requireAdmin,
+  requirePlatformAdmin,
   async (req, res): Promise<void> => {
     const productId = parseInt(req.params["productId"] as string, 10);
     if (isNaN(productId)) {

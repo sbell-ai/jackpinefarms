@@ -4,7 +4,7 @@ import { z } from "zod";
 import { desc } from "drizzle-orm";
 import { db, contactSubmissionsTable } from "@workspace/db";
 import { sendEmail } from "../lib/email.js";
-import { requireAdmin } from "../middlewares/require-admin.js";
+import { requirePlatformAdmin } from "../middlewares/require-admin.js";
 import { logger } from "../lib/logger.js";
 
 const router: IRouter = Router();
@@ -136,7 +136,7 @@ router.post("/contact", contactLimiter, async (req: Request, res: Response): Pro
   res.json({ ok: true });
 });
 
-router.get("/contact/submissions", requireAdmin, async (_req: Request, res: Response): Promise<void> => {
+router.get("/contact/submissions", requirePlatformAdmin, async (_req: Request, res: Response): Promise<void> => {
   const rows = await db
     .select({
       id: contactSubmissionsTable.id,

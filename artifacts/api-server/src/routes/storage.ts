@@ -6,7 +6,7 @@ import {
 } from "@workspace/api-zod";
 import { ObjectStorageService, ObjectNotFoundError } from "../lib/objectStorage";
 import { ObjectPermission } from "../lib/objectAcl";
-import { requireAdmin } from "../middlewares/require-admin.js";
+import { requirePlatformAdmin } from "../middlewares/require-admin.js";
 
 const router: IRouter = Router();
 const objectStorageService = new ObjectStorageService();
@@ -20,7 +20,7 @@ const MAX_UPLOAD_SIZE_BYTES = 10 * 1024 * 1024; // 10 MB
  * The client sends JSON metadata (name, size, contentType) — NOT the file.
  * Then uploads the file directly to the returned presigned URL.
  */
-router.post("/storage/uploads/request-url", requireAdmin, async (req: Request, res: Response) => {
+router.post("/storage/uploads/request-url", requirePlatformAdmin, async (req: Request, res: Response) => {
   const parsed = RequestUploadUrlBody.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: "Missing or invalid required fields" });
@@ -94,7 +94,7 @@ router.get("/storage/public-objects/*filePath", async (req: Request, res: Respon
  * These are served from a separate path from /public-objects and can optionally
  * be protected with authentication or ACL checks based on the use case.
  */
-router.get("/storage/objects/*path", requireAdmin, async (req: Request, res: Response) => {
+router.get("/storage/objects/*path", requirePlatformAdmin, async (req: Request, res: Response) => {
   try {
     const raw = req.params.path;
     const wildcardPath = Array.isArray(raw) ? raw.join("/") : raw;

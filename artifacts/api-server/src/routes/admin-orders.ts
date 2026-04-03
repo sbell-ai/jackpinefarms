@@ -2,7 +2,7 @@ import "../types/session.d.ts";
 import { Router, type IRouter } from "express";
 import { desc, eq, and, SQL, sql } from "drizzle-orm";
 import { db, ordersTable, orderEventsTable, orderItemsTable, preorderBatchesTable, couponsTable } from "@workspace/db";
-import { requireAdmin } from "../middlewares/require-admin.js";
+import { requirePlatformAdmin } from "../middlewares/require-platform-admin.js";
 import { AdminListOrdersQueryParams, AdminGetOrderParams } from "@workspace/api-zod";
 import { getOrderWithItems } from "./orders.js";
 import { buildOrderItems } from "./checkout.js";
@@ -51,7 +51,7 @@ function getStripe() {
   return new Stripe(key, { apiVersion: "2025-02-24.acacia" });
 }
 
-router.get("/admin/orders", requireAdmin, async (req, res): Promise<void> => {
+router.get("/admin/orders", requirePlatformAdmin, async (req, res): Promise<void> => {
   const parsed = AdminListOrdersQueryParams.safeParse(req.query);
   if (!parsed.success) {
     res.status(400).json({ error: parsed.error.message });
@@ -92,7 +92,7 @@ router.get("/admin/orders", requireAdmin, async (req, res): Promise<void> => {
   );
 });
 
-router.post("/admin/orders", requireAdmin, async (req, res): Promise<void> => {
+router.post("/admin/orders", requirePlatformAdmin, async (req, res): Promise<void> => {
   const parsed = CreateAdminOrderBody.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: parsed.error.message });
@@ -126,7 +126,7 @@ router.post("/admin/orders", requireAdmin, async (req, res): Promise<void> => {
   res.status(201).json(orderWithItems);
 });
 
-router.post("/admin/orders/:id/items", requireAdmin, async (req, res): Promise<void> => {
+router.post("/admin/orders/:id/items", requirePlatformAdmin, async (req, res): Promise<void> => {
   const id = Number(req.params.id);
   if (isNaN(id)) { res.status(400).json({ error: "Invalid id" }); return; }
 
@@ -180,7 +180,7 @@ router.post("/admin/orders/:id/items", requireAdmin, async (req, res): Promise<v
   res.json(orderWithItems);
 });
 
-router.post("/admin/orders/:id/finalize", requireAdmin, async (req, res): Promise<void> => {
+router.post("/admin/orders/:id/finalize", requirePlatformAdmin, async (req, res): Promise<void> => {
   const id = Number(req.params.id);
   if (isNaN(id)) { res.status(400).json({ error: "Invalid id" }); return; }
 
@@ -267,7 +267,7 @@ router.post("/admin/orders/:id/finalize", requireAdmin, async (req, res): Promis
   }
 });
 
-router.get("/admin/orders/:id", requireAdmin, async (req, res): Promise<void> => {
+router.get("/admin/orders/:id", requirePlatformAdmin, async (req, res): Promise<void> => {
   const parsed = AdminGetOrderParams.safeParse({ id: Number(req.params.id) });
   if (!parsed.success) {
     res.status(400).json({ error: parsed.error.message });
@@ -283,7 +283,7 @@ router.get("/admin/orders/:id", requireAdmin, async (req, res): Promise<void> =>
   res.json(order);
 });
 
-router.patch("/admin/orders/:id/status", requireAdmin, async (req, res): Promise<void> => {
+router.patch("/admin/orders/:id/status", requirePlatformAdmin, async (req, res): Promise<void> => {
   const id = Number(req.params.id);
   if (isNaN(id)) { res.status(400).json({ error: "Invalid id" }); return; }
 
@@ -319,7 +319,7 @@ router.patch("/admin/orders/:id/status", requireAdmin, async (req, res): Promise
   res.json(order);
 });
 
-router.post("/admin/orders/:id/refund-giblets", requireAdmin, async (req, res): Promise<void> => {
+router.post("/admin/orders/:id/refund-giblets", requirePlatformAdmin, async (req, res): Promise<void> => {
   const id = Number(req.params.id);
   if (isNaN(id)) { res.status(400).json({ error: "Invalid id" }); return; }
 
@@ -388,7 +388,7 @@ const AdminRefundBody = z.object({
   reason: z.string().optional(),
 });
 
-router.post("/admin/orders/:id/refund", requireAdmin, async (req, res): Promise<void> => {
+router.post("/admin/orders/:id/refund", requirePlatformAdmin, async (req, res): Promise<void> => {
   const id = Number(req.params.id);
   if (isNaN(id)) { res.status(400).json({ error: "Invalid id" }); return; }
 
@@ -439,7 +439,7 @@ router.post("/admin/orders/:id/refund", requireAdmin, async (req, res): Promise<
   }
 });
 
-router.post("/admin/orders/:id/notes", requireAdmin, async (req, res): Promise<void> => {
+router.post("/admin/orders/:id/notes", requirePlatformAdmin, async (req, res): Promise<void> => {
   const id = Number(req.params.id);
   if (isNaN(id)) { res.status(400).json({ error: "Invalid id" }); return; }
 
@@ -457,7 +457,7 @@ router.post("/admin/orders/:id/notes", requireAdmin, async (req, res): Promise<v
   res.status(201).json(event);
 });
 
-router.get("/admin/orders/:id/events", requireAdmin, async (req, res): Promise<void> => {
+router.get("/admin/orders/:id/events", requirePlatformAdmin, async (req, res): Promise<void> => {
   const id = Number(req.params.id);
   if (isNaN(id)) { res.status(400).json({ error: "Invalid id" }); return; }
 
@@ -473,7 +473,7 @@ router.get("/admin/orders/:id/events", requireAdmin, async (req, res): Promise<v
   res.json(events);
 });
 
-router.patch("/admin/orders/:id/assign-batch", requireAdmin, async (req, res): Promise<void> => {
+router.patch("/admin/orders/:id/assign-batch", requirePlatformAdmin, async (req, res): Promise<void> => {
   const id = Number(req.params.id);
   if (isNaN(id)) { res.status(400).json({ error: "Invalid id" }); return; }
 
@@ -494,7 +494,7 @@ const SendOrderInvoiceBody = z.object({
   variant: z.enum(["whole", "half", "quarter"]).default("whole"),
 });
 
-router.post("/admin/orders/:id/send-invoice", requireAdmin, async (req, res): Promise<void> => {
+router.post("/admin/orders/:id/send-invoice", requirePlatformAdmin, async (req, res): Promise<void> => {
   const id = Number(req.params.id);
   if (isNaN(id)) { res.status(400).json({ error: "Invalid id" }); return; }
 
@@ -595,7 +595,7 @@ const UpdateOrderBody = z.object({
   pickupEventId: z.number().int().positive().nullable().optional(),
 });
 
-router.patch("/admin/orders/:id", requireAdmin, async (req, res): Promise<void> => {
+router.patch("/admin/orders/:id", requirePlatformAdmin, async (req, res): Promise<void> => {
   const id = Number(req.params.id);
   if (isNaN(id)) { res.status(400).json({ error: "Invalid id" }); return; }
 
@@ -625,7 +625,7 @@ router.patch("/admin/orders/:id", requireAdmin, async (req, res): Promise<void> 
   res.json(order);
 });
 
-router.delete("/admin/orders/:id", requireAdmin, async (req, res): Promise<void> => {
+router.delete("/admin/orders/:id", requirePlatformAdmin, async (req, res): Promise<void> => {
   const id = Number(req.params.id);
   if (isNaN(id)) { res.status(400).json({ error: "Invalid id" }); return; }
 

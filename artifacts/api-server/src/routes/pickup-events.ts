@@ -2,7 +2,7 @@ import "../types/session.d.ts";
 import { Router, type IRouter } from "express";
 import { eq, count, inArray, isNull, and, not, gt, gte } from "drizzle-orm";
 import { db, pickupEventsTable, ordersTable, orderEventsTable, orderItemsTable, preorderBatchesTable } from "@workspace/db";
-import { requireAdmin } from "../middlewares/require-admin.js";
+import { requirePlatformAdmin } from "../middlewares/require-admin.js";
 import { createStripeInvoice } from "../lib/stripe-invoice.js";
 import * as z from "zod";
 
@@ -97,7 +97,7 @@ router.get("/pickup-events", async (req, res): Promise<void> => {
   res.json(result);
 });
 
-router.get("/admin/pickup-events", requireAdmin, async (req, res): Promise<void> => {
+router.get("/admin/pickup-events", requirePlatformAdmin, async (req, res): Promise<void> => {
   const events = await db
     .select()
     .from(pickupEventsTable)
@@ -118,7 +118,7 @@ router.get("/admin/pickup-events", requireAdmin, async (req, res): Promise<void>
   res.json(events.map((e) => ({ ...e, assignedOrderCount: countMap.get(e.id) ?? 0 })));
 });
 
-router.get("/admin/pickup-events/:id", requireAdmin, async (req, res): Promise<void> => {
+router.get("/admin/pickup-events/:id", requirePlatformAdmin, async (req, res): Promise<void> => {
   const id = Number(req.params.id);
   if (isNaN(id)) { res.status(400).json({ error: "Invalid id" }); return; }
 
@@ -204,7 +204,7 @@ router.get("/admin/pickup-events/:id", requireAdmin, async (req, res): Promise<v
   res.json({ ...event, orders: ordersWithItems, unassignedOrders: unassignedWithItems });
 });
 
-router.post("/admin/pickup-events", requireAdmin, async (req, res): Promise<void> => {
+router.post("/admin/pickup-events", requirePlatformAdmin, async (req, res): Promise<void> => {
   const parsed = CreatePickupEventBody.safeParse(req.body);
   if (!parsed.success) { res.status(400).json({ error: parsed.error.message }); return; }
 
@@ -216,7 +216,7 @@ router.post("/admin/pickup-events", requireAdmin, async (req, res): Promise<void
   res.status(201).json({ ...event, assignedOrderCount: 0 });
 });
 
-router.patch("/admin/pickup-events/:id", requireAdmin, async (req, res): Promise<void> => {
+router.patch("/admin/pickup-events/:id", requirePlatformAdmin, async (req, res): Promise<void> => {
   const id = Number(req.params.id);
   if (isNaN(id)) { res.status(400).json({ error: "Invalid id" }); return; }
 
@@ -235,7 +235,7 @@ router.patch("/admin/pickup-events/:id", requireAdmin, async (req, res): Promise
   res.json(event);
 });
 
-router.post("/admin/pickup-events/:id/assign-order", requireAdmin, async (req, res): Promise<void> => {
+router.post("/admin/pickup-events/:id/assign-order", requirePlatformAdmin, async (req, res): Promise<void> => {
   const eventId = Number(req.params.id);
   if (isNaN(eventId)) { res.status(400).json({ error: "Invalid id" }); return; }
 
@@ -269,7 +269,7 @@ router.post("/admin/pickup-events/:id/assign-order", requireAdmin, async (req, r
   res.json({ message: "Order and all its items assigned to pickup event" });
 });
 
-router.post("/admin/pickup-events/:id/assign-item", requireAdmin, async (req, res): Promise<void> => {
+router.post("/admin/pickup-events/:id/assign-item", requirePlatformAdmin, async (req, res): Promise<void> => {
   const eventId = Number(req.params.id);
   if (isNaN(eventId)) { res.status(400).json({ error: "Invalid id" }); return; }
 
@@ -306,7 +306,7 @@ router.post("/admin/pickup-events/:id/assign-item", requireAdmin, async (req, re
   res.json({ message: "Item assigned to pickup event", orderItemId, eventId });
 });
 
-router.post("/admin/pickup-events/:id/send-invoices", requireAdmin, async (req, res): Promise<void> => {
+router.post("/admin/pickup-events/:id/send-invoices", requirePlatformAdmin, async (req, res): Promise<void> => {
   const eventId = Number(req.params.id);
   if (isNaN(eventId)) { res.status(400).json({ error: "Invalid id" }); return; }
 

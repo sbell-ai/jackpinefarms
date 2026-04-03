@@ -17,3 +17,4 @@ export * from "./cms-menus";
 export * from "./farmops-tenants";
 export * from "./farmops-users";
 export * from "./farmops-invitations";
+export * from "./platform-admins";

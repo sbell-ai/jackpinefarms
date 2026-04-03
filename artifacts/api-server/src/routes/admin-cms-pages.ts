@@ -1,7 +1,7 @@
 import { Router, type IRouter } from "express";
 import { eq, desc } from "drizzle-orm";
 import { db, cmsPagesTable, cmsPageSeoTable } from "@workspace/db";
-import { requireAdmin } from "../middlewares/require-admin.js";
+import { requirePlatformAdmin } from "../middlewares/require-platform-admin.js";
 import { z } from "zod";
 import sanitizeHtml from "sanitize-html";
 
@@ -50,7 +50,7 @@ const UpdateSeoBody = z.object({
 });
 
 // GET /admin/cms/pages
-router.get("/admin/cms/pages", requireAdmin, async (_req, res): Promise<void> => {
+router.get("/admin/cms/pages", requirePlatformAdmin, async (_req, res): Promise<void> => {
   const pages = await db
     .select()
     .from(cmsPagesTable)
@@ -59,7 +59,7 @@ router.get("/admin/cms/pages", requireAdmin, async (_req, res): Promise<void> =>
 });
 
 // POST /admin/cms/pages
-router.post("/admin/cms/pages", requireAdmin, async (req, res): Promise<void> => {
+router.post("/admin/cms/pages", requirePlatformAdmin, async (req, res): Promise<void> => {
   const parsed = CreatePageBody.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: parsed.error.issues[0]?.message ?? "Invalid request" });
@@ -88,7 +88,7 @@ router.post("/admin/cms/pages", requireAdmin, async (req, res): Promise<void> =>
 });
 
 // GET /admin/cms/pages/:id
-router.get("/admin/cms/pages/:id", requireAdmin, async (req, res): Promise<void> => {
+router.get("/admin/cms/pages/:id", requirePlatformAdmin, async (req, res): Promise<void> => {
   const id = parseInt(req.params["id"] as string, 10);
   if (isNaN(id)) {
     res.status(400).json({ error: "Invalid page ID" });
@@ -110,7 +110,7 @@ router.get("/admin/cms/pages/:id", requireAdmin, async (req, res): Promise<void>
 });
 
 // PATCH /admin/cms/pages/:id
-router.patch("/admin/cms/pages/:id", requireAdmin, async (req, res): Promise<void> => {
+router.patch("/admin/cms/pages/:id", requirePlatformAdmin, async (req, res): Promise<void> => {
   const id = parseInt(req.params["id"] as string, 10);
   if (isNaN(id)) {
     res.status(400).json({ error: "Invalid page ID" });
@@ -156,7 +156,7 @@ router.patch("/admin/cms/pages/:id", requireAdmin, async (req, res): Promise<voi
 });
 
 // POST /admin/cms/pages/:id/publish
-router.post("/admin/cms/pages/:id/publish", requireAdmin, async (req, res): Promise<void> => {
+router.post("/admin/cms/pages/:id/publish", requirePlatformAdmin, async (req, res): Promise<void> => {
   const id = parseInt(req.params["id"] as string, 10);
   if (isNaN(id)) {
     res.status(400).json({ error: "Invalid page ID" });
@@ -178,7 +178,7 @@ router.post("/admin/cms/pages/:id/publish", requireAdmin, async (req, res): Prom
 });
 
 // POST /admin/cms/pages/:id/unpublish
-router.post("/admin/cms/pages/:id/unpublish", requireAdmin, async (req, res): Promise<void> => {
+router.post("/admin/cms/pages/:id/unpublish", requirePlatformAdmin, async (req, res): Promise<void> => {
   const id = parseInt(req.params["id"] as string, 10);
   if (isNaN(id)) {
     res.status(400).json({ error: "Invalid page ID" });
@@ -200,7 +200,7 @@ router.post("/admin/cms/pages/:id/unpublish", requireAdmin, async (req, res): Pr
 });
 
 // GET /admin/cms/pages/:id/seo
-router.get("/admin/cms/pages/:id/seo", requireAdmin, async (req, res): Promise<void> => {
+router.get("/admin/cms/pages/:id/seo", requirePlatformAdmin, async (req, res): Promise<void> => {
   const id = parseInt(req.params["id"] as string, 10);
   if (isNaN(id)) {
     res.status(400).json({ error: "Invalid page ID" });
@@ -228,7 +228,7 @@ router.get("/admin/cms/pages/:id/seo", requireAdmin, async (req, res): Promise<v
 });
 
 // PATCH /admin/cms/pages/:id/seo
-router.patch("/admin/cms/pages/:id/seo", requireAdmin, async (req, res): Promise<void> => {
+router.patch("/admin/cms/pages/:id/seo", requirePlatformAdmin, async (req, res): Promise<void> => {
   const id = parseInt(req.params["id"] as string, 10);
   if (isNaN(id)) {
     res.status(400).json({ error: "Invalid page ID" });

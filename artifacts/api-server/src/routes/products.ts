@@ -14,7 +14,7 @@ import {
   SubscribeNotifyMeResponse,
   ListProductsQueryParams,
 } from "@workspace/api-zod";
-import { requireAdmin } from "../middlewares/require-admin";
+import { requirePlatformAdmin } from "../middlewares/require-admin";
 import { generateUnsubscribeToken } from "./notify-me.js";
 import { sendEmail } from "../lib/email.js";
 import sanitizeHtml from "sanitize-html";
@@ -135,7 +135,7 @@ router.get("/products", async (req, res): Promise<void> => {
   res.json(ListProductsResponse.parse(productsWithImages));
 });
 
-router.post("/products", requireAdmin, async (req, res): Promise<void> => {
+router.post("/products", requirePlatformAdmin, async (req, res): Promise<void> => {
   const parsed = CreateProductBody.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: parsed.error.message });
@@ -196,7 +196,7 @@ router.get("/products/:id", async (req, res): Promise<void> => {
   res.json(GetProductResponse.parse({ ...product, images }));
 });
 
-router.patch("/products/:id", requireAdmin, async (req, res): Promise<void> => {
+router.patch("/products/:id", requirePlatformAdmin, async (req, res): Promise<void> => {
   const rawId = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
   const params = UpdateProductParams.safeParse({ id: parseInt(rawId, 10) });
   if (!params.success) {
