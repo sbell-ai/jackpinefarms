@@ -541,6 +541,80 @@ export const AdminGetOrderResponse = zod.object({
 });
 
 /**
+ * @summary Update order customer details (admin)
+ */
+export const AdminUpdateOrderParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const AdminUpdateOrderBody = zod.object({
+  customerName: zod.string().optional(),
+  customerEmail: zod.string().email().optional(),
+  customerPhone: zod.string().optional(),
+  notes: zod.string().nullish(),
+  pickupEventId: zod.number().nullish(),
+});
+
+export const AdminUpdateOrderResponse = zod.object({
+  id: zod.number(),
+  customerId: zod.number().nullable(),
+  customerName: zod.string(),
+  customerEmail: zod.string(),
+  customerPhone: zod.string(),
+  status: zod.enum([
+    "pending_payment",
+    "deposit_paid",
+    "cash_pending",
+    "pickup_assigned",
+    "weights_entered",
+    "invoice_sent",
+    "fulfilled",
+    "cancelled",
+    "no_show",
+  ]),
+  paymentMethod: zod.enum(["stripe", "cash"]),
+  source: zod.string().describe("Order origin — storefront or admin"),
+  stripeCheckoutSessionId: zod.string().nullable(),
+  stripeCheckoutUrl: zod.string().nullable(),
+  stripeInvoiceId: zod.string().nullable(),
+  totalInCents: zod.number(),
+  notes: zod.string().nullable(),
+  refundedGiblets: zod.boolean(),
+  batchId: zod.number().nullable(),
+  pickupEventId: zod.number().nullable(),
+  pickupEventName: zod.string().nullable(),
+  pickupEventScheduledAt: zod.string().nullable(),
+  items: zod.array(
+    zod.object({
+      id: zod.number(),
+      productId: zod.number().nullable(),
+      productName: zod.string(),
+      quantity: zod.number(),
+      pricingType: zod.enum(["unit", "deposit"]),
+      unitPriceInCents: zod.number(),
+      unitLabel: zod.string().nullable(),
+      variantLabel: zod.string().nullable(),
+      isGiblets: zod.boolean(),
+      lineTotalInCents: zod.number(),
+    }),
+  ),
+  finalWeightLbs: zod.number().nullable(),
+  createdAt: zod.date(),
+  updatedAt: zod.date(),
+});
+
+/**
+ * @summary Delete an order (admin)
+ */
+export const AdminDeleteOrderParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const AdminDeleteOrderResponse = zod.object({
+  message: zod.string(),
+});
+
+/**
  * @summary Register a new customer account
  */
 export const authRegisterBodyPasswordMin = 8;
@@ -1591,6 +1665,41 @@ export const AdminGetCustomerResponse = zod.object({
     }),
   ),
   createdAt: zod.date(),
+});
+
+/**
+ * @summary Update customer details (admin)
+ */
+export const AdminUpdateCustomerParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const AdminUpdateCustomerBody = zod.object({
+  name: zod.string().optional(),
+  email: zod.string().email().nullish(),
+  phone: zod.string().nullish(),
+  notes: zod.string().nullish(),
+});
+
+export const AdminUpdateCustomerResponse = zod.object({
+  id: zod.number(),
+  email: zod.string().nullable(),
+  name: zod.string(),
+  phone: zod.string().nullable(),
+  notes: zod.string().nullable(),
+  orderCount: zod.number(),
+  createdAt: zod.date(),
+});
+
+/**
+ * @summary Delete a customer (admin) — fails with 409 if they have orders
+ */
+export const AdminDeleteCustomerParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const AdminDeleteCustomerResponse = zod.object({
+  message: zod.string(),
 });
 
 /**

@@ -324,6 +324,11 @@ export async function runMigrations(): Promise<void> {
     await db.execute(sql.raw(`ALTER TABLE pickup_events ADD COLUMN IF NOT EXISTS capacity INTEGER`));
     await db.execute(sql.raw(`ALTER TABLE stripe_pending_checkouts ADD COLUMN IF NOT EXISTS pickup_event_id INTEGER REFERENCES pickup_events(id)`));
 
+    // ── Order items schema evolution (Task #18) ──────────────────────────────
+    // variant_label was added to the Drizzle schema but never migrated to the DB,
+    // causing GET /admin/orders/:id to return 500 on every request.
+    await db.execute(sql.raw(`ALTER TABLE order_items ADD COLUMN IF NOT EXISTS variant_label TEXT`));
+
     // ── Orders schema evolution (Task #14) ──────────────────────────────────
     // Add source column to distinguish storefront vs admin-created orders
     await db.execute(sql.raw(

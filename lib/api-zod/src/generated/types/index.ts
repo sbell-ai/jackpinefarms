@@ -23,6 +23,8 @@ export * from "./adminLoginBody";
 export * from "./adminMeResponse";
 export * from "./adminSetOrderItemsBody";
 export * from "./adminSetOrderItemsBodyItem";
+export * from "./adminUpdateCustomerBody";
+export * from "./adminUpdateOrderBody";
 export * from "./allocateEggsAlreadyAllocated";
 export * from "./allocateEggsResponse";
 export * from "./appliedCoupon";

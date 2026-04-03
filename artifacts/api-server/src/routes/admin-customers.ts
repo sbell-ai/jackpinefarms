@@ -172,4 +172,94 @@ router.get("/admin/customers/:id", requireAdmin, async (req, res): Promise<void>
   });
 });
 
+const UpdateCustomerBody = z.object({
+  name: z.string().min(1).optional(),
+  email: z.string().email().nullable().optional(),
+  phone: z.string().nullable().optional(),
+  notes: z.string().nullable().optional(),
+});
+
+router.patch("/admin/customers/:id", requireAdmin, async (req, res): Promise<void> => {
+  const id = Number(req.params.id);
+  if (isNaN(id)) { res.status(400).json({ error: "Invalid id" }); return; }
+
+  const parsed = UpdateCustomerBody.safeParse(req.body);
+  if (!parsed.success) { res.status(400).json({ error: parsed.error.message }); return; }
+
+  const [existing] = await db
+    .select({ id: customersTable.id })
+    .from(customersTable)
+    .where(eq(customersTable.id, id))
+    .limit(1);
+  if (!existing) { res.status(404).json({ error: "Customer not found" }); return; }
+
+  if (parsed.data.email !== undefined && parsed.data.email !== null) {
+    const [dupe] = await db
+      .select({ id: customersTable.id })
+      .from(customersTable)
+      .where(eq(customersTable.email, parsed.data.email))
+      .limit(1);
+    if (dupe && dupe.id !== id) {
+      res.status(409).json({ error: "A customer with this email already exists." });
+      return;
+    }
+  }
+
+  const updates: Record<string, unknown> = {};
+  if (parsed.data.name !== undefined) updates.name = parsed.data.name;
+  if (parsed.data.email !== undefined) updates.email = parsed.data.email;
+  if (parsed.data.phone !== undefined) updates.phone = parsed.data.phone;
+  if (parsed.data.notes !== undefined) updates.notes = parsed.data.notes;
+
+  if (Object.keys(updates).length > 0) {
+    await db.update(customersTable).set(updates).where(eq(customersTable.id, id));
+  }
+
+  const [updated] = await db
+    .select({
+      id: customersTable.id,
+      name: customersTable.name,
+      email: customersTable.email,
+      phone: customersTable.phone,
+      notes: customersTable.notes,
+      emailVerified: customersTable.emailVerified,
+      createdAt: customersTable.createdAt,
+    })
+    .from(customersTable)
+    .where(eq(customersTable.id, id))
+    .limit(1);
+
+  const [orderCount] = await db
+    .select({ value: count() })
+    .from(ordersTable)
+    .where(eq(ordersTable.customerId, id));
+
+  res.json({ ...updated, orderCount: Number(orderCount?.value ?? 0) });
+});
+
+router.delete("/admin/customers/:id", requireAdmin, async (req, res): Promise<void> => {
+  const id = Number(req.params.id);
+  if (isNaN(id)) { res.status(400).json({ error: "Invalid id" }); return; }
+
+  const [existing] = await db
+    .select({ id: customersTable.id })
+    .from(customersTable)
+    .where(eq(customersTable.id, id))
+    .limit(1);
+  if (!existing) { res.status(404).json({ error: "Customer not found" }); return; }
+
+  const [orderCountRow] = await db
+    .select({ value: count() })
+    .from(ordersTable)
+    .where(eq(ordersTable.customerId, id));
+  const orderCount = Number(orderCountRow?.value ?? 0);
+  if (orderCount > 0) {
+    res.status(409).json({ error: `Cannot delete — this customer has ${orderCount} order${orderCount !== 1 ? "s" : ""}. Remove their orders first.` });
+    return;
+  }
+
+  await db.delete(customersTable).where(eq(customersTable.id, id));
+  res.json({ success: true });
+});
+
 export default router;

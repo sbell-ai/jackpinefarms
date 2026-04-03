@@ -33,6 +33,8 @@ import type {
   AdminLoginBody,
   AdminMeResponse,
   AdminSetOrderItemsBody,
+  AdminUpdateCustomerBody,
+  AdminUpdateOrderBody,
   AllocateEggsAlreadyAllocated,
   AllocateEggsResponse,
   ApplyCartCouponBody,
@@ -1549,6 +1551,177 @@ export function useAdminGetOrder<
 
   return { ...query, queryKey: queryOptions.queryKey };
 }
+
+/**
+ * @summary Update order customer details (admin)
+ */
+export const getAdminUpdateOrderUrl = (id: number) => {
+  return `/api/admin/orders/${id}`;
+};
+
+export const adminUpdateOrder = async (
+  id: number,
+  adminUpdateOrderBody: AdminUpdateOrderBody,
+  options?: RequestInit,
+): Promise<OrderDetail> => {
+  return customFetch<OrderDetail>(getAdminUpdateOrderUrl(id), {
+    ...options,
+    method: "PATCH",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(adminUpdateOrderBody),
+  });
+};
+
+export const getAdminUpdateOrderMutationOptions = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof adminUpdateOrder>>,
+    TError,
+    { id: number; data: BodyType<AdminUpdateOrderBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof adminUpdateOrder>>,
+  TError,
+  { id: number; data: BodyType<AdminUpdateOrderBody> },
+  TContext
+> => {
+  const mutationKey = ["adminUpdateOrder"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof adminUpdateOrder>>,
+    { id: number; data: BodyType<AdminUpdateOrderBody> }
+  > = (props) => {
+    const { id, data } = props ?? {};
+
+    return adminUpdateOrder(id, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type AdminUpdateOrderMutationResult = NonNullable<
+  Awaited<ReturnType<typeof adminUpdateOrder>>
+>;
+export type AdminUpdateOrderMutationBody = BodyType<AdminUpdateOrderBody>;
+export type AdminUpdateOrderMutationError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary Update order customer details (admin)
+ */
+export const useAdminUpdateOrder = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof adminUpdateOrder>>,
+    TError,
+    { id: number; data: BodyType<AdminUpdateOrderBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof adminUpdateOrder>>,
+  TError,
+  { id: number; data: BodyType<AdminUpdateOrderBody> },
+  TContext
+> => {
+  return useMutation(getAdminUpdateOrderMutationOptions(options));
+};
+
+/**
+ * @summary Delete an order (admin)
+ */
+export const getAdminDeleteOrderUrl = (id: number) => {
+  return `/api/admin/orders/${id}`;
+};
+
+export const adminDeleteOrder = async (
+  id: number,
+  options?: RequestInit,
+): Promise<SuccessResponse> => {
+  return customFetch<SuccessResponse>(getAdminDeleteOrderUrl(id), {
+    ...options,
+    method: "DELETE",
+  });
+};
+
+export const getAdminDeleteOrderMutationOptions = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof adminDeleteOrder>>,
+    TError,
+    { id: number },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof adminDeleteOrder>>,
+  TError,
+  { id: number },
+  TContext
+> => {
+  const mutationKey = ["adminDeleteOrder"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof adminDeleteOrder>>,
+    { id: number }
+  > = (props) => {
+    const { id } = props ?? {};
+
+    return adminDeleteOrder(id, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type AdminDeleteOrderMutationResult = NonNullable<
+  Awaited<ReturnType<typeof adminDeleteOrder>>
+>;
+
+export type AdminDeleteOrderMutationError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary Delete an order (admin)
+ */
+export const useAdminDeleteOrder = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof adminDeleteOrder>>,
+    TError,
+    { id: number },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof adminDeleteOrder>>,
+  TError,
+  { id: number },
+  TContext
+> => {
+  return useMutation(getAdminDeleteOrderMutationOptions(options));
+};
 
 /**
  * @summary Register a new customer account
@@ -4899,6 +5072,177 @@ export function useAdminGetCustomer<
 
   return { ...query, queryKey: queryOptions.queryKey };
 }
+
+/**
+ * @summary Update customer details (admin)
+ */
+export const getAdminUpdateCustomerUrl = (id: number) => {
+  return `/api/admin/customers/${id}`;
+};
+
+export const adminUpdateCustomer = async (
+  id: number,
+  adminUpdateCustomerBody: AdminUpdateCustomerBody,
+  options?: RequestInit,
+): Promise<AdminCustomerSummary> => {
+  return customFetch<AdminCustomerSummary>(getAdminUpdateCustomerUrl(id), {
+    ...options,
+    method: "PATCH",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(adminUpdateCustomerBody),
+  });
+};
+
+export const getAdminUpdateCustomerMutationOptions = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof adminUpdateCustomer>>,
+    TError,
+    { id: number; data: BodyType<AdminUpdateCustomerBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof adminUpdateCustomer>>,
+  TError,
+  { id: number; data: BodyType<AdminUpdateCustomerBody> },
+  TContext
+> => {
+  const mutationKey = ["adminUpdateCustomer"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof adminUpdateCustomer>>,
+    { id: number; data: BodyType<AdminUpdateCustomerBody> }
+  > = (props) => {
+    const { id, data } = props ?? {};
+
+    return adminUpdateCustomer(id, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type AdminUpdateCustomerMutationResult = NonNullable<
+  Awaited<ReturnType<typeof adminUpdateCustomer>>
+>;
+export type AdminUpdateCustomerMutationBody = BodyType<AdminUpdateCustomerBody>;
+export type AdminUpdateCustomerMutationError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary Update customer details (admin)
+ */
+export const useAdminUpdateCustomer = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof adminUpdateCustomer>>,
+    TError,
+    { id: number; data: BodyType<AdminUpdateCustomerBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof adminUpdateCustomer>>,
+  TError,
+  { id: number; data: BodyType<AdminUpdateCustomerBody> },
+  TContext
+> => {
+  return useMutation(getAdminUpdateCustomerMutationOptions(options));
+};
+
+/**
+ * @summary Delete a customer (admin) — fails with 409 if they have orders
+ */
+export const getAdminDeleteCustomerUrl = (id: number) => {
+  return `/api/admin/customers/${id}`;
+};
+
+export const adminDeleteCustomer = async (
+  id: number,
+  options?: RequestInit,
+): Promise<SuccessResponse> => {
+  return customFetch<SuccessResponse>(getAdminDeleteCustomerUrl(id), {
+    ...options,
+    method: "DELETE",
+  });
+};
+
+export const getAdminDeleteCustomerMutationOptions = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof adminDeleteCustomer>>,
+    TError,
+    { id: number },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof adminDeleteCustomer>>,
+  TError,
+  { id: number },
+  TContext
+> => {
+  const mutationKey = ["adminDeleteCustomer"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof adminDeleteCustomer>>,
+    { id: number }
+  > = (props) => {
+    const { id } = props ?? {};
+
+    return adminDeleteCustomer(id, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type AdminDeleteCustomerMutationResult = NonNullable<
+  Awaited<ReturnType<typeof adminDeleteCustomer>>
+>;
+
+export type AdminDeleteCustomerMutationError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary Delete a customer (admin) — fails with 409 if they have orders
+ */
+export const useAdminDeleteCustomer = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof adminDeleteCustomer>>,
+    TError,
+    { id: number },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof adminDeleteCustomer>>,
+  TError,
+  { id: number },
+  TContext
+> => {
+  return useMutation(getAdminDeleteCustomerMutationOptions(options));
+};
 
 /**
  * @summary Get unsubscribe preferences by token (public)

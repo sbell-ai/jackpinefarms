@@ -48,7 +48,7 @@ export async function getOrderWithItems(orderId: number) {
       .limit(1);
     if (event) {
       pickupEventName = event.name;
-      pickupEventScheduledAt = event.scheduledAt.toISOString();
+      pickupEventScheduledAt = new Date(event.scheduledAt).toISOString();
     }
   }
 
@@ -78,7 +78,7 @@ router.get("/orders/by-stripe-session/:sessionId", async (req, res): Promise<voi
       .limit(1);
     if (event) {
       pickupEventName = event.name;
-      pickupEventScheduledAt = event.scheduledAt.toISOString();
+      pickupEventScheduledAt = new Date(event.scheduledAt).toISOString();
     }
   }
 

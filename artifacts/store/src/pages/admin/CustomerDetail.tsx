@@ -1,10 +1,29 @@
-import { useParams, Link } from "wouter";
+import { useState } from "react";
+import { useParams, Link, useLocation } from "wouter";
 import { format } from "date-fns";
 import {
   useAdminGetCustomer,
   getAdminGetCustomerQueryKey,
+  useAdminUpdateCustomer,
+  useAdminDeleteCustomer,
 } from "@workspace/api-client-react";
-import { ArrowLeft, Mail, Phone, ShoppingBag, CheckCircle, XCircle } from "lucide-react";
+import { useQueryClient } from "@tanstack/react-query";
+import { ArrowLeft, Mail, Phone, ShoppingBag, CheckCircle, XCircle, Pencil, Trash2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import { useToast } from "@/hooks/use-toast";
 
 const STATUS_LABELS: Record<string, string> = {
   pending_payment: "Pending Payment",
@@ -42,9 +61,42 @@ const EVENT_ICONS: Record<string, string> = {
 export default function AdminCustomerDetail() {
   const { id } = useParams();
   const customerId = Number(id);
+  const qc = useQueryClient();
+  const { toast } = useToast();
+  const [, navigate] = useLocation();
+
+  const [editOpen, setEditOpen] = useState(false);
+  const [editName, setEditName] = useState("");
+  const [editEmail, setEditEmail] = useState("");
+  const [editPhone, setEditPhone] = useState("");
+  const [editNotes, setEditNotes] = useState("");
 
   const { data: customer, isLoading, isError } = useAdminGetCustomer(customerId, {
     query: { queryKey: getAdminGetCustomerQueryKey(customerId) },
+  });
+
+  const updateCustomer = useAdminUpdateCustomer({
+    mutation: {
+      onSuccess: () => {
+        toast({ title: "Customer updated" });
+        setEditOpen(false);
+        qc.invalidateQueries({ queryKey: getAdminGetCustomerQueryKey(customerId) });
+      },
+      onError: (e: any) => toast({ title: "Error", description: e.response?.data?.error ?? e.message, variant: "destructive" }),
+    },
+  });
+
+  const deleteCustomer = useAdminDeleteCustomer({
+    mutation: {
+      onSuccess: () => {
+        toast({ title: "Customer deleted" });
+        navigate("/admin/customers");
+      },
+      onError: (e: any) => {
+        const msg = e.response?.data?.error ?? e.message;
+        toast({ title: "Cannot delete", description: msg, variant: "destructive" });
+      },
+    },
   });
 
   if (isLoading) {
@@ -71,36 +123,120 @@ export default function AdminCustomerDetail() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-3 flex-wrap">
         <Link href="/admin/customers">
           <button className="text-muted-foreground hover:text-foreground transition-colors">
             <ArrowLeft className="w-5 h-5" />
           </button>
         </Link>
         <h1 className="text-2xl font-bold text-foreground">{customer.name ?? customer.email}</h1>
+        <div className="ml-auto flex items-center gap-2">
+          <Button
+            size="sm"
+            variant="outline"
+            className="gap-1.5"
+            onClick={() => {
+              setEditName(customer.name ?? "");
+              setEditEmail(customer.email ?? "");
+              setEditPhone(customer.phone ?? "");
+              setEditNotes((customer as any).notes ?? "");
+              setEditOpen(true);
+            }}
+          >
+            <Pencil className="w-3.5 h-3.5" /> Edit
+          </Button>
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button size="sm" variant="destructive" className="gap-1.5">
+                <Trash2 className="w-3.5 h-3.5" /> Delete
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Delete {customer.name ?? customer.email}?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  This will permanently delete this customer. If they have orders, deletion will be blocked.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction
+                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                  onClick={() => deleteCustomer.mutate({ id: customerId })}
+                >
+                  {deleteCustomer.isPending ? "Deleting…" : "Delete Customer"}
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        </div>
       </div>
 
       {/* Customer Info */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="rounded-lg border border-border bg-card p-4 space-y-3">
           <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Contact</div>
-          <div className="flex items-center gap-2 text-sm text-foreground">
-            <Mail className="w-4 h-4 text-muted-foreground shrink-0" />
-            {customer.email}
-          </div>
-          {customer.phone && (
-            <div className="flex items-center gap-2 text-sm text-foreground">
-              <Phone className="w-4 h-4 text-muted-foreground shrink-0" />
-              {customer.phone}
+          {editOpen ? (
+            <div className="space-y-2">
+              <div>
+                <label className="block text-xs text-muted-foreground mb-1">Name</label>
+                <Input value={editName} onChange={(e) => setEditName(e.target.value)} className="text-sm h-8" />
+              </div>
+              <div>
+                <label className="block text-xs text-muted-foreground mb-1">Email</label>
+                <Input type="email" value={editEmail} onChange={(e) => setEditEmail(e.target.value)} className="text-sm h-8" />
+              </div>
+              <div>
+                <label className="block text-xs text-muted-foreground mb-1">Phone</label>
+                <Input value={editPhone} onChange={(e) => setEditPhone(e.target.value)} className="text-sm h-8" />
+              </div>
+              <div>
+                <label className="block text-xs text-muted-foreground mb-1">Notes</label>
+                <Textarea value={editNotes} onChange={(e) => setEditNotes(e.target.value)} rows={2} className="text-sm" />
+              </div>
+              <div className="flex gap-2 pt-1">
+                <Button
+                  size="sm"
+                  disabled={updateCustomer.isPending}
+                  onClick={() => updateCustomer.mutate({
+                    id: customerId,
+                    data: {
+                      name: editName || undefined,
+                      email: editEmail || null,
+                      phone: editPhone || null,
+                      notes: editNotes || null,
+                    },
+                  })}
+                >
+                  {updateCustomer.isPending ? "Saving…" : "Save"}
+                </Button>
+                <Button size="sm" variant="ghost" onClick={() => setEditOpen(false)}>Cancel</Button>
+              </div>
             </div>
+          ) : (
+            <>
+              <div className="flex items-center gap-2 text-sm text-foreground">
+                <Mail className="w-4 h-4 text-muted-foreground shrink-0" />
+                {customer.email}
+              </div>
+              {customer.phone && (
+                <div className="flex items-center gap-2 text-sm text-foreground">
+                  <Phone className="w-4 h-4 text-muted-foreground shrink-0" />
+                  {customer.phone}
+                </div>
+              )}
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                {(customer as any).emailVerified ? (
+                  <><CheckCircle className="w-4 h-4 text-teal-600" /> Email verified</>
+                ) : (
+                  <><XCircle className="w-4 h-4 text-yellow-600" /> Email not verified</>
+                )}
+              </div>
+              {(customer as any).notes && (
+                <div className="text-sm text-muted-foreground italic">{(customer as any).notes}</div>
+              )}
+            </>
           )}
-          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            {(customer as any).emailVerified ? (
-              <><CheckCircle className="w-4 h-4 text-teal-600" /> Email verified</>
-            ) : (
-              <><XCircle className="w-4 h-4 text-yellow-600" /> Email not verified</>
-            )}
-          </div>
         </div>
 
         <div className="rounded-lg border border-border bg-card p-4 space-y-3">

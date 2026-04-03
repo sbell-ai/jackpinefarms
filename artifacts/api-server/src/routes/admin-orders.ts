@@ -534,4 +534,55 @@ router.post("/admin/orders/:id/send-invoice", requireAdmin, async (req, res): Pr
   }
 });
 
+const UpdateOrderBody = z.object({
+  customerName: z.string().min(1).optional(),
+  customerEmail: z.string().email().optional().or(z.literal("")),
+  customerPhone: z.string().optional(),
+  notes: z.string().nullable().optional(),
+  pickupEventId: z.number().int().positive().nullable().optional(),
+});
+
+router.patch("/admin/orders/:id", requireAdmin, async (req, res): Promise<void> => {
+  const id = Number(req.params.id);
+  if (isNaN(id)) { res.status(400).json({ error: "Invalid id" }); return; }
+
+  const parsed = UpdateOrderBody.safeParse(req.body);
+  if (!parsed.success) { res.status(400).json({ error: parsed.error.message }); return; }
+
+  const [existing] = await db.select().from(ordersTable).where(eq(ordersTable.id, id)).limit(1);
+  if (!existing) { res.status(404).json({ error: "Order not found" }); return; }
+
+  const updates: Partial<typeof ordersTable.$inferInsert> = {};
+  if (parsed.data.customerName !== undefined) updates.customerName = parsed.data.customerName;
+  if (parsed.data.customerEmail !== undefined) updates.customerEmail = parsed.data.customerEmail;
+  if (parsed.data.customerPhone !== undefined) updates.customerPhone = parsed.data.customerPhone;
+  if (parsed.data.notes !== undefined) updates.notes = parsed.data.notes;
+  if (parsed.data.pickupEventId !== undefined) updates.pickupEventId = parsed.data.pickupEventId;
+
+  if (Object.keys(updates).length > 0) {
+    await db.update(ordersTable).set(updates).where(eq(ordersTable.id, id));
+    await db.insert(orderEventsTable).values({
+      orderId: id,
+      eventType: "note",
+      body: `Order details updated by admin.`,
+    });
+  }
+
+  const order = await getOrderWithItems(id);
+  res.json(order);
+});
+
+router.delete("/admin/orders/:id", requireAdmin, async (req, res): Promise<void> => {
+  const id = Number(req.params.id);
+  if (isNaN(id)) { res.status(400).json({ error: "Invalid id" }); return; }
+
+  const [existing] = await db.select({ id: ordersTable.id }).from(ordersTable).where(eq(ordersTable.id, id)).limit(1);
+  if (!existing) { res.status(404).json({ error: "Order not found" }); return; }
+
+  await db.delete(orderItemsTable).where(eq(orderItemsTable.orderId, id));
+  await db.delete(ordersTable).where(eq(ordersTable.id, id));
+
+  res.json({ success: true });
+});
+
 export default router;

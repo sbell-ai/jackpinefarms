@@ -527,6 +527,16 @@ export interface AdminCreateCustomerBody {
   notes?: string;
 }
 
+export interface AdminUpdateCustomerBody {
+  name?: string;
+  /** @nullable */
+  email?: string | null;
+  /** @nullable */
+  phone?: string | null;
+  /** @nullable */
+  notes?: string | null;
+}
+
 export interface AdminCustomerSummary {
   id: number;
   /** @nullable */
@@ -561,6 +571,16 @@ export interface AdminCreateOrderBody {
   customerEmail?: string;
   customerPhone?: string;
   notes?: string;
+}
+
+export interface AdminUpdateOrderBody {
+  customerName?: string;
+  customerEmail?: string;
+  customerPhone?: string;
+  /** @nullable */
+  notes?: string | null;
+  /** @nullable */
+  pickupEventId?: number | null;
 }
 
 export type AdminSetOrderItemsBodyItem = {

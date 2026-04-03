@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useParams, Link } from "wouter";
+import { useParams, Link, useLocation } from "wouter";
 import { format } from "date-fns";
 import {
   useAdminGetOrder,
@@ -15,14 +15,28 @@ import {
   useAdminGetEggAllocations,
   getAdminGetEggAllocationsQueryKey,
   useAdminSendOrderInvoice,
+  useAdminUpdateOrder,
+  useAdminDeleteOrder,
   type OrderStatus,
   type SendOrderInvoiceResponse,
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, RefreshCw, FileText, CheckCircle, XCircle, MessageSquare, Package, Egg, Send, DollarSign, PhoneCall } from "lucide-react";
+import { ArrowLeft, RefreshCw, FileText, CheckCircle, XCircle, MessageSquare, Package, Egg, Send, DollarSign, PhoneCall, Pencil, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
 
 const STATUS_LABELS: Record<string, string> = {
@@ -68,6 +82,7 @@ export default function AdminOrderDetail() {
   const orderId = Number(id);
   const qc = useQueryClient();
   const { toast } = useToast();
+  const [, navigate] = useLocation();
 
   const [newNote, setNewNote] = useState("");
   const [newStatus, setNewStatus] = useState<OrderStatus | "">("");
@@ -75,6 +90,12 @@ export default function AdminOrderDetail() {
   const [selectedBatchId, setSelectedBatchId] = useState("");
   const [invoiceWeightLbs, setInvoiceWeightLbs] = useState("");
   const [invoiceVariant, setInvoiceVariant] = useState<"whole" | "half" | "quarter">("whole");
+
+  const [editOpen, setEditOpen] = useState(false);
+  const [editName, setEditName] = useState("");
+  const [editEmail, setEditEmail] = useState("");
+  const [editPhone, setEditPhone] = useState("");
+  const [editNotes, setEditNotes] = useState("");
 
   const { data: order, isLoading } = useAdminGetOrder(orderId, {
     query: { queryKey: getAdminGetOrderQueryKey(orderId) },
@@ -176,6 +197,27 @@ export default function AdminOrderDetail() {
     },
   });
 
+  const updateOrder = useAdminUpdateOrder({
+    mutation: {
+      onSuccess: () => {
+        toast({ title: "Order updated" });
+        setEditOpen(false);
+        invalidate();
+      },
+      onError: (e: any) => toast({ title: "Error", description: e.response?.data?.error ?? e.message, variant: "destructive" }),
+    },
+  });
+
+  const deleteOrder = useAdminDeleteOrder({
+    mutation: {
+      onSuccess: () => {
+        toast({ title: "Order deleted" });
+        navigate("/admin/orders");
+      },
+      onError: (e: any) => toast({ title: "Error", description: e.response?.data?.error ?? e.message, variant: "destructive" }),
+    },
+  });
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-24">
@@ -200,7 +242,7 @@ export default function AdminOrderDetail() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-3 flex-wrap">
         <Link href="/admin/orders">
           <button className="text-muted-foreground hover:text-foreground transition-colors">
             <ArrowLeft className="w-5 h-5" />
@@ -217,16 +259,102 @@ export default function AdminOrderDetail() {
             <PhoneCall className="w-3 h-3" /> Admin order
           </span>
         )}
+        <div className="ml-auto flex items-center gap-2">
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button size="sm" variant="destructive" className="gap-1.5">
+                <Trash2 className="w-3.5 h-3.5" /> Delete
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Delete order #{String(orderId).padStart(4, "0")}?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  This will permanently delete the order and all its items. This cannot be undone.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction
+                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                  onClick={() => deleteOrder.mutate({ id: orderId })}
+                >
+                  {deleteOrder.isPending ? "Deleting…" : "Delete Order"}
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {/* Customer */}
         <div className="rounded-lg border border-border bg-card p-4 space-y-1">
-          <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2">Customer</div>
-          <div className="font-medium text-foreground">{order.customerName}</div>
-          <div className="text-sm text-muted-foreground">{order.customerEmail}</div>
-          {order.customerPhone && (
-            <div className="text-sm text-muted-foreground">{order.customerPhone}</div>
+          <div className="flex items-center justify-between mb-2">
+            <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Customer</div>
+            <Button
+              size="sm"
+              variant="ghost"
+              className="h-6 px-2 text-xs gap-1 text-muted-foreground hover:text-foreground"
+              onClick={() => {
+                setEditName(order.customerName ?? "");
+                setEditEmail(order.customerEmail ?? "");
+                setEditPhone(order.customerPhone ?? "");
+                setEditNotes((order as any).notes ?? "");
+                setEditOpen(true);
+              }}
+            >
+              <Pencil className="w-3 h-3" /> Edit
+            </Button>
+          </div>
+          {editOpen ? (
+            <div className="space-y-2 pt-1">
+              <div>
+                <label className="block text-xs text-muted-foreground mb-1">Name</label>
+                <Input value={editName} onChange={(e) => setEditName(e.target.value)} className="text-sm h-8" />
+              </div>
+              <div>
+                <label className="block text-xs text-muted-foreground mb-1">Email</label>
+                <Input type="email" value={editEmail} onChange={(e) => setEditEmail(e.target.value)} className="text-sm h-8" />
+              </div>
+              <div>
+                <label className="block text-xs text-muted-foreground mb-1">Phone</label>
+                <Input value={editPhone} onChange={(e) => setEditPhone(e.target.value)} className="text-sm h-8" />
+              </div>
+              <div>
+                <label className="block text-xs text-muted-foreground mb-1">Notes</label>
+                <Textarea value={editNotes} onChange={(e) => setEditNotes(e.target.value)} rows={2} className="text-sm" />
+              </div>
+              <div className="flex gap-2 pt-1">
+                <Button
+                  size="sm"
+                  disabled={updateOrder.isPending}
+                  onClick={() => updateOrder.mutate({
+                    id: orderId,
+                    data: {
+                      customerName: editName || undefined,
+                      customerEmail: editEmail || undefined,
+                      customerPhone: editPhone || undefined,
+                      notes: editNotes || null,
+                    },
+                  })}
+                >
+                  {updateOrder.isPending ? "Saving…" : "Save"}
+                </Button>
+                <Button size="sm" variant="ghost" onClick={() => setEditOpen(false)}>Cancel</Button>
+              </div>
+            </div>
+          ) : (
+            <>
+              <div className="font-medium text-foreground">{order.customerName}</div>
+              <div className="text-sm text-muted-foreground">{order.customerEmail}</div>
+              {order.customerPhone && (
+                <div className="text-sm text-muted-foreground">{order.customerPhone}</div>
+              )}
+              {(order as any).notes && (
+                <div className="text-sm text-muted-foreground italic mt-1">{(order as any).notes}</div>
+              )}
+            </>
           )}
         </div>
 
