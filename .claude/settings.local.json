@@ -5,7 +5,11 @@
       "Bash(find /home/runner/workspace -type f \\\\\\(-name .env* -o -name *.env* \\\\\\))",
       "Bash(pnpm run:*)",
       "Bash(pnpm -r --if-present run build)",
-      "Bash(pnpm build:*)"
+      "Bash(pnpm build:*)",
+      "Bash(grep -r \"innerHTML\\\\|dangerouslySetInnerHTML\\\\|\\\\.html\\(\\\\|sql\\\\`\" /home/runner/workspace/artifacts --include=\"*.ts\" --include=\"*.tsx\" --include=\"*.js\")",
+      "Bash(find /home/runner/workspace/artifacts/api-server/src -name \"*.ts\" -exec wc -l {} +)",
+      "Bash(grep:*)",
+      "Bash(wc -l /home/runner/workspace/artifacts/api-server/src/routes/*.ts)"
     ]
   }
 }

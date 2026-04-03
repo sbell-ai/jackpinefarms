@@ -6,6 +6,7 @@ import {
   getAdminListBatchesQueryKey,
   useAdminCreateBatch,
   useAdminUpdateBatch,
+  useListProducts,
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Plus, Layers, ChevronRight } from "lucide-react";
@@ -58,6 +59,8 @@ export default function AdminBatches() {
   const { data: batches = [], isLoading } = useAdminListBatches({
     query: { queryKey: getAdminListBatchesQueryKey() },
   });
+
+  const { data: products = [] } = useListProducts();
 
   const invalidate = () => qc.invalidateQueries({ queryKey: getAdminListBatchesQueryKey() });
 
@@ -194,9 +197,23 @@ export default function AdminBatches() {
                 <Label>Batch Name</Label>
                 <Input placeholder="e.g. Fall 2026 Whole Chickens" {...f("name")} />
               </div>
-              <div className="space-y-1">
-                <Label>Product ID</Label>
-                <Input type="number" placeholder="Product ID" {...f("productId")} />
+              <div className="col-span-2 space-y-1">
+                <Label>Product</Label>
+                <Select
+                  value={form.productId}
+                  onValueChange={(v) => setForm((p) => ({ ...p, productId: v }))}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select a product…" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {products.map((p: any) => (
+                      <SelectItem key={p.id} value={String(p.id)}>
+                        {p.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
               <div className="space-y-1">
                 <Label>Capacity (birds)</Label>
