@@ -1,9 +1,19 @@
 import "express-session";
+import type { FarmopsTenant, FarmopsUser } from "@workspace/db";
 
 interface SessionCartItem {
   productId: number;
   quantity: number;
   addGiblets: boolean;
+}
+
+declare global {
+  namespace Express {
+    interface Request {
+      farmopsTenant?: FarmopsTenant;
+      farmopsUser?: FarmopsUser;
+    }
+  }
 }
 
 declare module "express-session" {

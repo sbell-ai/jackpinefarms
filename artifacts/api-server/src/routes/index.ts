@@ -22,6 +22,7 @@ import siteSettingsRouter from "./site-settings.js";
 import adminCmsPagesRouter from "./admin-cms-pages.js";
 import adminCmsMenusRouter from "./admin-cms-menus.js";
 import farmopsAuthRouter from "./farmops-auth.js";
+import farmopsExpensesRouter from "./farmops-expenses.js";
 
 const router: IRouter = Router();
 
@@ -48,5 +49,6 @@ router.use(siteSettingsRouter);
 router.use(adminCmsPagesRouter);
 router.use(adminCmsMenusRouter);
 router.use(farmopsAuthRouter);
+router.use(farmopsExpensesRouter);
 
 export default router;

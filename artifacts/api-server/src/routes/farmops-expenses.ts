@@ -1,0 +1,177 @@
+import { Router, type IRouter } from "express";
+import { eq, desc, gte, lte, and, sql } from "drizzle-orm";
+import { z } from "zod";
+import { db, expensesTable, insertExpenseSchema } from "@workspace/db";
+import {
+  requireFarmopsTenant,
+  requireFarmopsPlan,
+} from "../middlewares/require-farmops-tenant.js";
+
+const router: IRouter = Router();
+
+const listQuery = z.object({
+  fromDate: z.string().optional(),
+  toDate: z.string().optional(),
+  category: z.string().optional(),
+});
+
+const idParam = z.object({ id: z.coerce.number().int().positive() });
+
+// All routes below require an authenticated, active tenant.
+// Expense tracking is available on all plans (starter+).
+
+router.get("/farmops/expenses", requireFarmopsTenant, async (req, res): Promise<void> => {
+  const tenantId = req.farmopsTenant!.id;
+  const parsed = listQuery.safeParse(req.query);
+  if (!parsed.success) {
+    res.status(400).json({ error: "Invalid query parameters" });
+    return;
+  }
+
+  const { fromDate, toDate, category } = parsed.data;
+  const conditions = [eq(expensesTable.tenantId, tenantId)];
+  if (fromDate) conditions.push(gte(expensesTable.date, fromDate));
+  if (toDate) conditions.push(lte(expensesTable.date, toDate));
+  if (category) conditions.push(eq(expensesTable.category, category));
+
+  const expenses = await db
+    .select()
+    .from(expensesTable)
+    .where(and(...conditions))
+    .orderBy(desc(expensesTable.date), desc(expensesTable.createdAt));
+
+  res.json(expenses);
+});
+
+router.get("/farmops/expenses/summary", requireFarmopsTenant, async (req, res): Promise<void> => {
+  const tenantId = req.farmopsTenant!.id;
+  const parsed = listQuery.safeParse(req.query);
+  if (!parsed.success) {
+    res.status(400).json({ error: "Invalid query parameters" });
+    return;
+  }
+
+  const { fromDate, toDate } = parsed.data;
+  const conditions = [eq(expensesTable.tenantId, tenantId)];
+  if (fromDate) conditions.push(gte(expensesTable.date, fromDate));
+  if (toDate) conditions.push(lte(expensesTable.date, toDate));
+
+  const rows = await db
+    .select({
+      category: expensesTable.category,
+      totalCents: sql<number>`SUM(${expensesTable.amountCents})::int`,
+      count: sql<number>`COUNT(*)::int`,
+    })
+    .from(expensesTable)
+    .where(and(...conditions))
+    .groupBy(expensesTable.category)
+    .orderBy(desc(sql`SUM(${expensesTable.amountCents})`));
+
+  const grandTotal = rows.reduce((s, r) => s + (r.totalCents ?? 0), 0);
+  res.json({ byCategory: rows, totalCents: grandTotal });
+});
+
+router.post("/farmops/expenses", requireFarmopsTenant, async (req, res): Promise<void> => {
+  const tenantId = req.farmopsTenant!.id;
+  const parsed = insertExpenseSchema.safeParse({ ...req.body, tenantId });
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.issues[0]?.message ?? "Invalid request" });
+    return;
+  }
+
+  const [expense] = await db.insert(expensesTable).values(parsed.data).returning();
+  res.status(201).json(expense);
+});
+
+router.patch(
+  "/farmops/expenses/:id",
+  requireFarmopsTenant,
+  async (req, res): Promise<void> => {
+    const tenantId = req.farmopsTenant!.id;
+    const params = idParam.safeParse({ id: req.params.id });
+    if (!params.success) {
+      res.status(400).json({ error: "Invalid expense ID" });
+      return;
+    }
+
+    const parsed = insertExpenseSchema.partial().safeParse(req.body);
+    if (!parsed.success) {
+      res.status(400).json({ error: parsed.error.issues[0]?.message ?? "Invalid request" });
+      return;
+    }
+
+    const [expense] = await db
+      .update(expensesTable)
+      .set({ ...parsed.data, updatedAt: new Date() })
+      .where(and(eq(expensesTable.id, params.data.id), eq(expensesTable.tenantId, tenantId)))
+      .returning();
+
+    if (!expense) {
+      res.status(404).json({ error: "Expense not found" });
+      return;
+    }
+
+    res.json(expense);
+  }
+);
+
+router.delete(
+  "/farmops/expenses/:id",
+  requireFarmopsTenant,
+  async (req, res): Promise<void> => {
+    const tenantId = req.farmopsTenant!.id;
+    const params = idParam.safeParse({ id: req.params.id });
+    if (!params.success) {
+      res.status(400).json({ error: "Invalid expense ID" });
+      return;
+    }
+
+    const [deleted] = await db
+      .delete(expensesTable)
+      .where(and(eq(expensesTable.id, params.data.id), eq(expensesTable.tenantId, tenantId)))
+      .returning({ id: expensesTable.id });
+
+    if (!deleted) {
+      res.status(404).json({ error: "Expense not found" });
+      return;
+    }
+
+    res.json({ message: "Expense deleted" });
+  }
+);
+
+// Example of plan-gated route — advanced export is growth+ only
+router.get(
+  "/farmops/expenses/export",
+  requireFarmopsTenant,
+  requireFarmopsPlan("growth"),
+  async (req, res): Promise<void> => {
+    const tenantId = req.farmopsTenant!.id;
+    const expenses = await db
+      .select()
+      .from(expensesTable)
+      .where(eq(expensesTable.tenantId, tenantId))
+      .orderBy(desc(expensesTable.date));
+
+    // Return CSV
+    const header = "id,date,category,description,amount_cents,vendor,payment_method,notes";
+    const rows = expenses.map((e) =>
+      [
+        e.id,
+        e.date,
+        e.category,
+        `"${(e.description ?? "").replace(/"/g, '""')}"`,
+        e.amountCents,
+        e.vendor ?? "",
+        e.paymentMethod ?? "",
+        `"${(e.notes ?? "").replace(/"/g, '""')}"`,
+      ].join(",")
+    );
+
+    res.setHeader("Content-Type", "text/csv");
+    res.setHeader("Content-Disposition", "attachment; filename=\"expenses.csv\"");
+    res.send([header, ...rows].join("\n"));
+  }
+);
+
+export default router;
