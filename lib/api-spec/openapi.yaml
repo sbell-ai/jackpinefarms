@@ -32,6 +32,8 @@ tags:
     description: Customer management (admin)
   - name: Storage
     description: Object storage upload and serving endpoints.
+  - name: cms
+    description: CMS pages and SEO management
 paths:
   /healthz:
     get:
@@ -2263,6 +2265,247 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
 
+  /cms/pages/{slug}:
+    get:
+      operationId: getPublicCmsPage
+      tags: [cms]
+      summary: Get a published CMS page by slug (public)
+      parameters:
+        - in: path
+          name: slug
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Published page with SEO fields
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CmsPageWithSeo"
+        "404":
+          description: Page not found or unpublished
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /admin/cms/pages:
+    get:
+      operationId: adminListCmsPages
+      tags: [cms, admin]
+      summary: List all CMS pages (admin)
+      responses:
+        "200":
+          description: List of CMS pages
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/CmsPage"
+        "401":
+          description: Unauthorized
+    post:
+      operationId: adminCreateCmsPage
+      tags: [cms, admin]
+      summary: Create a CMS page (admin)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateCmsPageBody"
+      responses:
+        "201":
+          description: Page created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CmsPage"
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "409":
+          description: Slug already in use
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /admin/cms/pages/{id}:
+    get:
+      operationId: adminGetCmsPage
+      tags: [cms, admin]
+      summary: Get a single CMS page (admin)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: CMS page
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CmsPage"
+        "404":
+          description: Page not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    patch:
+      operationId: adminUpdateCmsPage
+      tags: [cms, admin]
+      summary: Update a CMS page (admin)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateCmsPageBody"
+      responses:
+        "200":
+          description: Updated page
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CmsPage"
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Page not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /admin/cms/pages/{id}/publish:
+    post:
+      operationId: adminPublishCmsPage
+      tags: [cms, admin]
+      summary: Publish a CMS page (admin)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Page published
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CmsPage"
+        "404":
+          description: Page not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /admin/cms/pages/{id}/unpublish:
+    post:
+      operationId: adminUnpublishCmsPage
+      tags: [cms, admin]
+      summary: Unpublish a CMS page (admin)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Page unpublished
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CmsPage"
+        "404":
+          description: Page not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /admin/cms/pages/{id}/seo:
+    get:
+      operationId: adminGetCmsPageSeo
+      tags: [cms, admin]
+      summary: Get SEO data for a CMS page (admin)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: SEO fields for the page
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CmsPageSeo"
+        "404":
+          description: Page not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    patch:
+      operationId: adminUpdateCmsPageSeo
+      tags: [cms, admin]
+      summary: Update SEO data for a CMS page (admin)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateCmsPageSeoBody"
+      responses:
+        "200":
+          description: Updated SEO data
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CmsPageSeo"
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Page not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
 components:
   schemas:
     HealthStatus:
@@ -3792,3 +4035,184 @@ components:
         - code
         - discountType
         - discountValue
+
+    CmsPage:
+      type: object
+      properties:
+        id:
+          type: integer
+        slug:
+          type: string
+        title:
+          type: string
+        contentHtml:
+          type: string
+        status:
+          type: string
+          enum: [draft, published]
+        publishedAt:
+          type: ["string", "null"]
+          format: date-time
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - slug
+        - title
+        - contentHtml
+        - status
+        - publishedAt
+        - createdAt
+        - updatedAt
+
+    CmsPageSeo:
+      type: object
+      properties:
+        pageId:
+          type: integer
+        metaTitle:
+          type: ["string", "null"]
+        metaDescription:
+          type: ["string", "null"]
+        canonicalUrl:
+          type: ["string", "null"]
+        ogTitle:
+          type: ["string", "null"]
+        ogDescription:
+          type: ["string", "null"]
+        ogImageUrl:
+          type: ["string", "null"]
+        robots:
+          type: string
+          enum: [index_follow, noindex_nofollow]
+        createdAt:
+          type: ["string", "null"]
+          format: date-time
+        updatedAt:
+          type: ["string", "null"]
+          format: date-time
+      required:
+        - pageId
+        - metaTitle
+        - metaDescription
+        - canonicalUrl
+        - ogTitle
+        - ogDescription
+        - ogImageUrl
+        - robots
+
+    CmsPageWithSeo:
+      type: object
+      properties:
+        id:
+          type: integer
+        slug:
+          type: string
+        title:
+          type: string
+        contentHtml:
+          type: string
+        status:
+          type: string
+          enum: [draft, published]
+        publishedAt:
+          type: ["string", "null"]
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+        seo:
+          type: object
+          properties:
+            metaTitle:
+              type: ["string", "null"]
+            metaDescription:
+              type: ["string", "null"]
+            canonicalUrl:
+              type: ["string", "null"]
+            ogTitle:
+              type: ["string", "null"]
+            ogDescription:
+              type: ["string", "null"]
+            ogImageUrl:
+              type: ["string", "null"]
+            robots:
+              type: string
+              enum: [index_follow, noindex_nofollow]
+          required:
+            - metaTitle
+            - metaDescription
+            - canonicalUrl
+            - ogTitle
+            - ogDescription
+            - ogImageUrl
+            - robots
+      required:
+        - id
+        - slug
+        - title
+        - contentHtml
+        - status
+        - publishedAt
+        - updatedAt
+        - seo
+
+    CreateCmsPageBody:
+      type: object
+      properties:
+        slug:
+          type: string
+          minLength: 1
+          maxLength: 100
+        title:
+          type: string
+          minLength: 1
+          maxLength: 200
+        contentHtml:
+          type: string
+      required:
+        - slug
+        - title
+
+    UpdateCmsPageBody:
+      type: object
+      properties:
+        slug:
+          type: string
+          minLength: 1
+          maxLength: 100
+        title:
+          type: string
+          minLength: 1
+          maxLength: 200
+        contentHtml:
+          type: string
+
+    UpdateCmsPageSeoBody:
+      type: object
+      properties:
+        metaTitle:
+          type: ["string", "null"]
+          maxLength: 200
+        metaDescription:
+          type: ["string", "null"]
+          maxLength: 500
+        canonicalUrl:
+          type: ["string", "null"]
+          maxLength: 500
+        ogTitle:
+          type: ["string", "null"]
+          maxLength: 200
+        ogDescription:
+          type: ["string", "null"]
+          maxLength: 500
+        ogImageUrl:
+          type: ["string", "null"]
+          maxLength: 500
+        robots:
+          type: string
+          enum: [index_follow, noindex_nofollow]

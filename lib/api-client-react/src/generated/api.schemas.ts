@@ -903,6 +903,168 @@ export interface CreateCouponBody {
   endsAt?: string;
 }
 
+export type CmsPageStatus = (typeof CmsPageStatus)[keyof typeof CmsPageStatus];
+
+export const CmsPageStatus = {
+  draft: "draft",
+  published: "published",
+} as const;
+
+export interface CmsPage {
+  id: number;
+  slug: string;
+  title: string;
+  contentHtml: string;
+  status: CmsPageStatus;
+  /** @nullable */
+  publishedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type CmsPageSeoRobots =
+  (typeof CmsPageSeoRobots)[keyof typeof CmsPageSeoRobots];
+
+export const CmsPageSeoRobots = {
+  index_follow: "index_follow",
+  noindex_nofollow: "noindex_nofollow",
+} as const;
+
+export interface CmsPageSeo {
+  pageId: number;
+  /** @nullable */
+  metaTitle: string | null;
+  /** @nullable */
+  metaDescription: string | null;
+  /** @nullable */
+  canonicalUrl: string | null;
+  /** @nullable */
+  ogTitle: string | null;
+  /** @nullable */
+  ogDescription: string | null;
+  /** @nullable */
+  ogImageUrl: string | null;
+  robots: CmsPageSeoRobots;
+  /** @nullable */
+  createdAt?: string | null;
+  /** @nullable */
+  updatedAt?: string | null;
+}
+
+export type CmsPageWithSeoStatus =
+  (typeof CmsPageWithSeoStatus)[keyof typeof CmsPageWithSeoStatus];
+
+export const CmsPageWithSeoStatus = {
+  draft: "draft",
+  published: "published",
+} as const;
+
+export type CmsPageWithSeoSeoRobots =
+  (typeof CmsPageWithSeoSeoRobots)[keyof typeof CmsPageWithSeoSeoRobots];
+
+export const CmsPageWithSeoSeoRobots = {
+  index_follow: "index_follow",
+  noindex_nofollow: "noindex_nofollow",
+} as const;
+
+export type CmsPageWithSeoSeo = {
+  /** @nullable */
+  metaTitle: string | null;
+  /** @nullable */
+  metaDescription: string | null;
+  /** @nullable */
+  canonicalUrl: string | null;
+  /** @nullable */
+  ogTitle: string | null;
+  /** @nullable */
+  ogDescription: string | null;
+  /** @nullable */
+  ogImageUrl: string | null;
+  robots: CmsPageWithSeoSeoRobots;
+};
+
+export interface CmsPageWithSeo {
+  id: number;
+  slug: string;
+  title: string;
+  contentHtml: string;
+  status: CmsPageWithSeoStatus;
+  /** @nullable */
+  publishedAt: string | null;
+  updatedAt: string;
+  seo: CmsPageWithSeoSeo;
+}
+
+export interface CreateCmsPageBody {
+  /**
+   * @minLength 1
+   * @maxLength 100
+   */
+  slug: string;
+  /**
+   * @minLength 1
+   * @maxLength 200
+   */
+  title: string;
+  contentHtml?: string;
+}
+
+export interface UpdateCmsPageBody {
+  /**
+   * @minLength 1
+   * @maxLength 100
+   */
+  slug?: string;
+  /**
+   * @minLength 1
+   * @maxLength 200
+   */
+  title?: string;
+  contentHtml?: string;
+}
+
+export type UpdateCmsPageSeoBodyRobots =
+  (typeof UpdateCmsPageSeoBodyRobots)[keyof typeof UpdateCmsPageSeoBodyRobots];
+
+export const UpdateCmsPageSeoBodyRobots = {
+  index_follow: "index_follow",
+  noindex_nofollow: "noindex_nofollow",
+} as const;
+
+export interface UpdateCmsPageSeoBody {
+  /**
+   * @maxLength 200
+   * @nullable
+   */
+  metaTitle?: string | null;
+  /**
+   * @maxLength 500
+   * @nullable
+   */
+  metaDescription?: string | null;
+  /**
+   * @maxLength 500
+   * @nullable
+   */
+  canonicalUrl?: string | null;
+  /**
+   * @maxLength 200
+   * @nullable
+   */
+  ogTitle?: string | null;
+  /**
+   * @maxLength 500
+   * @nullable
+   */
+  ogDescription?: string | null;
+  /**
+   * @maxLength 500
+   * @nullable
+   */
+  ogImageUrl?: string | null;
+  robots?: UpdateCmsPageSeoBodyRobots;
+}
+
 export type UpdateSiteSettingsBody = {
   value: string;
 };

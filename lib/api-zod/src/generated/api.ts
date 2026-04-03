@@ -1948,3 +1948,215 @@ export const AdminGetEggAllocationsResponseItem = zod.object({
 export const AdminGetEggAllocationsResponse = zod.array(
   AdminGetEggAllocationsResponseItem,
 );
+
+/**
+ * @summary Get a published CMS page by slug (public)
+ */
+export const GetPublicCmsPageParams = zod.object({
+  slug: zod.coerce.string(),
+});
+
+export const GetPublicCmsPageResponse = zod.object({
+  id: zod.number(),
+  slug: zod.string(),
+  title: zod.string(),
+  contentHtml: zod.string(),
+  status: zod.enum(["draft", "published"]),
+  publishedAt: zod.date().nullable(),
+  updatedAt: zod.date(),
+  seo: zod.object({
+    metaTitle: zod.string().nullable(),
+    metaDescription: zod.string().nullable(),
+    canonicalUrl: zod.string().nullable(),
+    ogTitle: zod.string().nullable(),
+    ogDescription: zod.string().nullable(),
+    ogImageUrl: zod.string().nullable(),
+    robots: zod.enum(["index_follow", "noindex_nofollow"]),
+  }),
+});
+
+/**
+ * @summary List all CMS pages (admin)
+ */
+export const AdminListCmsPagesResponseItem = zod.object({
+  id: zod.number(),
+  slug: zod.string(),
+  title: zod.string(),
+  contentHtml: zod.string(),
+  status: zod.enum(["draft", "published"]),
+  publishedAt: zod.date().nullable(),
+  createdAt: zod.date(),
+  updatedAt: zod.date(),
+});
+export const AdminListCmsPagesResponse = zod.array(
+  AdminListCmsPagesResponseItem,
+);
+
+/**
+ * @summary Create a CMS page (admin)
+ */
+export const adminCreateCmsPageBodySlugMax = 100;
+
+export const adminCreateCmsPageBodyTitleMax = 200;
+
+export const AdminCreateCmsPageBody = zod.object({
+  slug: zod.string().min(1).max(adminCreateCmsPageBodySlugMax),
+  title: zod.string().min(1).max(adminCreateCmsPageBodyTitleMax),
+  contentHtml: zod.string().optional(),
+});
+
+/**
+ * @summary Get a single CMS page (admin)
+ */
+export const AdminGetCmsPageParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const AdminGetCmsPageResponse = zod.object({
+  id: zod.number(),
+  slug: zod.string(),
+  title: zod.string(),
+  contentHtml: zod.string(),
+  status: zod.enum(["draft", "published"]),
+  publishedAt: zod.date().nullable(),
+  createdAt: zod.date(),
+  updatedAt: zod.date(),
+});
+
+/**
+ * @summary Update a CMS page (admin)
+ */
+export const AdminUpdateCmsPageParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const adminUpdateCmsPageBodySlugMax = 100;
+
+export const adminUpdateCmsPageBodyTitleMax = 200;
+
+export const AdminUpdateCmsPageBody = zod.object({
+  slug: zod.string().min(1).max(adminUpdateCmsPageBodySlugMax).optional(),
+  title: zod.string().min(1).max(adminUpdateCmsPageBodyTitleMax).optional(),
+  contentHtml: zod.string().optional(),
+});
+
+export const AdminUpdateCmsPageResponse = zod.object({
+  id: zod.number(),
+  slug: zod.string(),
+  title: zod.string(),
+  contentHtml: zod.string(),
+  status: zod.enum(["draft", "published"]),
+  publishedAt: zod.date().nullable(),
+  createdAt: zod.date(),
+  updatedAt: zod.date(),
+});
+
+/**
+ * @summary Publish a CMS page (admin)
+ */
+export const AdminPublishCmsPageParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const AdminPublishCmsPageResponse = zod.object({
+  id: zod.number(),
+  slug: zod.string(),
+  title: zod.string(),
+  contentHtml: zod.string(),
+  status: zod.enum(["draft", "published"]),
+  publishedAt: zod.date().nullable(),
+  createdAt: zod.date(),
+  updatedAt: zod.date(),
+});
+
+/**
+ * @summary Unpublish a CMS page (admin)
+ */
+export const AdminUnpublishCmsPageParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const AdminUnpublishCmsPageResponse = zod.object({
+  id: zod.number(),
+  slug: zod.string(),
+  title: zod.string(),
+  contentHtml: zod.string(),
+  status: zod.enum(["draft", "published"]),
+  publishedAt: zod.date().nullable(),
+  createdAt: zod.date(),
+  updatedAt: zod.date(),
+});
+
+/**
+ * @summary Get SEO data for a CMS page (admin)
+ */
+export const AdminGetCmsPageSeoParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const AdminGetCmsPageSeoResponse = zod.object({
+  pageId: zod.number(),
+  metaTitle: zod.string().nullable(),
+  metaDescription: zod.string().nullable(),
+  canonicalUrl: zod.string().nullable(),
+  ogTitle: zod.string().nullable(),
+  ogDescription: zod.string().nullable(),
+  ogImageUrl: zod.string().nullable(),
+  robots: zod.enum(["index_follow", "noindex_nofollow"]),
+  createdAt: zod.date().nullish(),
+  updatedAt: zod.date().nullish(),
+});
+
+/**
+ * @summary Update SEO data for a CMS page (admin)
+ */
+export const AdminUpdateCmsPageSeoParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const adminUpdateCmsPageSeoBodyMetaTitleMax = 200;
+
+export const adminUpdateCmsPageSeoBodyMetaDescriptionMax = 500;
+
+export const adminUpdateCmsPageSeoBodyCanonicalUrlMax = 500;
+
+export const adminUpdateCmsPageSeoBodyOgTitleMax = 200;
+
+export const adminUpdateCmsPageSeoBodyOgDescriptionMax = 500;
+
+export const adminUpdateCmsPageSeoBodyOgImageUrlMax = 500;
+
+export const AdminUpdateCmsPageSeoBody = zod.object({
+  metaTitle: zod.string().max(adminUpdateCmsPageSeoBodyMetaTitleMax).nullish(),
+  metaDescription: zod
+    .string()
+    .max(adminUpdateCmsPageSeoBodyMetaDescriptionMax)
+    .nullish(),
+  canonicalUrl: zod
+    .string()
+    .max(adminUpdateCmsPageSeoBodyCanonicalUrlMax)
+    .nullish(),
+  ogTitle: zod.string().max(adminUpdateCmsPageSeoBodyOgTitleMax).nullish(),
+  ogDescription: zod
+    .string()
+    .max(adminUpdateCmsPageSeoBodyOgDescriptionMax)
+    .nullish(),
+  ogImageUrl: zod
+    .string()
+    .max(adminUpdateCmsPageSeoBodyOgImageUrlMax)
+    .nullish(),
+  robots: zod.enum(["index_follow", "noindex_nofollow"]).optional(),
+});
+
+export const AdminUpdateCmsPageSeoResponse = zod.object({
+  pageId: zod.number(),
+  metaTitle: zod.string().nullable(),
+  metaDescription: zod.string().nullable(),
+  canonicalUrl: zod.string().nullable(),
+  ogTitle: zod.string().nullable(),
+  ogDescription: zod.string().nullable(),
+  ogImageUrl: zod.string().nullable(),
+  robots: zod.enum(["index_follow", "noindex_nofollow"]),
+  createdAt: zod.date().nullish(),
+  updatedAt: zod.date().nullish(),
+});

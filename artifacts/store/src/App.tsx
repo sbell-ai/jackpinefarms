@@ -11,9 +11,7 @@ import Home from "./pages/Home";
 import Shop from "./pages/Shop";
 import ProductDetail from "./pages/ProductDetail";
 import HowWeRaiseThem from "./pages/HowWeRaiseThem";
-import About from "./pages/About";
-import Faq from "./pages/Faq";
-import Contact from "./pages/Contact";
+import CmsPage from "./pages/CmsPage";
 import SalesReturnsPolicy from "./pages/SalesReturnsPolicy";
 import NotFound from "@/pages/not-found";
 import Unsubscribe from "./pages/Unsubscribe";
@@ -178,13 +176,18 @@ function Router() {
         <PublicLayout><HowWeRaiseThem /></PublicLayout>
       </Route>
       <Route path="/about">
-        <PublicLayout><About /></PublicLayout>
+        <PublicLayout><CmsPage slug="about" /></PublicLayout>
       </Route>
       <Route path="/faq">
-        <PublicLayout><Faq /></PublicLayout>
+        <PublicLayout><CmsPage slug="faq" /></PublicLayout>
       </Route>
       <Route path="/contact">
-        <PublicLayout><Contact /></PublicLayout>
+        <PublicLayout><CmsPage slug="contact" /></PublicLayout>
+      </Route>
+      <Route path="/p/:slug">
+        {(params) => (
+          <PublicLayout><CmsPage slug={params.slug ?? ""} /></PublicLayout>
+        )}
       </Route>
       <Route path="/policies/sales-returns">
         <PublicLayout><SalesReturnsPolicy /></PublicLayout>

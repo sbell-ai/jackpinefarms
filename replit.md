@@ -126,6 +126,8 @@ Database layer using Drizzle ORM with PostgreSQL.
 - `contact_submissions` — contact form submissions (name, email, subject, message, ip, user_agent, status)
 - `site_settings` — key-value store for admin-editable site content (image URLs, etc.)
 - `coupons` — discount codes with Stripe sync, percent/amount types, start/end dates, redemption limits
+- `cms_pages` — CMS-managed content pages (slug unique, title, content_html, status draft/published, published_at)
+- `cms_page_seo` — 1:1 SEO data for CMS pages (meta_title, meta_description, canonical_url, og_*, robots)
 
 **Order status enum (9 values)**:
 `pending_payment | deposit_paid | cash_pending | pickup_assigned | weights_entered | invoice_sent | fulfilled | cancelled | no_show`

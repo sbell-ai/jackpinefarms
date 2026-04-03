@@ -364,6 +364,35 @@ export async function runMigrations(): Promise<void> {
       ));
     }
 
+    // ── CMS tables (Task #20) ────────────────────────────────────────────────
+    await db.execute(sql.raw(`
+      CREATE TABLE IF NOT EXISTS cms_pages (
+        id SERIAL PRIMARY KEY,
+        slug TEXT NOT NULL UNIQUE,
+        title TEXT NOT NULL,
+        content_html TEXT NOT NULL DEFAULT '',
+        status TEXT NOT NULL DEFAULT 'draft',
+        published_at TIMESTAMPTZ,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      )
+    `));
+
+    await db.execute(sql.raw(`
+      CREATE TABLE IF NOT EXISTS cms_page_seo (
+        page_id INTEGER PRIMARY KEY REFERENCES cms_pages(id) ON DELETE CASCADE,
+        meta_title TEXT,
+        meta_description TEXT,
+        canonical_url TEXT,
+        og_title TEXT,
+        og_description TEXT,
+        og_image_url TEXT,
+        robots TEXT NOT NULL DEFAULT 'index_follow',
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      )
+    `));
+
     logger.info("Startup migrations complete.");
   } catch (err) {
     logger.error({ err }, "Startup migration failed — server will still start");
