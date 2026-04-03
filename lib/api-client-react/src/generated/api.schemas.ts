@@ -1065,6 +1065,43 @@ export interface UpdateCmsPageSeoBody {
   robots?: UpdateCmsPageSeoBodyRobots;
 }
 
+export interface CmsMenuItem {
+  id: number;
+  menuId: number;
+  label: string;
+  url: string;
+  sortOrder: number;
+  isHidden: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CmsMenuWithItems {
+  id: number;
+  name: string;
+  items: CmsMenuItem[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CmsMenuItemInput {
+  /**
+   * @minLength 1
+   * @maxLength 200
+   */
+  label: string;
+  /**
+   * @minLength 1
+   * @maxLength 500
+   */
+  url: string;
+  isHidden?: boolean;
+}
+
+export interface PutCmsMenuItemsBody {
+  items: CmsMenuItemInput[];
+}
+
 export type UpdateSiteSettingsBody = {
   value: string;
 };

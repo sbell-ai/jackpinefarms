@@ -46,6 +46,7 @@ import type {
   Cart,
   CheckoutContactBody,
   ClaimOrderBody,
+  CmsMenuWithItems,
   CmsPage,
   CmsPageSeo,
   CmsPageWithSeo,
@@ -82,6 +83,7 @@ import type {
   PreorderBatch,
   Product,
   PublicPickupEvent,
+  PutCmsMenuItemsBody,
   RegisterBody,
   RemoveCartCoupon200,
   SendInvoicesBody,
@@ -7516,4 +7518,340 @@ export const useAdminUpdateCmsPageSeo = <
   TContext
 > => {
   return useMutation(getAdminUpdateCmsPageSeoMutationOptions(options));
+};
+
+/**
+ * @summary Get a menu by name with visible items (public)
+ */
+export const getGetPublicCmsMenuUrl = (name: string) => {
+  return `/api/cms/menus/${name}`;
+};
+
+export const getPublicCmsMenu = async (
+  name: string,
+  options?: RequestInit,
+): Promise<CmsMenuWithItems> => {
+  return customFetch<CmsMenuWithItems>(getGetPublicCmsMenuUrl(name), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetPublicCmsMenuQueryKey = (name: string) => {
+  return [`/api/cms/menus/${name}`] as const;
+};
+
+export const getGetPublicCmsMenuQueryOptions = <
+  TData = Awaited<ReturnType<typeof getPublicCmsMenu>>,
+  TError = ErrorType<ErrorResponse>,
+>(
+  name: string,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getPublicCmsMenu>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetPublicCmsMenuQueryKey(name);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getPublicCmsMenu>>
+  > = ({ signal }) => getPublicCmsMenu(name, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: !!name,
+    ...queryOptions,
+  } as UseQueryOptions<
+    Awaited<ReturnType<typeof getPublicCmsMenu>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetPublicCmsMenuQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getPublicCmsMenu>>
+>;
+export type GetPublicCmsMenuQueryError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary Get a menu by name with visible items (public)
+ */
+
+export function useGetPublicCmsMenu<
+  TData = Awaited<ReturnType<typeof getPublicCmsMenu>>,
+  TError = ErrorType<ErrorResponse>,
+>(
+  name: string,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getPublicCmsMenu>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetPublicCmsMenuQueryOptions(name, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary List all menus with items (admin)
+ */
+export const getAdminListCmsMenusUrl = () => {
+  return `/api/admin/cms/menus`;
+};
+
+export const adminListCmsMenus = async (
+  options?: RequestInit,
+): Promise<CmsMenuWithItems[]> => {
+  return customFetch<CmsMenuWithItems[]>(getAdminListCmsMenusUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getAdminListCmsMenusQueryKey = () => {
+  return [`/api/admin/cms/menus`] as const;
+};
+
+export const getAdminListCmsMenusQueryOptions = <
+  TData = Awaited<ReturnType<typeof adminListCmsMenus>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof adminListCmsMenus>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getAdminListCmsMenusQueryKey();
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof adminListCmsMenus>>
+  > = ({ signal }) => adminListCmsMenus({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof adminListCmsMenus>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type AdminListCmsMenusQueryResult = NonNullable<
+  Awaited<ReturnType<typeof adminListCmsMenus>>
+>;
+export type AdminListCmsMenusQueryError = ErrorType<unknown>;
+
+/**
+ * @summary List all menus with items (admin)
+ */
+
+export function useAdminListCmsMenus<
+  TData = Awaited<ReturnType<typeof adminListCmsMenus>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof adminListCmsMenus>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getAdminListCmsMenusQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Get a single menu with items (admin)
+ */
+export const getAdminGetCmsMenuUrl = (name: string) => {
+  return `/api/admin/cms/menus/${name}`;
+};
+
+export const adminGetCmsMenu = async (
+  name: string,
+  options?: RequestInit,
+): Promise<CmsMenuWithItems> => {
+  return customFetch<CmsMenuWithItems>(getAdminGetCmsMenuUrl(name), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getAdminGetCmsMenuQueryKey = (name: string) => {
+  return [`/api/admin/cms/menus/${name}`] as const;
+};
+
+export const getAdminGetCmsMenuQueryOptions = <
+  TData = Awaited<ReturnType<typeof adminGetCmsMenu>>,
+  TError = ErrorType<ErrorResponse>,
+>(
+  name: string,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof adminGetCmsMenu>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getAdminGetCmsMenuQueryKey(name);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof adminGetCmsMenu>>> = ({
+    signal,
+  }) => adminGetCmsMenu(name, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: !!name,
+    ...queryOptions,
+  } as UseQueryOptions<
+    Awaited<ReturnType<typeof adminGetCmsMenu>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type AdminGetCmsMenuQueryResult = NonNullable<
+  Awaited<ReturnType<typeof adminGetCmsMenu>>
+>;
+export type AdminGetCmsMenuQueryError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary Get a single menu with items (admin)
+ */
+
+export function useAdminGetCmsMenu<
+  TData = Awaited<ReturnType<typeof adminGetCmsMenu>>,
+  TError = ErrorType<ErrorResponse>,
+>(
+  name: string,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof adminGetCmsMenu>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getAdminGetCmsMenuQueryOptions(name, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Replace all items for a menu (admin)
+ */
+export const getAdminPutCmsMenuItemsUrl = (name: string) => {
+  return `/api/admin/cms/menus/${name}/items`;
+};
+
+export const adminPutCmsMenuItems = async (
+  name: string,
+  putCmsMenuItemsBody: PutCmsMenuItemsBody,
+  options?: RequestInit,
+): Promise<CmsMenuWithItems> => {
+  return customFetch<CmsMenuWithItems>(getAdminPutCmsMenuItemsUrl(name), {
+    ...options,
+    method: "PUT",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(putCmsMenuItemsBody),
+  });
+};
+
+export const getAdminPutCmsMenuItemsMutationOptions = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof adminPutCmsMenuItems>>,
+    TError,
+    { name: string; data: BodyType<PutCmsMenuItemsBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof adminPutCmsMenuItems>>,
+  TError,
+  { name: string; data: BodyType<PutCmsMenuItemsBody> },
+  TContext
+> => {
+  const mutationKey = ["adminPutCmsMenuItems"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof adminPutCmsMenuItems>>,
+    { name: string; data: BodyType<PutCmsMenuItemsBody> }
+  > = (props) => {
+    const { name, data } = props ?? {};
+
+    return adminPutCmsMenuItems(name, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type AdminPutCmsMenuItemsMutationResult = NonNullable<
+  Awaited<ReturnType<typeof adminPutCmsMenuItems>>
+>;
+export type AdminPutCmsMenuItemsMutationBody = BodyType<PutCmsMenuItemsBody>;
+export type AdminPutCmsMenuItemsMutationError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary Replace all items for a menu (admin)
+ */
+export const useAdminPutCmsMenuItems = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof adminPutCmsMenuItems>>,
+    TError,
+    { name: string; data: BodyType<PutCmsMenuItemsBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof adminPutCmsMenuItems>>,
+  TError,
+  { name: string; data: BodyType<PutCmsMenuItemsBody> },
+  TContext
+> => {
+  return useMutation(getAdminPutCmsMenuItemsMutationOptions(options));
 };

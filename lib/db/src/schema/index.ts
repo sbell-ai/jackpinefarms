@@ -13,3 +13,4 @@ export * from "./contact-submissions";
 export * from "./coupons";
 export * from "./site-settings";
 export * from "./cms-pages";
+export * from "./cms-menus";

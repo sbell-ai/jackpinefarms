@@ -49,6 +49,9 @@ import AdminExpenses from "./pages/admin/Expenses";
 import AdminCoupons from "./pages/admin/Coupons";
 import AdminSiteImages from "./pages/admin/SiteImages";
 import AdminNewOrder from "./pages/admin/NewOrder";
+import CmsPageList from "./pages/admin/CmsPageList";
+import CmsPageForm from "./pages/admin/CmsPageForm";
+import CmsMenus from "./pages/admin/CmsMenus";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -116,6 +119,20 @@ function Router() {
       </Route>
       <Route path="/admin/site-images">
         <AdminLayout><AdminSiteImages /></AdminLayout>
+      </Route>
+      <Route path="/admin/pages/new">
+        <AdminLayout><CmsPageForm /></AdminLayout>
+      </Route>
+      <Route path="/admin/pages/:id">
+        {(params) => (
+          <AdminLayout><CmsPageForm pageId={Number(params.id)} /></AdminLayout>
+        )}
+      </Route>
+      <Route path="/admin/pages">
+        <AdminLayout><CmsPageList /></AdminLayout>
+      </Route>
+      <Route path="/admin/menus">
+        <AdminLayout><CmsMenus /></AdminLayout>
       </Route>
       <Route path="/admin">
         <AdminLayout><AdminDashboard /></AdminLayout>

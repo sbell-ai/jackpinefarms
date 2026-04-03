@@ -4,6 +4,7 @@ import { useAdminMe, useAdminLogout, getAdminMeQueryKey } from "@workspace/api-c
 import {
   Store, Package, LogOut, Loader2, Home, ShoppingBag, Layers,
   CalendarDays, Users, LayoutDashboard, Egg, Bird, Rabbit, Menu, X, Receipt, Tag, ImageIcon,
+  FileText, Navigation,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
@@ -62,6 +63,8 @@ export function AdminLayout({ children }: { children: ReactNode }) {
     { href: "/admin/expenses", label: "Expenses", icon: Receipt },
     { href: "/admin/coupons", label: "Coupons", icon: Tag },
     { href: "/admin/site-images", label: "Site Images", icon: ImageIcon },
+    { href: "/admin/pages", label: "Pages", icon: FileText },
+    { href: "/admin/menus", label: "Menus", icon: Navigation },
   ];
 
   const isActive = (item: typeof navItems[0]) =>

@@ -378,6 +378,33 @@ export async function runMigrations(): Promise<void> {
       )
     `));
 
+    // ── CMS Menus tables (Task #21) ──────────────────────────────────────────
+    await db.execute(sql.raw(`
+      CREATE TABLE IF NOT EXISTS cms_menus (
+        id SERIAL PRIMARY KEY,
+        name TEXT NOT NULL UNIQUE,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      )
+    `));
+
+    await db.execute(sql.raw(`
+      CREATE TABLE IF NOT EXISTS cms_menu_items (
+        id SERIAL PRIMARY KEY,
+        menu_id INTEGER NOT NULL REFERENCES cms_menus(id) ON DELETE CASCADE,
+        label TEXT NOT NULL,
+        url TEXT NOT NULL,
+        sort_order INTEGER NOT NULL DEFAULT 0,
+        is_hidden BOOLEAN NOT NULL DEFAULT FALSE,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      )
+    `));
+
+    await db.execute(sql.raw(
+      `INSERT INTO cms_menus (name) VALUES ('header'), ('footer') ON CONFLICT (name) DO NOTHING`
+    ));
+
     await db.execute(sql.raw(`
       CREATE TABLE IF NOT EXISTS cms_page_seo (
         page_id INTEGER PRIMARY KEY REFERENCES cms_pages(id) ON DELETE CASCADE,

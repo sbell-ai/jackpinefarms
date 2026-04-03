@@ -2506,6 +2506,108 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
 
+  /cms/menus/{name}:
+    get:
+      operationId: getPublicCmsMenu
+      tags: [cms]
+      summary: Get a menu by name with visible items (public)
+      parameters:
+        - in: path
+          name: name
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Menu with visible items
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CmsMenuWithItems"
+        "404":
+          description: Menu not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /admin/cms/menus:
+    get:
+      operationId: adminListCmsMenus
+      tags: [cms, admin]
+      summary: List all menus with items (admin)
+      responses:
+        "200":
+          description: List of menus with items
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/CmsMenuWithItems"
+
+  /admin/cms/menus/{name}:
+    get:
+      operationId: adminGetCmsMenu
+      tags: [cms, admin]
+      summary: Get a single menu with items (admin)
+      parameters:
+        - in: path
+          name: name
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Menu with items
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CmsMenuWithItems"
+        "404":
+          description: Menu not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /admin/cms/menus/{name}/items:
+    put:
+      operationId: adminPutCmsMenuItems
+      tags: [cms, admin]
+      summary: Replace all items for a menu (admin)
+      parameters:
+        - in: path
+          name: name
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PutCmsMenuItemsBody"
+      responses:
+        "200":
+          description: Updated menu with items
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CmsMenuWithItems"
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Menu not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
 components:
   schemas:
     HealthStatus:
@@ -4216,3 +4318,85 @@ components:
         robots:
           type: string
           enum: [index_follow, noindex_nofollow]
+
+    CmsMenuItem:
+      type: object
+      properties:
+        id:
+          type: integer
+        menuId:
+          type: integer
+        label:
+          type: string
+        url:
+          type: string
+        sortOrder:
+          type: integer
+        isHidden:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - menuId
+        - label
+        - url
+        - sortOrder
+        - isHidden
+        - createdAt
+        - updatedAt
+
+    CmsMenuWithItems:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/CmsMenuItem"
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - name
+        - items
+        - createdAt
+        - updatedAt
+
+    CmsMenuItemInput:
+      type: object
+      properties:
+        label:
+          type: string
+          minLength: 1
+          maxLength: 200
+        url:
+          type: string
+          minLength: 1
+          maxLength: 500
+        isHidden:
+          type: boolean
+      required:
+        - label
+        - url
+
+    PutCmsMenuItemsBody:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/CmsMenuItemInput"
+      required:
+        - items

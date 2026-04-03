@@ -2160,3 +2160,120 @@ export const AdminUpdateCmsPageSeoResponse = zod.object({
   createdAt: zod.date().nullish(),
   updatedAt: zod.date().nullish(),
 });
+
+/**
+ * @summary Get a menu by name with visible items (public)
+ */
+export const GetPublicCmsMenuParams = zod.object({
+  name: zod.coerce.string(),
+});
+
+export const GetPublicCmsMenuResponse = zod.object({
+  id: zod.number(),
+  name: zod.string(),
+  items: zod.array(
+    zod.object({
+      id: zod.number(),
+      menuId: zod.number(),
+      label: zod.string(),
+      url: zod.string(),
+      sortOrder: zod.number(),
+      isHidden: zod.boolean(),
+      createdAt: zod.date(),
+      updatedAt: zod.date(),
+    }),
+  ),
+  createdAt: zod.date(),
+  updatedAt: zod.date(),
+});
+
+/**
+ * @summary List all menus with items (admin)
+ */
+export const AdminListCmsMenusResponseItem = zod.object({
+  id: zod.number(),
+  name: zod.string(),
+  items: zod.array(
+    zod.object({
+      id: zod.number(),
+      menuId: zod.number(),
+      label: zod.string(),
+      url: zod.string(),
+      sortOrder: zod.number(),
+      isHidden: zod.boolean(),
+      createdAt: zod.date(),
+      updatedAt: zod.date(),
+    }),
+  ),
+  createdAt: zod.date(),
+  updatedAt: zod.date(),
+});
+export const AdminListCmsMenusResponse = zod.array(
+  AdminListCmsMenusResponseItem,
+);
+
+/**
+ * @summary Get a single menu with items (admin)
+ */
+export const AdminGetCmsMenuParams = zod.object({
+  name: zod.coerce.string(),
+});
+
+export const AdminGetCmsMenuResponse = zod.object({
+  id: zod.number(),
+  name: zod.string(),
+  items: zod.array(
+    zod.object({
+      id: zod.number(),
+      menuId: zod.number(),
+      label: zod.string(),
+      url: zod.string(),
+      sortOrder: zod.number(),
+      isHidden: zod.boolean(),
+      createdAt: zod.date(),
+      updatedAt: zod.date(),
+    }),
+  ),
+  createdAt: zod.date(),
+  updatedAt: zod.date(),
+});
+
+/**
+ * @summary Replace all items for a menu (admin)
+ */
+export const AdminPutCmsMenuItemsParams = zod.object({
+  name: zod.coerce.string(),
+});
+
+export const adminPutCmsMenuItemsBodyItemsItemLabelMax = 200;
+
+export const adminPutCmsMenuItemsBodyItemsItemUrlMax = 500;
+
+export const AdminPutCmsMenuItemsBody = zod.object({
+  items: zod.array(
+    zod.object({
+      label: zod.string().min(1).max(adminPutCmsMenuItemsBodyItemsItemLabelMax),
+      url: zod.string().min(1).max(adminPutCmsMenuItemsBodyItemsItemUrlMax),
+      isHidden: zod.boolean().optional(),
+    }),
+  ),
+});
+
+export const AdminPutCmsMenuItemsResponse = zod.object({
+  id: zod.number(),
+  name: zod.string(),
+  items: zod.array(
+    zod.object({
+      id: zod.number(),
+      menuId: zod.number(),
+      label: zod.string(),
+      url: zod.string(),
+      sortOrder: zod.number(),
+      isHidden: zod.boolean(),
+      createdAt: zod.date(),
+      updatedAt: zod.date(),
+    }),
+  ),
+  createdAt: zod.date(),
+  updatedAt: zod.date(),
+});

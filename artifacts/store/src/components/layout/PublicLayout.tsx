@@ -3,7 +3,7 @@ import { Link, useLocation } from "wouter";
 import { Menu, X, ShoppingCart, Leaf, User } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
-import { useGetCart, getGetCartQueryKey, useAuthMe, getAuthMeQueryKey } from "@workspace/api-client-react";
+import { useGetCart, getGetCartQueryKey, useAuthMe, getAuthMeQueryKey, useGetPublicCmsMenu, getGetPublicCmsMenuQueryKey } from "@workspace/api-client-react";
 import { useSiteImage } from "@/lib/useSiteImage";
 
 export function PublicLayout({ children }: { children: ReactNode }) {
@@ -32,7 +32,7 @@ export function PublicLayout({ children }: { children: ReactNode }) {
     setMobileMenuOpen(false);
   }, [location]);
 
-  const navLinks = [
+  const fallbackNavLinks = [
     { href: "/shop", label: "Shop" },
     { href: "/pickup-events", label: "Pickup Dates" },
     { href: "/how-we-raise-them", label: "How We Raise Them" },
@@ -40,6 +40,15 @@ export function PublicLayout({ children }: { children: ReactNode }) {
     { href: "/faq", label: "FAQ" },
     { href: "/contact", label: "Contact" },
   ];
+
+  const { data: headerMenu } = useGetPublicCmsMenu("header", {
+    query: { queryKey: getGetPublicCmsMenuQueryKey("header"), retry: false },
+  });
+
+  const navLinks =
+    headerMenu && headerMenu.items.length > 0
+      ? headerMenu.items.map((item) => ({ href: item.url, label: item.label }))
+      : fallbackNavLinks;
 
   return (
     <div className="min-h-screen flex flex-col relative selection:bg-primary/20 selection:text-primary">

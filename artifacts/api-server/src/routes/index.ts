@@ -20,6 +20,7 @@ import contactRouter from "./contact.js";
 import adminCouponsRouter from "./admin-coupons.js";
 import siteSettingsRouter from "./site-settings.js";
 import adminCmsPagesRouter from "./admin-cms-pages.js";
+import adminCmsMenusRouter from "./admin-cms-menus.js";
 
 const router: IRouter = Router();
 
@@ -44,5 +45,6 @@ router.use(contactRouter);
 router.use(adminCouponsRouter);
 router.use(siteSettingsRouter);
 router.use(adminCmsPagesRouter);
+router.use(adminCmsMenusRouter);
 
 export default router;
