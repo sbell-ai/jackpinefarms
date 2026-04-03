@@ -3,8 +3,16 @@ import { eq, desc } from "drizzle-orm";
 import { db, cmsPagesTable, cmsPageSeoTable } from "@workspace/db";
 import { requireAdmin } from "../middlewares/require-admin.js";
 import { z } from "zod";
+import sanitizeHtml from "sanitize-html";
 
 const router: IRouter = Router();
+
+const ALLOWED_CMS_HTML_TAGS = ["p", "br", "strong", "em", "b", "i", "ul", "ol", "li", "h2", "h3", "a"];
+const ALLOWED_CMS_HTML_ATTRS = { a: ["href", "title"] };
+
+const contentHtmlSchema = z.string().transform((html) =>
+  sanitizeHtml(html, { allowedTags: ALLOWED_CMS_HTML_TAGS, allowedAttributes: ALLOWED_CMS_HTML_ATTRS })
+);
 
 const RESERVED_SLUGS = new Set([
   "admin", "api", "auth", "account", "shop", "cart", "checkout",
@@ -22,13 +30,13 @@ const slugSchema = z
 const CreatePageBody = z.object({
   slug: slugSchema,
   title: z.string().min(1).max(200),
-  contentHtml: z.string().default(""),
+  contentHtml: contentHtmlSchema.default(""),
 });
 
 const UpdatePageBody = z.object({
   slug: slugSchema.optional(),
   title: z.string().min(1).max(200).optional(),
-  contentHtml: z.string().optional(),
+  contentHtml: contentHtmlSchema.optional(),
 });
 
 const UpdateSeoBody = z.object({

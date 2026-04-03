@@ -1,5 +1,6 @@
 import "../types/session.d.ts";
 import { Router, type IRouter } from "express";
+import rateLimit from "express-rate-limit";
 import {
   AdminLoginBody,
   AdminLoginResponse,
@@ -9,7 +10,15 @@ import {
 
 const router: IRouter = Router();
 
-router.post("/admin/login", async (req, res): Promise<void> => {
+const adminLoginLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 5,
+  message: { error: "Too many login attempts. Please try again later." },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+router.post("/admin/login", adminLoginLimiter, async (req, res): Promise<void> => {
   const parsed = AdminLoginBody.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: parsed.error.message });

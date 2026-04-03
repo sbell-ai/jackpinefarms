@@ -39,9 +39,13 @@ app.use(
 
 const isProduction = process.env.NODE_ENV === "production";
 
+const ALLOWED_ORIGINS = process.env.CORS_ALLOWED_ORIGINS
+  ? process.env.CORS_ALLOWED_ORIGINS.split(",")
+  : ["http://localhost:3000"];
+
 app.use(
   cors({
-    origin: true,
+    origin: ALLOWED_ORIGINS,
     credentials: true,
   }),
 );
@@ -59,13 +63,17 @@ app.use(
 );
 app.use(express.urlencoded({ extended: true }));
 
+if (!process.env.SESSION_SECRET) {
+  throw new Error("SESSION_SECRET environment variable is required");
+}
+
 app.use(
   session({
     store: new PgSession({
       conString: process.env.DATABASE_URL,
       tableName: "session",
     }),
-    secret: process.env.SESSION_SECRET ?? "jack-pine-farm-dev-secret",
+    secret: process.env.SESSION_SECRET,
     resave: false,
     saveUninitialized: false,
     cookie: {

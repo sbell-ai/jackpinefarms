@@ -28,7 +28,7 @@ timeoutMs = 20000
 [userenv]
 
 [userenv.development]
-ADMIN_PASSWORD = "jackpine2026"
+# ADMIN_PASSWORD must be set via Replit Secrets — do not hardcode here
 
 [nix]
 channel = "stable-25_05"

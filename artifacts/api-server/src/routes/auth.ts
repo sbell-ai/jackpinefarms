@@ -79,10 +79,7 @@ router.post("/auth/register", authLimiter, async (req, res): Promise<void> => {
     req.session.save((err) => (err ? reject(err) : resolve()))
   );
 
-  const baseUrl = process.env.STORE_BASE_URL ?? `https://${process.env.REPLIT_DEV_DOMAIN}/store`;
-  console.log(
-    `[EMAIL STUB] Welcome to Jack Pine Farm, ${customer.name}!\n  Please verify your email: ${baseUrl}/auth/verify-email?token=${verificationToken}`
-  );
+  req.log.info({ customerId: customer.id }, "[EMAIL STUB] Verification email would be sent");
 
   res.status(201).json(toCustomerSession(customer));
 });
@@ -250,12 +247,7 @@ router.post("/auth/forgot-password", resetLimiter, async (req, res): Promise<voi
       .set({ resetToken: token, resetTokenExpiresAt: expiresAt })
       .where(eq(customersTable.id, customer.id));
 
-    const baseUrl = process.env.STORE_BASE_URL ?? `https://${process.env.REPLIT_DEV_DOMAIN}/store`;
-    const resetLink = `${baseUrl}/auth/reset-password?token=${token}`;
-
-    console.log(
-      `[EMAIL STUB] Password reset for ${customer.email}:\n  Reset link: ${resetLink}\n  Expires: ${expiresAt.toISOString()}`
-    );
+    req.log.info({ customerId: customer.id }, "[EMAIL STUB] Password reset email would be sent");
   }
 
   res.json({ message: "If an account with that email exists, a reset link has been sent." });

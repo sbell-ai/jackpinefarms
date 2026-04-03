@@ -30,6 +30,14 @@ function sanitizeDescription(raw: string | null | undefined): string | null {
   return sanitizeHtml(raw, ALLOWED_HTML).trim() || null;
 }
 
+function escapeHtml(s: string): string {
+  return s
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
 const router: IRouter = Router();
 
 const BASE_URL = process.env.PUBLIC_URL ?? "http://localhost:8080";
@@ -65,11 +73,11 @@ async function triggerNotifyMeEmails(productId: number, productName: string): Pr
         `To unsubscribe from these notifications: ${unsubscribeUrl}`,
       ].join("\n"),
       html: [
-        `<p>Good news! <strong>${productName}</strong> is now taking orders at Jack Pine Farm.</p>`,
+        `<p>Good news! <strong>${escapeHtml(productName)}</strong> is now taking orders at Jack Pine Farm.</p>`,
         `<p><a href="${shopUrl}">Place your order →</a></p>`,
         `<hr />`,
         `<p style="font-size:12px;color:#888">`,
-        `<a href="${unsubscribeUrl}">Unsubscribe</a> from restock notifications for ${productName}.`,
+        `<a href="${unsubscribeUrl}">Unsubscribe</a> from restock notifications for ${escapeHtml(productName)}.`,
         `</p>`,
       ].join("\n"),
     });

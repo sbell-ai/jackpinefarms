@@ -359,9 +359,9 @@ export async function runMigrations(): Promise<void> {
       'image.product_fallback',
     ];
     for (const key of imageKeys) {
-      await db.execute(sql.raw(
-        `INSERT INTO site_settings (key, value) VALUES ('${key}', '') ON CONFLICT (key) DO NOTHING`
-      ));
+      await db.execute(
+        sql`INSERT INTO site_settings (key, value) VALUES (${key}, '') ON CONFLICT (key) DO NOTHING`
+      );
     }
 
     // ── CMS tables (Task #20) ────────────────────────────────────────────────
