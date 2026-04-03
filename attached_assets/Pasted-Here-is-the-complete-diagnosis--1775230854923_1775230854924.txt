@@ -1,0 +1,41 @@
+Here is the complete diagnosis:                     
+                                                                                                                                           
+  ---                                                                                     
+  Findings                                                                                                                                 
+                                                                                                                                           
+  1. Current password_hash in DB                                                                                                           
+                                                                                                                                           
+  $2b$12$7zYy1d7xeg/5M2pOiHeM/OZvZ5JTfYUfIr4QNGWWFq94n2Wy3fXiu
+  Row exists, is_active: true, last_login_at: null (never successfully logged in).                                                         
+                                                                                                                                           
+  2. bcrypt.compare result                                                                                                                 
+                                                                                                                                           
+  bcrypt.compare(ADMIN_PASSWORD, stored_hash) => true
+  The DB hash is perfectly correct for the current ADMIN_PASSWORD. The seeding worked.                                                     
+                                                                                                                                           
+  3. Which env var / which path the login route uses                                                                                       
+                                                                                                                                           
+  This is the root issue. The login form (src/pages/admin/Login.tsx:19) sends only { password } — no email. That body hits the legacy path 
+  in the server (admin.ts:83273):                                                                                                          
+                                                                                                                                           
+  if (legacyParsed.data.password !== adminPassword) {  // plaintext ===, NOT bcrypt
+                                                                                                                                           
+  The legacy path does a raw string comparison against process.env.ADMIN_PASSWORD. It never touches the database or bcrypt at all. The     
+  bcrypt hash in platform_admins is irrelevant to what the login form currently does.                                                      
+                                                                                                                                           
+  4. process.env.ADMIN_PASSWORD at runtime
+
+  - Length: 13 — confirmed set, no whitespace, no newline, no carriage return.                                                             
+   
+  ---                                                                                                                                      
+  The actual suspect: rate limiter lockout
+                                                                                                                                           
+  The limiter is 5 attempts per 15-minute window (admin.ts:11-17). If you've been retrying while debugging, your IP is likely locked out
+  and getting a 429 that the frontend shows as "Invalid credentials."                                                                      
+                  
+  To confirm: open DevTools → Network, submit the form, and check whether the response is 401 or 429. If it's 429, wait 15 minutes (or     
+  restart the server to reset the in-memory limiter) and try once more with the exact ADMIN_PASSWORD value.
+                                                                                                                                           
+  If the response really is 401, the only explanation left is a copy/paste mismatch between what you type and what's in ADMIN_PASSWORD —   
+  the env var has 13 characters, so count carefully.
+                                                               
