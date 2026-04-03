@@ -12,6 +12,9 @@ import Shop from "./pages/Shop";
 import ProductDetail from "./pages/ProductDetail";
 import HowWeRaiseThem from "./pages/HowWeRaiseThem";
 import CmsPage from "./pages/CmsPage";
+import Faq from "./pages/Faq";
+import Contact from "./pages/Contact";
+import About from "./pages/About";
 import SalesReturnsPolicy from "./pages/SalesReturnsPolicy";
 import NotFound from "@/pages/not-found";
 import Unsubscribe from "./pages/Unsubscribe";
@@ -193,13 +196,13 @@ function Router() {
         <PublicLayout><HowWeRaiseThem /></PublicLayout>
       </Route>
       <Route path="/about">
-        <PublicLayout><CmsPage slug="about" /></PublicLayout>
+        <PublicLayout><About /></PublicLayout>
       </Route>
       <Route path="/faq">
-        <PublicLayout><CmsPage slug="faq" /></PublicLayout>
+        <PublicLayout><Faq /></PublicLayout>
       </Route>
       <Route path="/contact">
-        <PublicLayout><CmsPage slug="contact" /></PublicLayout>
+        <PublicLayout><Contact /></PublicLayout>
       </Route>
       <Route path="/p/:slug">
         {(params) => (
