@@ -58,7 +58,7 @@ import CmsMenus from "./pages/admin/CmsMenus";
 
 // FarmOps SaaS
 import { FarmOpsLayout } from "./components/farmops/FarmOpsLayout";
-import FarmOpsLanding from "./pages/farmops/Landing";
+import FarmOpsLanding from "./pages/FarmOpsLanding";
 import FarmOpsRegister from "./pages/farmops/Register";
 import FarmOpsLogin from "./pages/farmops/Login";
 import FarmOpsVerifyEmail from "./pages/farmops/VerifyEmail";
@@ -101,9 +101,7 @@ function Router() {
       <Route path="/farmops/billing">
         <FarmOpsLayout><FarmOpsBilling /></FarmOpsLayout>
       </Route>
-      <Route path="/farmops">
-        <FarmOpsLayout><FarmOpsLanding /></FarmOpsLayout>
-      </Route>
+      <Route path="/farmops" component={FarmOpsLanding} />
 
       {/* Admin Auth is standalone */}
       <Route path="/admin/login" component={AdminLogin} />
