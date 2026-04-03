@@ -420,6 +420,147 @@ export async function runMigrations(): Promise<void> {
       )
     `));
 
+    // ── FarmOps SaaS tables ──────────────────────────────────────────────────
+
+    await db.execute(sql`
+      DO $$ BEGIN
+        CREATE TYPE farmops_tenant_status AS ENUM ('trialing','active','past_due','canceled','paused');
+      EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+    `);
+
+    await db.execute(sql`
+      DO $$ BEGIN
+        CREATE TYPE farmops_plan AS ENUM ('starter','growth','pro');
+      EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+    `);
+
+    await db.execute(sql`
+      DO $$ BEGIN
+        CREATE TYPE farmops_addon_type AS ENUM ('custom_domain','sms_notifications','extra_admin_users','white_label');
+      EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+    `);
+
+    await db.execute(sql`
+      DO $$ BEGIN
+        CREATE TYPE farmops_user_role AS ENUM ('owner','admin','member');
+      EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+    `);
+
+    await db.execute(sql`
+      CREATE TABLE IF NOT EXISTS farmops_tenants (
+        id                          SERIAL PRIMARY KEY,
+        slug                        TEXT NOT NULL UNIQUE,
+        name                        TEXT NOT NULL,
+        owner_email                 TEXT NOT NULL,
+        status                      farmops_tenant_status NOT NULL DEFAULT 'trialing',
+        plan                        farmops_plan NOT NULL DEFAULT 'starter',
+        stripe_customer_id          TEXT UNIQUE,
+        stripe_subscription_id      TEXT UNIQUE,
+        stripe_subscription_status  TEXT,
+        stripe_price_id             TEXT,
+        trial_ends_at               TIMESTAMPTZ,
+        current_period_ends_at      TIMESTAMPTZ,
+        onboarding_purchased_at     TIMESTAMPTZ,
+        stripe_onboarding_payment_id TEXT,
+        created_at                  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        updated_at                  TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      )
+    `);
+
+    await db.execute(sql`
+      CREATE TABLE IF NOT EXISTS farmops_subscription_addons (
+        id                          SERIAL PRIMARY KEY,
+        tenant_id                   INTEGER NOT NULL REFERENCES farmops_tenants(id) ON DELETE CASCADE,
+        addon_type                  farmops_addon_type NOT NULL,
+        quantity                    INTEGER NOT NULL DEFAULT 1,
+        stripe_subscription_item_id TEXT,
+        created_at                  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        updated_at                  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        UNIQUE (tenant_id, addon_type)
+      )
+    `);
+
+    await db.execute(sql`
+      CREATE TABLE IF NOT EXISTS farmops_users (
+        id                    SERIAL PRIMARY KEY,
+        tenant_id             INTEGER NOT NULL REFERENCES farmops_tenants(id) ON DELETE CASCADE,
+        email                 TEXT NOT NULL,
+        password_hash         TEXT,
+        name                  TEXT NOT NULL,
+        role                  farmops_user_role NOT NULL DEFAULT 'member',
+        email_verified        BOOLEAN NOT NULL DEFAULT FALSE,
+        verification_token    TEXT,
+        reset_token           TEXT,
+        reset_token_expires_at TIMESTAMPTZ,
+        last_login_at         TIMESTAMPTZ,
+        created_at            TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        updated_at            TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        UNIQUE (tenant_id, email)
+      )
+    `);
+
+    await db.execute(sql`
+      CREATE TABLE IF NOT EXISTS farmops_invitations (
+        id                  SERIAL PRIMARY KEY,
+        tenant_id           INTEGER NOT NULL REFERENCES farmops_tenants(id) ON DELETE CASCADE,
+        email               TEXT NOT NULL,
+        role                farmops_user_role NOT NULL DEFAULT 'member',
+        token               TEXT NOT NULL UNIQUE,
+        invited_by_user_id  INTEGER REFERENCES farmops_users(id) ON DELETE SET NULL,
+        accepted_at         TIMESTAMPTZ,
+        expires_at          TIMESTAMPTZ NOT NULL,
+        created_at          TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      )
+    `);
+
+    // ── Indexes ──────────────────────────────────────────────────────────────
+
+    await db.execute(sql`CREATE INDEX IF NOT EXISTS idx_farmops_users_tenant ON farmops_users (tenant_id)`);
+    await db.execute(sql`CREATE INDEX IF NOT EXISTS idx_farmops_users_email ON farmops_users (email)`);
+    await db.execute(sql`CREATE INDEX IF NOT EXISTS idx_farmops_tenants_stripe_customer ON farmops_tenants (stripe_customer_id)`);
+    await db.execute(sql`CREATE INDEX IF NOT EXISTS idx_farmops_tenants_stripe_sub ON farmops_tenants (stripe_subscription_id)`);
+    await db.execute(sql`CREATE INDEX IF NOT EXISTS idx_farmops_addons_tenant ON farmops_subscription_addons (tenant_id)`);
+
+    // ── Seed Jack Pine Farm's own tenant record (id=1) ───────────────────────
+    // This represents the farm itself using FarmOps. Existing flocks/animals/
+    // expenses rows will be backfilled to this tenant below.
+
+    await db.execute(sql`
+      INSERT INTO farmops_tenants (id, slug, name, owner_email, status, plan)
+      VALUES (1, 'jack-pine-farm', 'Jack Pine Farm', 'hello@jackpinefarms.farm', 'active', 'pro')
+      ON CONFLICT (id) DO NOTHING
+    `);
+
+    // Reset sequence so new tenants start at 2
+    await db.execute(sql`
+      SELECT setval('farmops_tenants_id_seq', GREATEST((SELECT MAX(id) FROM farmops_tenants), 1))
+    `);
+
+    // ── Add tenant_id to FarmOps-managed tables ───────────────────────────────
+    // Added as nullable; existing rows are backfilled to tenant 1 (Jack Pine Farm).
+
+    for (const stmt of [
+      `ALTER TABLE flocks              ADD COLUMN IF NOT EXISTS tenant_id INTEGER REFERENCES farmops_tenants(id)`,
+      `ALTER TABLE animals             ADD COLUMN IF NOT EXISTS tenant_id INTEGER REFERENCES farmops_tenants(id)`,
+      `ALTER TABLE egg_types           ADD COLUMN IF NOT EXISTS tenant_id INTEGER REFERENCES farmops_tenants(id)`,
+      `ALTER TABLE egg_inventory_lots  ADD COLUMN IF NOT EXISTS tenant_id INTEGER REFERENCES farmops_tenants(id)`,
+      `ALTER TABLE expenses            ADD COLUMN IF NOT EXISTS tenant_id INTEGER REFERENCES farmops_tenants(id)`,
+    ]) {
+      await db.execute(sql.raw(stmt));
+    }
+
+    // Backfill: assign all unowned rows to the Jack Pine Farm tenant
+    for (const table of ["flocks", "animals", "egg_types", "egg_inventory_lots", "expenses"]) {
+      await db.execute(sql.raw(`UPDATE ${table} SET tenant_id = 1 WHERE tenant_id IS NULL`));
+    }
+
+    // ── Tenant-scoped indexes ─────────────────────────────────────────────────
+    await db.execute(sql`CREATE INDEX IF NOT EXISTS idx_flocks_tenant             ON flocks             (tenant_id)`);
+    await db.execute(sql`CREATE INDEX IF NOT EXISTS idx_animals_tenant            ON animals            (tenant_id)`);
+    await db.execute(sql`CREATE INDEX IF NOT EXISTS idx_egg_types_tenant          ON egg_types          (tenant_id)`);
+    await db.execute(sql`CREATE INDEX IF NOT EXISTS idx_egg_inventory_lots_tenant ON egg_inventory_lots (tenant_id)`);
+    await db.execute(sql`CREATE INDEX IF NOT EXISTS idx_expenses_tenant           ON expenses           (tenant_id)`);
+
     logger.info("Startup migrations complete.");
   } catch (err) {
     logger.error({ err }, "Startup migration failed — server will still start");

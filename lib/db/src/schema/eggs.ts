@@ -14,6 +14,7 @@ import { sql } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 import { orderItemsTable } from "./orders";
+import { farmopsTenantsTable } from "./farmops-tenants";
 
 // ─── Enums ────────────────────────────────────────────────────────────────────
 
@@ -49,6 +50,7 @@ export const animalStatusEnum = pgEnum("animal_status_enum", [
 
 export const flocksTable = pgTable("flocks", {
   id: serial("id").primaryKey(),
+  tenantId: integer("tenant_id").references(() => farmopsTenantsTable.id),
   name: text("name").notNull(),
   species: flockSpeciesEnum("species").notNull(),
   breed: text("breed"),
@@ -78,6 +80,7 @@ export const flockEventsTable = pgTable(
 
 export const animalsTable = pgTable("animals", {
   id: serial("id").primaryKey(),
+  tenantId: integer("tenant_id").references(() => farmopsTenantsTable.id),
   name: text("name"),
   species: flockSpeciesEnum("species").notNull(),
   breed: text("breed"),
@@ -92,6 +95,7 @@ export const animalsTable = pgTable("animals", {
 
 export const eggTypesTable = pgTable("egg_types", {
   id: serial("id").primaryKey(),
+  tenantId: integer("tenant_id").references(() => farmopsTenantsTable.id),
   name: text("name").notNull(),
   flockId: integer("flock_id").references(() => flocksTable.id),
   active: boolean("active").notNull().default(true),
@@ -126,6 +130,7 @@ export const eggInventoryLotsTable = pgTable(
   "egg_inventory_lots",
   {
     id: serial("id").primaryKey(),
+    tenantId: integer("tenant_id").references(() => farmopsTenantsTable.id),
     eggTypeId: integer("egg_type_id")
       .notNull()
       .references(() => eggTypesTable.id),

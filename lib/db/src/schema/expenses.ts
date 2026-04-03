@@ -1,6 +1,7 @@
 import { pgTable, serial, text, integer, timestamp, date } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
+import { farmopsTenantsTable } from "./farmops-tenants";
 
 export const EXPENSE_CATEGORIES = [
   "feed",
@@ -18,6 +19,7 @@ export type ExpenseCategory = (typeof EXPENSE_CATEGORIES)[number];
 
 export const expensesTable = pgTable("expenses", {
   id: serial("id").primaryKey(),
+  tenantId: integer("tenant_id").references(() => farmopsTenantsTable.id),
   date: date("date").notNull(),
   category: text("category").notNull(),
   description: text("description").notNull(),
