@@ -259,7 +259,7 @@ router.delete("/admin/customers/:id", requireAdmin, async (req, res): Promise<vo
   }
 
   await db.delete(customersTable).where(eq(customersTable.id, id));
-  res.json({ success: true });
+  res.json({ message: "Customer deleted" });
 });
 
 export default router;

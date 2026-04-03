@@ -367,13 +367,14 @@ router.post("/admin/orders/:id/refund-giblets", requireAdmin, async (req, res): 
         body: `Giblets refund of $${gibletRefundDollars} processed via Stripe (refund id: ${refund.id})`,
       });
       res.json({ message: `Giblets refunded via Stripe ($${gibletRefundDollars})` });
-    } catch (err: any) {
+    } catch (err: unknown) {
+      const errMsg = err instanceof Error ? err.message : String(err);
       await db.insert(orderEventsTable).values({
         orderId: id,
         eventType: "refund",
-        body: `Giblets refund of $${gibletRefundDollars} attempted via Stripe but failed: ${err.message}. Retry this refund when the issue is resolved.`,
+        body: `Giblets refund of $${gibletRefundDollars} attempted via Stripe but failed: ${errMsg}. Retry this refund when the issue is resolved.`,
       });
-      res.status(500).json({ error: `Stripe refund failed: ${err.message}` });
+      res.status(500).json({ error: `Stripe refund failed: ${errMsg}` });
     }
   } else {
     await db.update(ordersTable).set({ refundedGiblets: true }).where(eq(ordersTable.id, id));
@@ -423,13 +424,14 @@ router.post("/admin/orders/:id/refund", requireAdmin, async (req, res): Promise<
         body: `Admin refund of $${amountDollars} processed via Stripe (refund id: ${refund.id})${reasonText}.`,
       });
       res.json({ message: `Refund of $${amountDollars} processed via Stripe.` });
-    } catch (err: any) {
+    } catch (err: unknown) {
+      const errMsg = err instanceof Error ? err.message : String(err);
       await db.insert(orderEventsTable).values({
         orderId: id,
         eventType: "refund",
-        body: `Admin refund of $${amountDollars} failed: ${err.message}${reasonText}.`,
+        body: `Admin refund of $${amountDollars} failed: ${errMsg}${reasonText}.`,
       });
-      res.status(500).json({ error: `Stripe refund failed: ${err.message}` });
+      res.status(500).json({ error: `Stripe refund failed: ${errMsg}` });
     }
   } else {
     await db.insert(orderEventsTable).values({
@@ -579,13 +581,14 @@ router.post("/admin/orders/:id/send-invoice", requireAdmin, async (req, res): Pr
       );
       res.json({ status: "stub", remainingCents, finalTotalCents, depositPaidCents });
     }
-  } catch (err: any) {
+  } catch (err: unknown) {
+    const errMsg = err instanceof Error ? err.message : String(err);
     await db.insert(orderEventsTable).values({
       orderId: id,
       eventType: "invoice_sent",
-      body: `Stripe invoice failed for ${order.customerEmail}: ${err.message}. Remaining: $${(remainingCents / 100).toFixed(2)}.`,
+      body: `Stripe invoice failed for ${order.customerEmail}: ${errMsg}. Remaining: $${(remainingCents / 100).toFixed(2)}.`,
     });
-    res.status(500).json({ error: `Stripe invoice failed: ${err.message}` });
+    res.status(500).json({ error: `Stripe invoice failed: ${errMsg}` });
   }
 });
 
@@ -637,7 +640,7 @@ router.delete("/admin/orders/:id", requireAdmin, async (req, res): Promise<void>
   await db.delete(orderItemsTable).where(eq(orderItemsTable.orderId, id));
   await db.delete(ordersTable).where(eq(ordersTable.id, id));
 
-  res.json({ success: true });
+  res.json({ message: "Order deleted" });
 });
 
 export default router;
