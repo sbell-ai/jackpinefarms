@@ -19,8 +19,7 @@ declare global {
 declare module "express-session" {
   interface SessionData {
     // Jack Pine Farm storefront
-    admin?: boolean;         // legacy boolean — kept during transition, use platformAdminId
-    platformAdminId?: number; // replaces admin: set to the platform_admins.id on login
+    platformAdminId?: number;
     customerId?: number;
     cart?: SessionCartItem[];
     appliedCouponCode?: string | null;
