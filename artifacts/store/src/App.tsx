@@ -56,6 +56,16 @@ import CmsPageList from "./pages/admin/CmsPageList";
 import CmsPageForm from "./pages/admin/CmsPageForm";
 import CmsMenus from "./pages/admin/CmsMenus";
 
+// FarmOps SaaS
+import { FarmOpsLayout } from "./components/farmops/FarmOpsLayout";
+import FarmOpsLanding from "./pages/farmops/Landing";
+import FarmOpsRegister from "./pages/farmops/Register";
+import FarmOpsLogin from "./pages/farmops/Login";
+import FarmOpsVerifyEmail from "./pages/farmops/VerifyEmail";
+import FarmOpsForgotPassword from "./pages/farmops/ForgotPassword";
+import FarmOpsResetPassword from "./pages/farmops/ResetPassword";
+import FarmOpsDashboard from "./pages/farmops/Dashboard";
+
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
@@ -68,6 +78,29 @@ const queryClient = new QueryClient({
 function Router() {
   return (
     <Switch>
+      {/* FarmOps SaaS Routes */}
+      <Route path="/farmops/register">
+        <FarmOpsLayout><FarmOpsRegister /></FarmOpsLayout>
+      </Route>
+      <Route path="/farmops/login">
+        <FarmOpsLayout><FarmOpsLogin /></FarmOpsLayout>
+      </Route>
+      <Route path="/farmops/verify-email">
+        <FarmOpsLayout><FarmOpsVerifyEmail /></FarmOpsLayout>
+      </Route>
+      <Route path="/farmops/forgot-password">
+        <FarmOpsLayout><FarmOpsForgotPassword /></FarmOpsLayout>
+      </Route>
+      <Route path="/farmops/reset-password">
+        <FarmOpsLayout><FarmOpsResetPassword /></FarmOpsLayout>
+      </Route>
+      <Route path="/farmops/dashboard">
+        <FarmOpsLayout><FarmOpsDashboard /></FarmOpsLayout>
+      </Route>
+      <Route path="/farmops">
+        <FarmOpsLayout><FarmOpsLanding /></FarmOpsLayout>
+      </Route>
+
       {/* Admin Auth is standalone */}
       <Route path="/admin/login" component={AdminLogin} />
 
