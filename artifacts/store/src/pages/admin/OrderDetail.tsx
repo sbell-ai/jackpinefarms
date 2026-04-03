@@ -455,7 +455,18 @@ export default function AdminOrderDetail() {
       <div className="rounded-lg border border-border bg-card overflow-hidden">
         <div className="px-4 py-3 border-b border-border flex items-center justify-between">
           <div className="text-sm font-semibold text-foreground">Items</div>
-          {!itemsEditOpen ? (
+          {itemsEditOpen ? (
+            <div className="flex gap-1">
+              <Button
+                size="sm"
+                disabled={setOrderItems.isPending}
+                onClick={() => setOrderItems.mutate({ id: orderId, data: draftItems.map((i) => ({ productId: i.productId, quantity: i.quantity })) })}
+              >
+                {setOrderItems.isPending ? "Saving…" : "Save Items"}
+              </Button>
+              <Button size="sm" variant="ghost" onClick={() => setItemsEditOpen(false)}>Cancel</Button>
+            </div>
+          ) : order.source === "admin" ? (
             <Button
               size="sm"
               variant="ghost"
@@ -469,18 +480,7 @@ export default function AdminOrderDetail() {
             >
               <Pencil className="w-3 h-3" /> Edit Items
             </Button>
-          ) : (
-            <div className="flex gap-1">
-              <Button
-                size="sm"
-                disabled={setOrderItems.isPending}
-                onClick={() => setOrderItems.mutate({ id: orderId, data: draftItems.map((i) => ({ productId: i.productId, quantity: i.quantity })) })}
-              >
-                {setOrderItems.isPending ? "Saving…" : "Save Items"}
-              </Button>
-              <Button size="sm" variant="ghost" onClick={() => setItemsEditOpen(false)}>Cancel</Button>
-            </div>
-          )}
+          ) : null}
         </div>
 
         {itemsEditOpen ? (
