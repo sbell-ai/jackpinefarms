@@ -136,11 +136,6 @@ router.post("/admin/orders/:id/items", requireAdmin, async (req, res): Promise<v
   const [order] = await db.select().from(ordersTable).where(eq(ordersTable.id, id)).limit(1);
   if (!order) { res.status(404).json({ error: "Order not found" }); return; }
 
-  if (order.source !== "admin") {
-    res.status(403).json({ error: "Items can only be set on admin-created orders" });
-    return;
-  }
-
   await db.delete(orderItemsTable).where(eq(orderItemsTable.orderId, id));
 
   if (parsed.data.length > 0) {

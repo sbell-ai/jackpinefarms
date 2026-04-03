@@ -466,7 +466,7 @@ export default function AdminOrderDetail() {
               </Button>
               <Button size="sm" variant="ghost" onClick={() => setItemsEditOpen(false)}>Cancel</Button>
             </div>
-          ) : order.source === "admin" ? (
+          ) : (
             <Button
               size="sm"
               variant="ghost"
@@ -480,7 +480,7 @@ export default function AdminOrderDetail() {
             >
               <Pencil className="w-3 h-3" /> Edit Items
             </Button>
-          ) : null}
+          )}
         </div>
 
         {itemsEditOpen ? (
