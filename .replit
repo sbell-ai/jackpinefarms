@@ -17,6 +17,16 @@ env = { "CI" = "true" }
 [workflows]
 runButton = "Project"
 
+[[workflows.workflow]]
+name = "FarmOps Landing"
+mode = "sequential"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "pnpm --filter farmops-landing dev"
+waitForPort = 5173
+
 [agent]
 stack = "PNPM_WORKSPACE"
 expertMode = true

@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { Link } from "wouter";
 import {
   Bird,
   ClipboardList,
@@ -15,6 +14,12 @@ import {
   Quote,
   AlertCircle,
 } from "lucide-react";
+import { BASE_URL } from "./config";
+
+// ── Links ─────────────────────────────────────────────────────────────────────
+
+const REGISTER_URL = `${BASE_URL}/farmops/register`;
+const LOGIN_URL = `${BASE_URL}/farmops/login`;
 
 // ── Data ─────────────────────────────────────────────────────────────────────
 
@@ -32,7 +37,7 @@ const PAIN_POINTS = [
   {
     icon: AlertCircle,
     heading: "At the end of the month, you're guessing at your margins.",
-    body: "Feed costs, vet bills, labor — scattered across receipts and memory. Tax season is a scramble. You know the farm is profitable, but you can't prove it.",
+    body: "Feed costs, vet bills, labour — scattered across receipts and memory. Tax season is a scramble. You know the farm is profitable, but you can't prove it.",
   },
 ];
 
@@ -53,7 +58,7 @@ const FEATURES = [
     icon: DollarSign,
     title: "Expense Tracking",
     description:
-      "Categorize every dollar spent — feed, supplies, labor, vet bills. Filter by date or category and export a full summary at tax time.",
+      "Categorize every dollar spent — feed, supplies, labour, vet bills. Filter by date or category and export a full summary at tax time.",
   },
   {
     icon: ShoppingBasket,
@@ -136,14 +141,14 @@ function Nav() {
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
-          <Link href="/farmops" className="flex items-center gap-2 group">
+          <a href={`${BASE_URL}/farmops`} className="flex items-center gap-2 group">
             <div className="w-8 h-8 rounded-lg bg-[hsl(148,26%,23%)] flex items-center justify-center">
               <Sprout className="w-4 h-4 text-white" />
             </div>
             <span className="font-bold text-xl text-[hsl(148,26%,23%)] tracking-tight">
               Farm<span className="text-[hsl(14,52%,54%)]">Ops</span>
             </span>
-          </Link>
+          </a>
 
           {/* Desktop nav */}
           <nav className="hidden md:flex items-center gap-8">
@@ -153,16 +158,16 @@ function Nav() {
             <a href="#pricing" className="text-sm text-stone-600 hover:text-[hsl(148,26%,23%)] transition-colors font-medium">
               Pricing
             </a>
-            <Link href="/farmops/login" className="text-sm text-stone-600 hover:text-[hsl(148,26%,23%)] transition-colors font-medium">
+            <a href={LOGIN_URL} className="text-sm text-stone-600 hover:text-[hsl(148,26%,23%)] transition-colors font-medium">
               Sign in
-            </Link>
-            <Link
-              href="/farmops/register"
+            </a>
+            <a
+              href={REGISTER_URL}
               className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-[hsl(148,26%,23%)] text-white text-sm font-semibold hover:bg-[hsl(148,26%,18%)] transition-colors"
             >
               Start Free Trial
               <ArrowRight className="w-3.5 h-3.5" />
-            </Link>
+            </a>
           </nav>
 
           {/* Mobile menu button */}
@@ -181,13 +186,13 @@ function Nav() {
         <div className="md:hidden border-t border-stone-200 bg-white px-4 py-4 space-y-3">
           <a href="#features" onClick={() => setOpen(false)} className="block text-sm font-medium text-stone-700 py-2">Features</a>
           <a href="#pricing" onClick={() => setOpen(false)} className="block text-sm font-medium text-stone-700 py-2">Pricing</a>
-          <Link href="/farmops/login" className="block text-sm font-medium text-stone-700 py-2">Sign in</Link>
-          <Link
-            href="/farmops/register"
+          <a href={LOGIN_URL} className="block text-sm font-medium text-stone-700 py-2">Sign in</a>
+          <a
+            href={REGISTER_URL}
             className="block text-center px-4 py-2.5 rounded-lg bg-[hsl(148,26%,23%)] text-white text-sm font-semibold"
           >
             Start Free Trial
-          </Link>
+          </a>
         </div>
       )}
     </header>
@@ -196,21 +201,13 @@ function Nav() {
 
 // ── Page ─────────────────────────────────────────────────────────────────────
 
-export default function FarmOpsLanding() {
+export default function App() {
   return (
-    <div className="text-stone-900 scroll-smooth">
+    <div className="text-stone-900">
       <Nav />
 
       {/* ── Hero ─────────────────────────────────────────────────────────── */}
       <section className="relative overflow-hidden bg-[hsl(148,26%,14%)]">
-        {/* Subtle texture */}
-        <div
-          className="absolute inset-0 opacity-[0.04]"
-          style={{
-            backgroundImage: "url('/images/texture-bg.png')",
-            backgroundSize: "400px 400px",
-          }}
-        />
         {/* Warm glow */}
         <div className="absolute bottom-0 right-0 w-[600px] h-[600px] opacity-10 rounded-full bg-[hsl(14,52%,54%)] blur-[120px] translate-x-1/4 translate-y-1/4" />
 
@@ -235,13 +232,13 @@ export default function FarmOpsLanding() {
             </p>
 
             <div className="flex flex-col sm:flex-row gap-4 mb-8">
-              <Link
-                href="/farmops/register"
+              <a
+                href={REGISTER_URL}
                 className="inline-flex items-center justify-center gap-2 px-8 py-4 rounded-xl bg-white text-[hsl(148,26%,18%)] font-bold text-base hover:bg-stone-100 transition-colors shadow-lg"
               >
                 Start Free — No Credit Card Required
                 <ArrowRight className="w-4 h-4" />
-              </Link>
+              </a>
               <a
                 href="#pricing"
                 className="inline-flex items-center justify-center gap-2 px-8 py-4 rounded-xl border border-white/25 text-white/80 font-semibold text-base hover:bg-white/10 transition-colors"
@@ -412,8 +409,8 @@ export default function FarmOpsLanding() {
                     ))}
                   </ul>
 
-                  <Link
-                    href="/farmops/register"
+                  <a
+                    href={REGISTER_URL}
                     className={`block text-center py-3 rounded-xl font-semibold text-sm transition-colors ${
                       plan.highlight
                         ? "bg-white text-[hsl(148,26%,23%)] hover:bg-stone-100"
@@ -421,7 +418,7 @@ export default function FarmOpsLanding() {
                     }`}
                   >
                     Start free trial
-                  </Link>
+                  </a>
                 </div>
               </div>
             ))}
@@ -439,10 +436,7 @@ export default function FarmOpsLanding() {
             </div>
             <div className="divide-y divide-stone-100">
               {ADDONS.map(({ name, price }) => (
-                <div
-                  key={name}
-                  className="flex items-center justify-between px-8 py-4"
-                >
+                <div key={name} className="flex items-center justify-between px-8 py-4">
                   <span className="text-sm font-medium text-stone-700">{name}</span>
                   <span className="text-sm font-bold text-[hsl(148,26%,30%)] ml-4 whitespace-nowrap">
                     {price}
@@ -465,18 +459,18 @@ export default function FarmOpsLanding() {
             Start your 14-day free trial today. No credit card. No commitment.
             Cancel any time.
           </p>
-          <Link
-            href="/farmops/register"
+          <a
+            href={REGISTER_URL}
             className="inline-flex items-center gap-2 px-10 py-4 rounded-xl bg-white text-[hsl(148,26%,18%)] font-bold text-base hover:bg-stone-100 transition-colors shadow-lg"
           >
             Start Free — No Credit Card Required
             <ArrowRight className="w-4 h-4" />
-          </Link>
+          </a>
           <p className="text-white/30 text-sm mt-6">
             Already have an account?{" "}
-            <Link href="/farmops/login" className="text-white/60 underline hover:text-white transition-colors">
+            <a href={LOGIN_URL} className="text-white/60 underline hover:text-white transition-colors">
               Sign in
-            </Link>
+            </a>
           </p>
         </div>
       </section>
