@@ -31,6 +31,16 @@ const LoginBody = z.object({
 
 router.post("/admin/login", adminLoginLimiter, async (req, res): Promise<void> => {
   const parsed = LoginBody.safeParse(req.body);
+  req.log.info({
+    debug_login: true,
+    body_keys: Object.keys(req.body ?? {}),
+    email_received: parsed.success ? parsed.data.email : (req.body?.email ?? "MISSING"),
+    password_length: parsed.success ? parsed.data.password.length : (req.body?.password?.length ?? 0),
+    parse_success: parsed.success,
+    parse_error: parsed.success ? undefined : parsed.error.issues.map(i => i.message),
+    content_type: req.headers["content-type"],
+  }, "DEBUG admin login attempt");
+
   if (!parsed.success) {
     res.status(400).json({ error: "Email and password are required" });
     return;
@@ -44,7 +54,16 @@ router.post("/admin/login", adminLoginLimiter, async (req, res): Promise<void> =
     .where(eq(platformAdminsTable.email, email.toLowerCase()))
     .limit(1);
 
-  if (!admin || !admin.isActive || !(await bcrypt.compare(password, admin.passwordHash))) {
+  const hashMatch = admin ? await bcrypt.compare(password, admin.passwordHash) : false;
+  req.log.info({
+    debug_login: true,
+    email_looked_up: email.toLowerCase(),
+    admin_found: !!admin,
+    admin_active: admin?.isActive ?? false,
+    bcrypt_match: hashMatch,
+  }, "DEBUG admin login db check");
+
+  if (!admin || !admin.isActive || !hashMatch) {
     res.status(401).json({ error: "Invalid email or password" });
     return;
   }
