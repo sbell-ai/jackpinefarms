@@ -4,6 +4,8 @@ import pinoHttp from "pino-http";
 import session from "express-session";
 import cookieParser from "cookie-parser";
 import connectPgSimple from "connect-pg-simple";
+import path from "path";
+import { fileURLToPath } from "url";
 import router from "./routes";
 import { logger } from "./lib/logger";
 
@@ -86,5 +88,14 @@ app.use(
 );
 
 app.use("/api", router);
+
+const farmopsDistPath = path.resolve(
+  path.dirname(fileURLToPath(import.meta.url)),
+  "../../farmops-landing/dist",
+);
+app.use("/farmops", express.static(farmopsDistPath));
+app.get("/farmops", (_req, res) => {
+  res.sendFile(path.join(farmopsDistPath, "index.html"));
+});
 
 export default app;

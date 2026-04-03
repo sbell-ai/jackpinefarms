@@ -24,8 +24,8 @@ author = "agent"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "pnpm --filter farmops-landing dev"
-waitForPort = 5173
+args = "pnpm --filter @workspace/farmops-landing run dev"
+waitForPort = 5174
 
 [agent]
 stack = "PNPM_WORKSPACE"
@@ -42,3 +42,19 @@ timeoutMs = 20000
 
 [nix]
 channel = "stable-25_05"
+
+[[ports]]
+localPort = 5174
+externalPort = 80
+
+[[ports]]
+localPort = 8080
+externalPort = 3000
+
+[[ports]]
+localPort = 8081
+externalPort = 3001
+
+[[ports]]
+localPort = 24964
+externalPort = 3002

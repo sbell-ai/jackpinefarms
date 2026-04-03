@@ -3,9 +3,9 @@ import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
 
 const rawPort = process.env.PORT;
-const port = rawPort ? Number(rawPort) : undefined;
+const port = rawPort ? Number(rawPort) : 5174;
 
-if (port !== undefined && (Number.isNaN(port) || port <= 0)) {
+if (Number.isNaN(port) || port <= 0) {
   throw new Error(`Invalid PORT value: "${rawPort}"`);
 }
 
