@@ -6,6 +6,7 @@ import {
   getAdminGetCustomerQueryKey,
   useAdminUpdateCustomer,
   useAdminDeleteCustomer,
+  type OrderSummary,
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft, Mail, Phone, ShoppingBag, CheckCircle, XCircle, Pencil, Trash2 } from "lucide-react";
@@ -24,6 +25,32 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
+
+type CustomerEventTimelineItem = {
+  id: number;
+  orderId: number;
+  eventType: string;
+  body: string;
+  createdAt: string;
+};
+
+type CustomerDetailResponse = {
+  id: number;
+  email: string | null;
+  name: string;
+  phone: string | null;
+  notes: string | null;
+  emailVerified: boolean;
+  orderCount: number;
+  orders: OrderSummary[];
+  eventTimeline: CustomerEventTimelineItem[];
+  createdAt: string;
+};
+
+function getApiErrMsg(e: unknown): string {
+  const ae = e as { response?: { data?: { error?: string } }; message?: string };
+  return ae?.response?.data?.error ?? ae?.message ?? "Unknown error";
+}
 
 const STATUS_LABELS: Record<string, string> = {
   pending_payment: "Pending Payment",
@@ -82,7 +109,7 @@ export default function AdminCustomerDetail() {
         setEditOpen(false);
         qc.invalidateQueries({ queryKey: getAdminGetCustomerQueryKey(customerId) });
       },
-      onError: (e: any) => toast({ title: "Error", description: e.response?.data?.error ?? e.message, variant: "destructive" }),
+      onError: (e: unknown) => toast({ title: "Error", description: getApiErrMsg(e), variant: "destructive" }),
     },
   });
 
@@ -92,10 +119,7 @@ export default function AdminCustomerDetail() {
         toast({ title: "Customer deleted" });
         navigate("/admin/customers");
       },
-      onError: (e: any) => {
-        const msg = e.response?.data?.error ?? e.message;
-        toast({ title: "Cannot delete", description: msg, variant: "destructive" });
-      },
+      onError: (e: unknown) => toast({ title: "Cannot delete", description: getApiErrMsg(e), variant: "destructive" }),
     },
   });
 
@@ -118,8 +142,9 @@ export default function AdminCustomerDetail() {
     );
   }
 
-  const orders: any[] = (customer as any).orders ?? [];
-  const eventTimeline: any[] = (customer as any).eventTimeline ?? [];
+  const typedCustomer = customer as unknown as CustomerDetailResponse;
+  const orders: OrderSummary[] = typedCustomer.orders ?? [];
+  const eventTimeline: CustomerEventTimelineItem[] = typedCustomer.eventTimeline ?? [];
 
   return (
     <div className="space-y-6">
@@ -139,7 +164,7 @@ export default function AdminCustomerDetail() {
               setEditName(customer.name ?? "");
               setEditEmail(customer.email ?? "");
               setEditPhone(customer.phone ?? "");
-              setEditNotes((customer as any).notes ?? "");
+              setEditNotes(typedCustomer.notes ?? "");
               setEditOpen(true);
             }}
           >
@@ -226,14 +251,14 @@ export default function AdminCustomerDetail() {
                 </div>
               )}
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                {(customer as any).emailVerified ? (
+                {typedCustomer.emailVerified ? (
                   <><CheckCircle className="w-4 h-4 text-teal-600" /> Email verified</>
                 ) : (
                   <><XCircle className="w-4 h-4 text-yellow-600" /> Email not verified</>
                 )}
               </div>
-              {(customer as any).notes && (
-                <div className="text-sm text-muted-foreground italic">{(customer as any).notes}</div>
+              {typedCustomer.notes && (
+                <div className="text-sm text-muted-foreground italic">{typedCustomer.notes}</div>
               )}
             </>
           )}
@@ -246,9 +271,9 @@ export default function AdminCustomerDetail() {
             <span className="text-foreground font-medium">{orders.length}</span>
             <span className="text-muted-foreground">order{orders.length !== 1 ? "s" : ""}</span>
           </div>
-          {orders.filter((o: any) => o.refundedGiblets).length > 0 && (
+          {orders.filter((o) => o.refundedGiblets).length > 0 && (
             <div className="text-sm text-muted-foreground">
-              💸 {orders.filter((o: any) => o.refundedGiblets).length} giblets refund{orders.filter((o: any) => o.refundedGiblets).length !== 1 ? "s" : ""}
+              💸 {orders.filter((o) => o.refundedGiblets).length} giblets refund{orders.filter((o) => o.refundedGiblets).length !== 1 ? "s" : ""}
             </div>
           )}
           <div className="text-sm text-muted-foreground">
@@ -274,12 +299,11 @@ export default function AdminCustomerDetail() {
                 <th className="text-left px-4 py-2 font-medium text-muted-foreground">Date</th>
                 <th className="text-left px-4 py-2 font-medium text-muted-foreground">Payment</th>
                 <th className="text-left px-4 py-2 font-medium text-muted-foreground">Deposit</th>
-                <th className="text-left px-4 py-2 font-medium text-muted-foreground">Weight</th>
                 <th className="text-left px-4 py-2 font-medium text-muted-foreground">Status</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
-              {orders.map((order: any) => (
+              {orders.map((order) => (
                 <tr key={order.id} className="hover:bg-muted/30 transition-colors">
                   <td className="px-4 py-2 font-mono text-xs text-muted-foreground">
                     <Link href={`/admin/orders/${order.id}`} className="hover:text-primary transition-colors">
@@ -297,9 +321,6 @@ export default function AdminCustomerDetail() {
                   </td>
                   <td className="px-4 py-2 font-medium text-foreground">
                     ${((order.totalInCents ?? 0) / 100).toFixed(2)}
-                  </td>
-                  <td className="px-4 py-2 text-muted-foreground">
-                    {order.finalWeightLbs ? `${order.finalWeightLbs} lbs` : "—"}
                   </td>
                   <td className="px-4 py-2">
                     <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${STATUS_COLORS[order.status] ?? "bg-gray-100 text-gray-800"}`}>
@@ -326,7 +347,7 @@ export default function AdminCustomerDetail() {
           </div>
         ) : (
           <div className="divide-y divide-border max-h-96 overflow-y-auto">
-            {eventTimeline.map((ev: any) => (
+            {eventTimeline.map((ev) => (
               <div key={ev.id} className="px-4 py-3 flex gap-3 items-start">
                 <span className="text-base leading-none mt-0.5 shrink-0">
                   {EVENT_ICONS[ev.eventType] ?? "📌"}

@@ -23,6 +23,9 @@ import {
   useAdminListPickupEvents,
   type OrderStatus,
   type SendOrderInvoiceResponse,
+  type PickupEvent,
+  type Product,
+  type SuccessResponse,
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft, RefreshCw, FileText, CheckCircle, XCircle, MessageSquare, Package, Egg, Send, DollarSign, PhoneCall, Pencil, Trash2, Plus, Minus, RotateCcw } from "lucide-react";
@@ -42,6 +45,11 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
+
+function getApiErrMsg(e: unknown): string {
+  const ae = e as { response?: { data?: { error?: string } }; message?: string };
+  return ae?.response?.data?.error ?? ae?.message ?? "Unknown error";
+}
 
 const STATUS_LABELS: Record<string, string> = {
   pending_payment: "Pending Payment",
@@ -132,17 +140,17 @@ export default function AdminOrderDetail() {
         setStatusNote("");
         invalidate();
       },
-      onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
+      onError: (e: unknown) => toast({ title: "Error", description: getApiErrMsg(e), variant: "destructive" }),
     },
   });
 
   const refundGiblets = useAdminRefundGiblets({
     mutation: {
-      onSuccess: (data: any) => {
+      onSuccess: (data: SuccessResponse) => {
         toast({ title: "Giblets refunded", description: data.message });
         invalidate();
       },
-      onError: (e: any) => toast({ title: "Error", description: e.response?.data?.error ?? e.message, variant: "destructive" }),
+      onError: (e: unknown) => toast({ title: "Error", description: getApiErrMsg(e), variant: "destructive" }),
     },
   });
 
@@ -153,7 +161,7 @@ export default function AdminOrderDetail() {
         setNewNote("");
         invalidate();
       },
-      onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
+      onError: (e: unknown) => toast({ title: "Error", description: getApiErrMsg(e), variant: "destructive" }),
     },
   });
 
@@ -166,7 +174,7 @@ export default function AdminOrderDetail() {
         setSelectedBatchId("");
         invalidate();
       },
-      onError: (e: any) => toast({ title: "Error", description: e.response?.data?.error ?? e.message, variant: "destructive" }),
+      onError: (e: unknown) => toast({ title: "Error", description: getApiErrMsg(e), variant: "destructive" }),
     },
   });
 
@@ -183,13 +191,14 @@ export default function AdminOrderDetail() {
           queryKey: getAdminGetEggAllocationsQueryKey(orderId),
         });
       },
-      onError: (e: any) => {
-        if (e.response?.status === 409) {
+      onError: (e: unknown) => {
+        const ae = e as { response?: { status?: number; data?: { error?: string } }; message?: string };
+        if (ae.response?.status === 409) {
           toast({ title: "Already allocated", description: "Egg inventory already allocated for this order." });
           refetchAllocations();
           return;
         }
-        toast({ title: "Error", description: e.response?.data?.error ?? e.message, variant: "destructive" });
+        toast({ title: "Error", description: getApiErrMsg(e), variant: "destructive" });
       },
     },
   });
@@ -207,7 +216,7 @@ export default function AdminOrderDetail() {
         setInvoiceWeightLbs("");
         invalidate();
       },
-      onError: (e: any) => toast({ title: "Error", description: e.response?.data?.error ?? e.message, variant: "destructive" }),
+      onError: (e: unknown) => toast({ title: "Error", description: getApiErrMsg(e), variant: "destructive" }),
     },
   });
 
@@ -218,7 +227,7 @@ export default function AdminOrderDetail() {
         setEditOpen(false);
         invalidate();
       },
-      onError: (e: any) => toast({ title: "Error", description: e.response?.data?.error ?? e.message, variant: "destructive" }),
+      onError: (e: unknown) => toast({ title: "Error", description: getApiErrMsg(e), variant: "destructive" }),
     },
   });
 
@@ -228,7 +237,7 @@ export default function AdminOrderDetail() {
         toast({ title: "Order deleted" });
         navigate("/admin/orders");
       },
-      onError: (e: any) => toast({ title: "Error", description: e.response?.data?.error ?? e.message, variant: "destructive" }),
+      onError: (e: unknown) => toast({ title: "Error", description: getApiErrMsg(e), variant: "destructive" }),
     },
   });
 
@@ -242,19 +251,19 @@ export default function AdminOrderDetail() {
         setItemsEditOpen(false);
         invalidate();
       },
-      onError: (e: any) => toast({ title: "Error", description: e.response?.data?.error ?? e.message, variant: "destructive" }),
+      onError: (e: unknown) => toast({ title: "Error", description: getApiErrMsg(e), variant: "destructive" }),
     },
   });
 
   const refundOrder = useAdminRefundOrder({
     mutation: {
-      onSuccess: (data: any) => {
+      onSuccess: (data: SuccessResponse) => {
         toast({ title: "Refund recorded", description: data.message });
         setRefundAmount("");
         setRefundReason("");
         invalidate();
       },
-      onError: (e: any) => toast({ title: "Error", description: e.response?.data?.error ?? e.message, variant: "destructive" }),
+      onError: (e: unknown) => toast({ title: "Error", description: getApiErrMsg(e), variant: "destructive" }),
     },
   });
 
@@ -340,7 +349,7 @@ export default function AdminOrderDetail() {
                 setEditName(order.customerName ?? "");
                 setEditEmail(order.customerEmail ?? "");
                 setEditPhone(order.customerPhone ?? "");
-                setEditNotes((order as any).notes ?? "");
+                setEditNotes(order.notes ?? "");
                 setEditPickupEventId(order.pickupEventId ?? null);
                 setEditOpen(true);
               }}
@@ -377,7 +386,7 @@ export default function AdminOrderDetail() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="__none__">— No pickup event —</SelectItem>
-                    {pickupEvents.map((ev: any) => (
+                    {pickupEvents.map((ev: PickupEvent) => (
                       <SelectItem key={ev.id} value={String(ev.id)}>
                         {ev.name} {ev.scheduledAt ? `(${format(new Date(ev.scheduledAt), "MMM d, yyyy")})` : ""}
                       </SelectItem>
@@ -412,8 +421,8 @@ export default function AdminOrderDetail() {
               {order.customerPhone && (
                 <div className="text-sm text-muted-foreground">{order.customerPhone}</div>
               )}
-              {(order as any).notes && (
-                <div className="text-sm text-muted-foreground italic mt-1">{(order as any).notes}</div>
+              {order.notes && (
+                <div className="text-sm text-muted-foreground italic mt-1">{order.notes}</div>
               )}
             </>
           )}
@@ -518,9 +527,9 @@ export default function AdminOrderDetail() {
                   <SelectValue placeholder="Add a product…" />
                 </SelectTrigger>
                 <SelectContent>
-                  {(allProducts as any[])
-                    .filter((p: any) => !draftItems.some((d) => d.productId === p.id))
-                    .map((p: any) => (
+                  {allProducts
+                    .filter((p: Product) => !draftItems.some((d) => d.productId === p.id))
+                    .map((p: Product) => (
                       <SelectItem key={p.id} value={String(p.id)}>{p.name}</SelectItem>
                     ))}
                 </SelectContent>
@@ -539,7 +548,7 @@ export default function AdminOrderDetail() {
                 variant="outline"
                 disabled={!addProductId}
                 onClick={() => {
-                  const prod = (allProducts as any[]).find((p: any) => p.id === Number(addProductId));
+                  const prod = allProducts.find((p: Product) => p.id === Number(addProductId));
                   if (!prod) return;
                   setDraftItems((prev) => [...prev, { productId: prod.id, quantity: addProductQty, productName: prod.name }]);
                   setAddProductId("");
