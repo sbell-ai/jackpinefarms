@@ -256,6 +256,7 @@ export const SubscribeNotifyMeResponse = zod.object({
  * @summary Admin login
  */
 export const AdminLoginBody = zod.object({
+  email: zod.string().email(),
   password: zod.string(),
 });
 

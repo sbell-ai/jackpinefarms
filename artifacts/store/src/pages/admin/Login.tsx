@@ -6,17 +6,18 @@ import { Store, Loader2, Lock } from "lucide-react";
 
 export default function AdminLogin() {
   const [, setLocation] = useLocation();
+  const [email, setEmail] = useState("admin@jackpinefarms.farm");
   const [password, setPassword] = useState("");
   const queryClient = useQueryClient();
   const loginMutation = useAdminLogin();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!password) return;
-    
+    if (!email || !password) return;
+
     try {
       await loginMutation.mutateAsync({
-        data: { password }
+        data: { email, password }
       });
       // Write authenticated:true directly into the cache so AdminLayout sees it
       // immediately on render — no refetch race, no stale-data bounce to login.
@@ -43,18 +44,29 @@ export default function AdminLogin() {
         <div className="bg-card border border-border p-8 rounded-3xl shadow-xl">
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="space-y-2">
-              <label className="text-sm font-bold text-foreground">Admin Password</label>
+              <label className="text-sm font-bold text-foreground">Email</label>
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="w-full px-4 py-3 rounded-xl bg-background border border-border focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all text-foreground"
+                placeholder="admin@jackpinefarms.farm"
+                autoFocus
+              />
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-bold text-foreground">Password</label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-muted-foreground">
                   <Lock className="w-5 h-5" />
                 </div>
-                <input 
-                  type="password" 
+                <input
+                  type="password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   className="w-full pl-12 pr-4 py-3 rounded-xl bg-background border border-border focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all text-foreground"
                   placeholder="••••••••"
-                  autoFocus
                 />
               </div>
               {loginMutation.isError && (
@@ -62,9 +74,9 @@ export default function AdminLogin() {
               )}
             </div>
 
-            <button 
+            <button
               type="submit"
-              disabled={loginMutation.isPending || !password}
+              disabled={loginMutation.isPending || !email || !password}
               className="w-full flex justify-center items-center gap-2 py-3 rounded-xl bg-primary text-white font-bold hover:bg-primary/90 transition-all shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {loginMutation.isPending ? <Loader2 className="w-5 h-5 animate-spin" /> : "Sign In"}

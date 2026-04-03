@@ -152,6 +152,7 @@ export interface NotifyMeBody {
 }
 
 export interface AdminLoginBody {
+  email: string;
   password: string;
 }
 
