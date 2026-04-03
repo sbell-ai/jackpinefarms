@@ -9,7 +9,10 @@
       "Bash(grep -r \"innerHTML\\\\|dangerouslySetInnerHTML\\\\|\\\\.html\\(\\\\|sql\\\\`\" /home/runner/workspace/artifacts --include=\"*.ts\" --include=\"*.tsx\" --include=\"*.js\")",
       "Bash(find /home/runner/workspace/artifacts/api-server/src -name \"*.ts\" -exec wc -l {} +)",
       "Bash(grep:*)",
-      "Bash(wc -l /home/runner/workspace/artifacts/api-server/src/routes/*.ts)"
+      "Bash(wc -l /home/runner/workspace/artifacts/api-server/src/routes/*.ts)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git push:*)"
     ]
   }
 }
