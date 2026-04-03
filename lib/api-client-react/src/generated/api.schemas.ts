@@ -573,6 +573,12 @@ export interface AdminCreateOrderBody {
   notes?: string;
 }
 
+export interface AdminRefundOrderBody {
+  /** @minimum 1 */
+  amountCents: number;
+  reason?: string;
+}
+
 export interface AdminUpdateOrderBody {
   customerName?: string;
   customerEmail?: string;

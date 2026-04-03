@@ -339,7 +339,7 @@ export const AdminListOrdersResponseItem = zod.object({
 export const AdminListOrdersResponse = zod.array(AdminListOrdersResponseItem);
 
 /**
- * @summary Set items on a draft admin order
+ * @summary Set items on an order (admin)
  */
 export const AdminSetOrderItemsParams = zod.object({
   id: zod.coerce.number(),
@@ -1417,6 +1417,22 @@ export const AdminRefundGibletsParams = zod.object({
 });
 
 export const AdminRefundGibletsResponse = zod.object({
+  message: zod.string(),
+});
+
+/**
+ * @summary Issue an arbitrary refund for an order (admin, no status guard)
+ */
+export const AdminRefundOrderParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const AdminRefundOrderBody = zod.object({
+  amountCents: zod.number().min(1),
+  reason: zod.string().optional(),
+});
+
+export const AdminRefundOrderResponse = zod.object({
   message: zod.string(),
 });
 

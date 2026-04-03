@@ -21,6 +21,7 @@ export * from "./adminListEggCollectionParams";
 export * from "./adminListOrdersParams";
 export * from "./adminLoginBody";
 export * from "./adminMeResponse";
+export * from "./adminRefundOrderBody";
 export * from "./adminSetOrderItemsBody";
 export * from "./adminSetOrderItemsBodyItem";
 export * from "./adminUpdateCustomerBody";

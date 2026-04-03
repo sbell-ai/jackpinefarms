@@ -373,7 +373,7 @@ paths:
     post:
       operationId: adminSetOrderItems
       tags: [admin, orders]
-      summary: Set items on a draft admin order
+      summary: Set items on an order (admin)
       parameters:
         - in: path
           name: id
@@ -1413,6 +1413,55 @@ paths:
                 $ref: "#/components/schemas/ErrorResponse"
         "404":
           description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /admin/orders/{id}/refund:
+    post:
+      operationId: adminRefundOrder
+      tags: [admin, orders]
+      summary: Issue an arbitrary refund for an order (admin, no status guard)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AdminRefundOrderBody"
+      responses:
+        "200":
+          description: Refund processed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: Stripe refund failed
           content:
             application/json:
               schema:
@@ -3276,6 +3325,17 @@ components:
           type: string
       required:
         - customerName
+
+    AdminRefundOrderBody:
+      type: object
+      required:
+        - amountCents
+      properties:
+        amountCents:
+          type: integer
+          minimum: 1
+        reason:
+          type: string
 
     AdminUpdateOrderBody:
       type: object

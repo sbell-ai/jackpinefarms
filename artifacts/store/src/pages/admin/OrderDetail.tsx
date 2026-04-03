@@ -17,11 +17,15 @@ import {
   useAdminSendOrderInvoice,
   useAdminUpdateOrder,
   useAdminDeleteOrder,
+  useAdminSetOrderItems,
+  useAdminRefundOrder,
+  useListProducts,
+  useAdminListPickupEvents,
   type OrderStatus,
   type SendOrderInvoiceResponse,
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, RefreshCw, FileText, CheckCircle, XCircle, MessageSquare, Package, Egg, Send, DollarSign, PhoneCall, Pencil, Trash2 } from "lucide-react";
+import { ArrowLeft, RefreshCw, FileText, CheckCircle, XCircle, MessageSquare, Package, Egg, Send, DollarSign, PhoneCall, Pencil, Trash2, Plus, Minus, RotateCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
@@ -96,6 +100,16 @@ export default function AdminOrderDetail() {
   const [editEmail, setEditEmail] = useState("");
   const [editPhone, setEditPhone] = useState("");
   const [editNotes, setEditNotes] = useState("");
+  const [editPickupEventId, setEditPickupEventId] = useState<number | null | undefined>(undefined);
+
+  const [itemsEditOpen, setItemsEditOpen] = useState(false);
+  type DraftItem = { productId: number; quantity: number; productName: string };
+  const [draftItems, setDraftItems] = useState<DraftItem[]>([]);
+  const [addProductId, setAddProductId] = useState("");
+  const [addProductQty, setAddProductQty] = useState(1);
+
+  const [refundAmount, setRefundAmount] = useState("");
+  const [refundReason, setRefundReason] = useState("");
 
   const { data: order, isLoading } = useAdminGetOrder(orderId, {
     query: { queryKey: getAdminGetOrderQueryKey(orderId) },
@@ -218,6 +232,32 @@ export default function AdminOrderDetail() {
     },
   });
 
+  const { data: allProducts = [] } = useListProducts();
+  const { data: pickupEvents = [] } = useAdminListPickupEvents();
+
+  const setOrderItems = useAdminSetOrderItems({
+    mutation: {
+      onSuccess: () => {
+        toast({ title: "Items saved" });
+        setItemsEditOpen(false);
+        invalidate();
+      },
+      onError: (e: any) => toast({ title: "Error", description: e.response?.data?.error ?? e.message, variant: "destructive" }),
+    },
+  });
+
+  const refundOrder = useAdminRefundOrder({
+    mutation: {
+      onSuccess: (data: any) => {
+        toast({ title: "Refund recorded", description: data.message });
+        setRefundAmount("");
+        setRefundReason("");
+        invalidate();
+      },
+      onError: (e: any) => toast({ title: "Error", description: e.response?.data?.error ?? e.message, variant: "destructive" }),
+    },
+  });
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-24">
@@ -301,6 +341,7 @@ export default function AdminOrderDetail() {
                 setEditEmail(order.customerEmail ?? "");
                 setEditPhone(order.customerPhone ?? "");
                 setEditNotes((order as any).notes ?? "");
+                setEditPickupEventId(order.pickupEventId ?? null);
                 setEditOpen(true);
               }}
             >
@@ -325,6 +366,25 @@ export default function AdminOrderDetail() {
                 <label className="block text-xs text-muted-foreground mb-1">Notes</label>
                 <Textarea value={editNotes} onChange={(e) => setEditNotes(e.target.value)} rows={2} className="text-sm" />
               </div>
+              <div>
+                <label className="block text-xs text-muted-foreground mb-1">Pickup Event</label>
+                <Select
+                  value={editPickupEventId != null ? String(editPickupEventId) : "__none__"}
+                  onValueChange={(v) => setEditPickupEventId(v === "__none__" ? null : Number(v))}
+                >
+                  <SelectTrigger className="text-sm h-8">
+                    <SelectValue placeholder="No pickup event" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__none__">— No pickup event —</SelectItem>
+                    {pickupEvents.map((ev: any) => (
+                      <SelectItem key={ev.id} value={String(ev.id)}>
+                        {ev.name} {ev.scheduledAt ? `(${format(new Date(ev.scheduledAt), "MMM d, yyyy")})` : ""}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
               <div className="flex gap-2 pt-1">
                 <Button
                   size="sm"
@@ -336,6 +396,7 @@ export default function AdminOrderDetail() {
                       customerEmail: editEmail || undefined,
                       customerPhone: editPhone || undefined,
                       notes: editNotes || null,
+                      pickupEventId: editPickupEventId,
                     },
                   })}
                 >
@@ -382,11 +443,116 @@ export default function AdminOrderDetail() {
       </div>
 
       {/* Order Items */}
-      {order.items.length > 0 && (
-        <div className="rounded-lg border border-border bg-card overflow-hidden">
-          <div className="px-4 py-3 border-b border-border">
-            <div className="text-sm font-semibold text-foreground">Items</div>
+      <div className="rounded-lg border border-border bg-card overflow-hidden">
+        <div className="px-4 py-3 border-b border-border flex items-center justify-between">
+          <div className="text-sm font-semibold text-foreground">Items</div>
+          {!itemsEditOpen ? (
+            <Button
+              size="sm"
+              variant="ghost"
+              className="h-6 px-2 text-xs gap-1 text-muted-foreground hover:text-foreground"
+              onClick={() => {
+                setDraftItems(order.items.filter((i) => i.productId != null).map((i) => ({ productId: i.productId as number, quantity: i.quantity, productName: i.productName ?? "" })));
+                setAddProductId("");
+                setAddProductQty(1);
+                setItemsEditOpen(true);
+              }}
+            >
+              <Pencil className="w-3 h-3" /> Edit Items
+            </Button>
+          ) : (
+            <div className="flex gap-1">
+              <Button
+                size="sm"
+                disabled={setOrderItems.isPending}
+                onClick={() => setOrderItems.mutate({ id: orderId, data: draftItems.map((i) => ({ productId: i.productId, quantity: i.quantity })) })}
+              >
+                {setOrderItems.isPending ? "Saving…" : "Save Items"}
+              </Button>
+              <Button size="sm" variant="ghost" onClick={() => setItemsEditOpen(false)}>Cancel</Button>
+            </div>
+          )}
+        </div>
+
+        {itemsEditOpen ? (
+          <div className="p-4 space-y-3">
+            {draftItems.length === 0 && (
+              <p className="text-sm text-muted-foreground text-center py-2">No items yet. Add a product below.</p>
+            )}
+            {draftItems.map((item, idx) => (
+              <div key={idx} className="flex items-center gap-2">
+                <span className="flex-1 text-sm text-foreground">{item.productName}</span>
+                <div className="flex items-center gap-1">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="h-7 w-7 p-0"
+                    disabled={item.quantity <= 1}
+                    onClick={() => setDraftItems((prev) => prev.map((d, i) => i === idx ? { ...d, quantity: d.quantity - 1 } : d))}
+                  >
+                    <Minus className="w-3 h-3" />
+                  </Button>
+                  <span className="w-8 text-center text-sm font-medium">{item.quantity}</span>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="h-7 w-7 p-0"
+                    onClick={() => setDraftItems((prev) => prev.map((d, i) => i === idx ? { ...d, quantity: d.quantity + 1 } : d))}
+                  >
+                    <Plus className="w-3 h-3" />
+                  </Button>
+                </div>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="h-7 w-7 p-0 text-destructive hover:text-destructive"
+                  onClick={() => setDraftItems((prev) => prev.filter((_, i) => i !== idx))}
+                >
+                  <Trash2 className="w-3 h-3" />
+                </Button>
+              </div>
+            ))}
+            <div className="border-t border-border pt-3 flex items-center gap-2">
+              <Select value={addProductId} onValueChange={setAddProductId}>
+                <SelectTrigger className="flex-1 text-sm h-8">
+                  <SelectValue placeholder="Add a product…" />
+                </SelectTrigger>
+                <SelectContent>
+                  {(allProducts as any[])
+                    .filter((p: any) => !draftItems.some((d) => d.productId === p.id))
+                    .map((p: any) => (
+                      <SelectItem key={p.id} value={String(p.id)}>{p.name}</SelectItem>
+                    ))}
+                </SelectContent>
+              </Select>
+              <div className="flex items-center gap-1">
+                <Button size="sm" variant="outline" className="h-7 w-7 p-0" disabled={addProductQty <= 1} onClick={() => setAddProductQty((q) => q - 1)}>
+                  <Minus className="w-3 h-3" />
+                </Button>
+                <span className="w-8 text-center text-sm font-medium">{addProductQty}</span>
+                <Button size="sm" variant="outline" className="h-7 w-7 p-0" onClick={() => setAddProductQty((q) => q + 1)}>
+                  <Plus className="w-3 h-3" />
+                </Button>
+              </div>
+              <Button
+                size="sm"
+                variant="outline"
+                disabled={!addProductId}
+                onClick={() => {
+                  const prod = (allProducts as any[]).find((p: any) => p.id === Number(addProductId));
+                  if (!prod) return;
+                  setDraftItems((prev) => [...prev, { productId: prod.id, quantity: addProductQty, productName: prod.name }]);
+                  setAddProductId("");
+                  setAddProductQty(1);
+                }}
+              >
+                <Plus className="w-3.5 h-3.5 mr-1" /> Add
+              </Button>
+            </div>
           </div>
+        ) : order.items.length === 0 ? (
+          <div className="px-4 py-6 text-sm text-muted-foreground text-center">No items on this order.</div>
+        ) : (
           <table className="w-full text-sm">
             <thead className="bg-muted/40">
               <tr>
@@ -411,8 +577,8 @@ export default function AdminOrderDetail() {
               ))}
             </tbody>
           </table>
-        </div>
-      )}
+        )}
+      </div>
 
       {/* Actions */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -701,6 +867,54 @@ export default function AdminOrderDetail() {
           )}
         </div>
       )}
+
+      {/* Admin Refund */}
+      <div className="rounded-lg border border-border bg-card p-4 space-y-3">
+        <div className="text-sm font-semibold text-foreground flex items-center gap-2">
+          <RotateCcw className="w-4 h-4" /> Issue Refund
+        </div>
+        <p className="text-sm text-muted-foreground">
+          Record a refund of any amount. If Stripe is configured and this order was paid via Stripe, the refund will be processed automatically.
+        </p>
+        <div className="flex gap-2 items-end">
+          <div className="flex-1">
+            <label className="block text-xs text-muted-foreground mb-1">Amount (dollars)</label>
+            <Input
+              type="number"
+              min="0.01"
+              step="0.01"
+              placeholder="e.g. 5.00"
+              value={refundAmount}
+              onChange={(e) => setRefundAmount(e.target.value)}
+              className="text-sm h-8"
+            />
+          </div>
+          <div className="flex-1">
+            <label className="block text-xs text-muted-foreground mb-1">Reason (optional)</label>
+            <Input
+              placeholder="e.g. Wrong product"
+              value={refundReason}
+              onChange={(e) => setRefundReason(e.target.value)}
+              className="text-sm h-8"
+            />
+          </div>
+          <Button
+            size="sm"
+            variant="outline"
+            className="gap-1.5 shrink-0"
+            disabled={!refundAmount || parseFloat(refundAmount) <= 0 || refundOrder.isPending}
+            onClick={() => refundOrder.mutate({
+              id: orderId,
+              data: {
+                amountCents: Math.round(parseFloat(refundAmount) * 100),
+                reason: refundReason || undefined,
+              },
+            })}
+          >
+            {refundOrder.isPending ? "Processing…" : "Process Refund"}
+          </Button>
+        </div>
+      </div>
 
       {/* Event Timeline */}
       <div className="rounded-lg border border-border bg-card">

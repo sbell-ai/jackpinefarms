@@ -32,6 +32,7 @@ import type {
   AdminListOrdersParams,
   AdminLoginBody,
   AdminMeResponse,
+  AdminRefundOrderBody,
   AdminSetOrderItemsBody,
   AdminUpdateCustomerBody,
   AdminUpdateOrderBody,
@@ -1202,7 +1203,7 @@ export function useAdminListOrders<
 }
 
 /**
- * @summary Set items on a draft admin order
+ * @summary Set items on an order (admin)
  */
 export const getAdminSetOrderItemsUrl = (id: number) => {
   return `/api/admin/orders/${id}/items`;
@@ -1266,7 +1267,7 @@ export type AdminSetOrderItemsMutationBody = BodyType<AdminSetOrderItemsBody>;
 export type AdminSetOrderItemsMutationError = ErrorType<ErrorResponse>;
 
 /**
- * @summary Set items on a draft admin order
+ * @summary Set items on an order (admin)
  */
 export const useAdminSetOrderItems = <
   TError = ErrorType<ErrorResponse>,
@@ -4211,6 +4212,93 @@ export const useAdminRefundGiblets = <
   TContext
 > => {
   return useMutation(getAdminRefundGibletsMutationOptions(options));
+};
+
+/**
+ * @summary Issue an arbitrary refund for an order (admin, no status guard)
+ */
+export const getAdminRefundOrderUrl = (id: number) => {
+  return `/api/admin/orders/${id}/refund`;
+};
+
+export const adminRefundOrder = async (
+  id: number,
+  adminRefundOrderBody: AdminRefundOrderBody,
+  options?: RequestInit,
+): Promise<SuccessResponse> => {
+  return customFetch<SuccessResponse>(getAdminRefundOrderUrl(id), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(adminRefundOrderBody),
+  });
+};
+
+export const getAdminRefundOrderMutationOptions = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof adminRefundOrder>>,
+    TError,
+    { id: number; data: BodyType<AdminRefundOrderBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof adminRefundOrder>>,
+  TError,
+  { id: number; data: BodyType<AdminRefundOrderBody> },
+  TContext
+> => {
+  const mutationKey = ["adminRefundOrder"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof adminRefundOrder>>,
+    { id: number; data: BodyType<AdminRefundOrderBody> }
+  > = (props) => {
+    const { id, data } = props ?? {};
+
+    return adminRefundOrder(id, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type AdminRefundOrderMutationResult = NonNullable<
+  Awaited<ReturnType<typeof adminRefundOrder>>
+>;
+export type AdminRefundOrderMutationBody = BodyType<AdminRefundOrderBody>;
+export type AdminRefundOrderMutationError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary Issue an arbitrary refund for an order (admin, no status guard)
+ */
+export const useAdminRefundOrder = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof adminRefundOrder>>,
+    TError,
+    { id: number; data: BodyType<AdminRefundOrderBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof adminRefundOrder>>,
+  TError,
+  { id: number; data: BodyType<AdminRefundOrderBody> },
+  TContext
+> => {
+  return useMutation(getAdminRefundOrderMutationOptions(options));
 };
 
 /**

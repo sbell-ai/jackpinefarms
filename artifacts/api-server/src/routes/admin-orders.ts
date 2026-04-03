@@ -136,11 +136,6 @@ router.post("/admin/orders/:id/items", requireAdmin, async (req, res): Promise<v
   const [order] = await db.select().from(ordersTable).where(eq(ordersTable.id, id)).limit(1);
   if (!order) { res.status(404).json({ error: "Order not found" }); return; }
 
-  if (order.source !== "admin") {
-    res.status(403).json({ error: "Only admin-created orders can be modified this way" });
-    return;
-  }
-
   await db.delete(orderItemsTable).where(eq(orderItemsTable.orderId, id));
 
   if (parsed.data.length > 0) {
@@ -384,6 +379,61 @@ router.post("/admin/orders/:id/refund-giblets", requireAdmin, async (req, res): 
     });
     console.log(`[REFUND STUB] Order ${id} — giblets refund of $${gibletRefundDollars} for ${order.customerEmail}`);
     res.json({ message: `Giblets refund recorded (configure Stripe to process real refunds)` });
+  }
+});
+
+const AdminRefundBody = z.object({
+  amountCents: z.number().int().positive(),
+  reason: z.string().optional(),
+});
+
+router.post("/admin/orders/:id/refund", requireAdmin, async (req, res): Promise<void> => {
+  const id = Number(req.params.id);
+  if (isNaN(id)) { res.status(400).json({ error: "Invalid id" }); return; }
+
+  const parsed = AdminRefundBody.safeParse(req.body);
+  if (!parsed.success) { res.status(400).json({ error: parsed.error.message }); return; }
+
+  const [order] = await db.select().from(ordersTable).where(eq(ordersTable.id, id)).limit(1);
+  if (!order) { res.status(404).json({ error: "Order not found" }); return; }
+
+  const { amountCents, reason } = parsed.data;
+  const amountDollars = (amountCents / 100).toFixed(2);
+  const reasonText = reason ? ` — ${reason}` : "";
+
+  const stripeKey = process.env.STRIPE_SECRET_KEY;
+  const paymentIntentId = order.stripePaymentIntentId;
+
+  if (stripeKey && paymentIntentId) {
+    try {
+      const stripe = getStripe()!;
+      const refund = await stripe.refunds.create({
+        payment_intent: paymentIntentId,
+        amount: amountCents,
+        reason: "requested_by_customer",
+      });
+      await db.insert(orderEventsTable).values({
+        orderId: id,
+        eventType: "refund",
+        body: `Admin refund of $${amountDollars} processed via Stripe (refund id: ${refund.id})${reasonText}.`,
+      });
+      res.json({ message: `Refund of $${amountDollars} processed via Stripe.` });
+    } catch (err: any) {
+      await db.insert(orderEventsTable).values({
+        orderId: id,
+        eventType: "refund",
+        body: `Admin refund of $${amountDollars} failed: ${err.message}${reasonText}.`,
+      });
+      res.status(500).json({ error: `Stripe refund failed: ${err.message}` });
+    }
+  } else {
+    await db.insert(orderEventsTable).values({
+      orderId: id,
+      eventType: "refund",
+      body: `[REFUND STUB] Admin refund of $${amountDollars} recorded${reasonText}. Configure STRIPE_SECRET_KEY to process real refunds.`,
+    });
+    console.log(`[REFUND STUB] Order ${id} — admin refund of $${amountDollars}${reasonText}`);
+    res.json({ message: `Refund of $${amountDollars} recorded (configure Stripe to process real refunds).` });
   }
 });
 
