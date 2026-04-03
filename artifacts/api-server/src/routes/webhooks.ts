@@ -1,8 +1,9 @@
 import { Router, type IRouter } from "express";
 import { eq, lt, sql } from "drizzle-orm";
-import { db, ordersTable, stripePendingCheckoutsTable, customerCartsTable, couponsTable } from "@workspace/db";
+import { db, ordersTable, stripePendingCheckoutsTable, customerCartsTable, couponsTable, farmopsTenantsTable } from "@workspace/db";
 import { createOrderFromData, generateClaimToken } from "./checkout.js";
 import { sendEmail } from "../lib/email.js";
+import { getStripe } from "../lib/farmops-stripe.js";
 
 const router: IRouter = Router();
 
@@ -262,6 +263,196 @@ router.post("/webhooks/stripe", async (req, res): Promise<void> => {
       .where(eq(stripePendingCheckoutsTable.stripeSessionId, stripeSessionId));
 
     console.log(`Pending checkout ${stripeSessionId} removed due to ${event.type}`);
+  }
+
+  res.json({ received: true });
+});
+
+// ── POST /webhooks/farmops-stripe ─────────────────────────────────────────────
+// Handles FarmOps SaaS subscription lifecycle events from Stripe.
+// Uses a separate webhook secret (FARMOPS_STRIPE_WEBHOOK_SECRET) so that
+// Jack Pine storefront webhooks and FarmOps billing webhooks can be registered
+// as distinct Stripe webhook endpoints with different event filters.
+
+async function updateTenantFromSubscription(
+  subscription: any,
+  logger: typeof console
+): Promise<void> {
+  // Prefer metadata set on the subscription; fall back to customer lookup.
+  const tenantIdStr: string | undefined =
+    subscription.metadata?.farmopsTenantId;
+
+  let tenantId: number | undefined = tenantIdStr ? parseInt(tenantIdStr, 10) : undefined;
+
+  if (!tenantId && subscription.customer) {
+    // Fall back: look up tenant by Stripe customer ID
+    const [t] = await db
+      .select({ id: farmopsTenantsTable.id })
+      .from(farmopsTenantsTable)
+      .where(eq(farmopsTenantsTable.stripeCustomerId, subscription.customer))
+      .limit(1);
+    tenantId = t?.id;
+  }
+
+  if (!tenantId) {
+    logger.warn("[FarmOps webhook] Could not resolve tenantId from subscription", {
+      subscriptionId: subscription.id,
+    });
+    return;
+  }
+
+  // Derive our status from Stripe's subscription status
+  const stripeStatus: string = subscription.status;
+  const statusMap: Record<string, string> = {
+    trialing:         "trialing",
+    active:           "active",
+    past_due:         "past_due",
+    canceled:         "canceled",
+    unpaid:           "past_due",
+    paused:           "paused",
+    incomplete:       "past_due",
+    incomplete_expired: "canceled",
+  };
+  const ourStatus = statusMap[stripeStatus] ?? "past_due";
+
+  // Derive our plan from the subscription's price metadata or item lookup
+  const planFromMeta = subscription.metadata?.plan as string | undefined;
+  const validPlans = ["starter", "growth", "pro"];
+  const ourPlan = validPlans.includes(planFromMeta ?? "") ? planFromMeta : undefined;
+
+  const currentPeriodEndsAt = subscription.current_period_end
+    ? new Date(subscription.current_period_end * 1000)
+    : undefined;
+
+  const update: Partial<typeof farmopsTenantsTable.$inferInsert> = {
+    stripeSubscriptionId:      subscription.id,
+    stripeSubscriptionStatus:  stripeStatus,
+    status:                    ourStatus as any,
+    updatedAt:                 new Date(),
+  };
+  if (ourPlan) update.plan = ourPlan as any;
+  if (currentPeriodEndsAt) update.currentPeriodEndsAt = currentPeriodEndsAt;
+
+  await db
+    .update(farmopsTenantsTable)
+    .set(update)
+    .where(eq(farmopsTenantsTable.id, tenantId));
+
+  logger.log(`[FarmOps webhook] Tenant ${tenantId} updated: status=${ourStatus}${ourPlan ? ` plan=${ourPlan}` : ""}`);
+}
+
+router.post("/webhooks/farmops-stripe", async (req, res): Promise<void> => {
+  const webhookSecret = process.env.FARMOPS_STRIPE_WEBHOOK_SECRET;
+  const stripeKey     = process.env.STRIPE_SECRET_KEY;
+
+  if (!stripeKey) {
+    // Stripe not configured — ack silently
+    res.status(200).json({ received: true });
+    return;
+  }
+
+  const stripe = getStripe()!;
+  const rawBody: Buffer = (req as any).rawBody ?? Buffer.from(JSON.stringify(req.body));
+  let event: any;
+
+  if (webhookSecret) {
+    const sig = req.headers["stripe-signature"] as string;
+    try {
+      event = stripe.webhooks.constructEvent(rawBody, sig, webhookSecret);
+    } catch (err: any) {
+      console.error("[FarmOps webhook] Signature verification failed:", err.message);
+      res.status(400).json({ error: `Webhook error: ${err.message}` });
+      return;
+    }
+  } else {
+    try {
+      event = typeof req.body === "object" ? req.body : JSON.parse(rawBody.toString());
+    } catch {
+      res.status(400).json({ error: "Invalid payload" });
+      return;
+    }
+  }
+
+  const obj = event.data.object;
+
+  switch (event.type) {
+    // ── Subscription created / updated ──────────────────────────────────────
+    case "customer.subscription.created":
+    case "customer.subscription.updated":
+      await updateTenantFromSubscription(obj, console);
+      break;
+
+    // ── Subscription cancelled ───────────────────────────────────────────────
+    case "customer.subscription.deleted":
+      await updateTenantFromSubscription({ ...obj, status: "canceled" }, console);
+      break;
+
+    // ── Invoice paid — confirm active and update period end ──────────────────
+    case "invoice.payment_succeeded": {
+      const subscriptionId: string | undefined = obj.subscription;
+      if (subscriptionId) {
+        // Re-fetch subscription to get latest period & plan info
+        const subscription = await stripe.subscriptions.retrieve(subscriptionId);
+        await updateTenantFromSubscription(subscription, console);
+      }
+      break;
+    }
+
+    // ── Invoice payment failed — mark past_due ───────────────────────────────
+    case "invoice.payment_failed": {
+      const subscriptionId: string | undefined = obj.subscription;
+      if (subscriptionId) {
+        const [tenant] = await db
+          .select({ id: farmopsTenantsTable.id })
+          .from(farmopsTenantsTable)
+          .where(eq(farmopsTenantsTable.stripeSubscriptionId, subscriptionId))
+          .limit(1);
+        if (tenant) {
+          await db
+            .update(farmopsTenantsTable)
+            .set({ status: "past_due", updatedAt: new Date() })
+            .where(eq(farmopsTenantsTable.id, tenant.id));
+          console.log(`[FarmOps webhook] Tenant ${tenant.id} marked past_due`);
+        }
+      }
+      break;
+    }
+
+    // ── One-time payment for onboarding add-on ───────────────────────────────
+    case "checkout.session.completed": {
+      const metadata = obj.metadata ?? {};
+      if (
+        metadata.type === "farmops_onboarding" &&
+        obj.payment_status === "paid" &&
+        metadata.farmopsTenantId
+      ) {
+        const tenantId = parseInt(metadata.farmopsTenantId, 10);
+        await db
+          .update(farmopsTenantsTable)
+          .set({
+            onboardingPurchasedAt:     new Date(),
+            stripeOnboardingPaymentId: obj.payment_intent ?? null,
+            updatedAt:                 new Date(),
+          })
+          .where(eq(farmopsTenantsTable.id, tenantId));
+        console.log(`[FarmOps webhook] Tenant ${tenantId} onboarding purchased`);
+      }
+
+      // FarmOps subscription checkout — sync the new subscription
+      if (
+        metadata.type === "farmops_subscription" &&
+        obj.subscription &&
+        metadata.farmopsTenantId
+      ) {
+        const subscription = await stripe.subscriptions.retrieve(obj.subscription);
+        await updateTenantFromSubscription(subscription, console);
+      }
+      break;
+    }
+
+    default:
+      // Unhandled event — ack silently
+      break;
   }
 
   res.json({ received: true });

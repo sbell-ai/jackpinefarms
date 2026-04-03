@@ -2,7 +2,7 @@ import "../types/session.d.ts";
 import { Router, type IRouter } from "express";
 import { eq, count, inArray } from "drizzle-orm";
 import { db, preorderBatchesTable, ordersTable } from "@workspace/db";
-import { requirePlatformAdmin } from "../middlewares/require-admin.js";
+import { requirePlatformAdmin } from "../middlewares/require-platform-admin.js";
 import * as z from "zod";
 
 const router: IRouter = Router();

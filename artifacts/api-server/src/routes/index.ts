@@ -23,6 +23,7 @@ import adminCmsPagesRouter from "./admin-cms-pages.js";
 import adminCmsMenusRouter from "./admin-cms-menus.js";
 import farmopsAuthRouter from "./farmops-auth.js";
 import farmopsExpensesRouter from "./farmops-expenses.js";
+import farmopsBillingRouter from "./farmops-billing.js";
 import platformAdminTenantsRouter from "./platform-admin-tenants.js";
 
 const router: IRouter = Router();
@@ -51,6 +52,7 @@ router.use(adminCmsPagesRouter);
 router.use(adminCmsMenusRouter);
 router.use(farmopsAuthRouter);
 router.use(farmopsExpensesRouter);
+router.use(farmopsBillingRouter);
 router.use(platformAdminTenantsRouter);
 
 export default router;

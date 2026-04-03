@@ -4,7 +4,7 @@ import { z } from "zod";
 import { desc } from "drizzle-orm";
 import { db, contactSubmissionsTable } from "@workspace/db";
 import { sendEmail } from "../lib/email.js";
-import { requirePlatformAdmin } from "../middlewares/require-admin.js";
+import { requirePlatformAdmin } from "../middlewares/require-platform-admin.js";
 import { logger } from "../lib/logger.js";
 
 const router: IRouter = Router();

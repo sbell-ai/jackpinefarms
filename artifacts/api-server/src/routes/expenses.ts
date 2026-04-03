@@ -2,7 +2,7 @@ import { Router, type IRouter } from "express";
 import { eq, desc, gte, lte, and, sql } from "drizzle-orm";
 import { z } from "zod";
 import { db, expensesTable, insertExpenseSchema } from "@workspace/db";
-import { requirePlatformAdmin } from "../middlewares/require-admin.js";
+import { requirePlatformAdmin } from "../middlewares/require-platform-admin.js";
 
 const router: IRouter = Router();
 

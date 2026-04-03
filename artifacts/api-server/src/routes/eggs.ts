@@ -22,7 +22,7 @@ import {
   insertDailyEggCollectionSchema,
   insertEggInventoryAdjustmentSchema,
 } from "@workspace/db";
-import { requirePlatformAdmin } from "../middlewares/require-admin.js";
+import { requirePlatformAdmin } from "../middlewares/require-platform-admin.js";
 import {
   AdminAllocateEggsParams,
   AdminGetEggAllocationsParams,

@@ -12,7 +12,13 @@
       "Bash(wc -l /home/runner/workspace/artifacts/api-server/src/routes/*.ts)",
       "Bash(git add:*)",
       "Bash(git commit:*)",
-      "Bash(git push:*)"
+      "Bash(git push:*)",
+      "Bash(node -e \":*)",
+      "Bash(node:*)",
+      "Bash(ls /home/runner/workspace/artifacts/api-server/dist/*.mjs)",
+      "Bash(psql:*)",
+      "Bash(find /home/runner/workspace/node_modules/.pnpm -name bcrypt.js -path */bcryptjs/*)",
+      "Bash(BCRYPT_PATH=\"/home/runner/workspace/node_modules/.pnpm/bcryptjs@3.0.3/node_modules/bcryptjs/index.js\")"
     ]
   }
 }

@@ -2,7 +2,7 @@ import { Router, type IRouter } from "express";
 import { eq, asc, count } from "drizzle-orm";
 import { db, productsTable, productImagesTable } from "@workspace/db";
 import { GetProductParams } from "@workspace/api-zod";
-import { requirePlatformAdmin } from "../middlewares/require-admin.js";
+import { requirePlatformAdmin } from "../middlewares/require-platform-admin.js";
 import { deleteStorageObject } from "../lib/objectStorage.js";
 import * as z from "zod";
 

@@ -14,7 +14,7 @@ import {
   SubscribeNotifyMeResponse,
   ListProductsQueryParams,
 } from "@workspace/api-zod";
-import { requirePlatformAdmin } from "../middlewares/require-admin";
+import { requirePlatformAdmin } from "../middlewares/require-platform-admin.js";
 import { generateUnsubscribeToken } from "./notify-me.js";
 import { sendEmail } from "../lib/email.js";
 import sanitizeHtml from "sanitize-html";

@@ -55,7 +55,7 @@ app.use(cookieParser());
 app.use(
   express.json({
     verify: (req: any, _res, buf) => {
-      if ((req as any).url?.includes("/webhooks/stripe")) {
+      if ((req as any).url?.includes("/webhooks/stripe") || (req as any).url?.includes("/webhooks/farmops-stripe")) {
         (req as any).rawBody = buf;
       }
     },

@@ -564,7 +564,7 @@ export async function runMigrations(): Promise<void> {
 
     // ── Platform admins ───────────────────────────────────────────────────────
     // Replaces the shared ADMIN_PASSWORD env-var credential with a real user row.
-    // The seed only runs once (ON CONFLICT DO NOTHING).
+    // ON CONFLICT DO UPDATE ensures a rotated ADMIN_PASSWORD takes effect on restart.
     // ADMIN_PASSWORD is bcrypt-hashed here — the raw value is never stored.
 
     await db.execute(sql`
@@ -585,9 +585,9 @@ export async function runMigrations(): Promise<void> {
       await db.execute(sql`
         INSERT INTO platform_admins (email, name, password_hash)
         VALUES ('admin@jackpinefarms.farm', 'Jack Pine Admin', ${hash})
-        ON CONFLICT (email) DO NOTHING
+        ON CONFLICT (email) DO UPDATE SET password_hash = EXCLUDED.password_hash
       `);
-      logger.info("Platform admin seed: row ensured for admin@jackpinefarms.farm");
+      logger.info("Platform admin seed: password hash updated for admin@jackpinefarms.farm");
     } else {
       logger.warn("ADMIN_PASSWORD not set — platform_admins table seeded empty. Set the env var and restart to create the first admin.");
     }
