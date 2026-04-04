@@ -1,25 +1,39 @@
 import { useState } from "react";
 import { Link } from "wouter";
 import { Loader2, Lock as LockIcon, Leaf, CheckCircle2 } from "lucide-react";
+import { PasswordInput } from "@/components/ui/PasswordInput";
+import { validatePassword } from "@/lib/passwordStrength";
 
 export default function ResetPassword() {
   const token = new URLSearchParams(window.location.search).get("token") ?? "";
 
   const [password, setPassword] = useState("");
+  const [passwordError, setPasswordError] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState("");
 
+  const handlePasswordChange = (value: string) => {
+    setPassword(value);
+    if (value) {
+      const result = validatePassword(value);
+      setPasswordError(result.valid ? "" : result.message);
+    } else {
+      setPasswordError("");
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!password || !confirmPassword) return;
-    if (password !== confirmPassword) {
-      setError("Passwords do not match.");
+    const strength = validatePassword(password);
+    if (!strength.valid) {
+      setPasswordError(strength.message);
       return;
     }
-    if (password.length < 8) {
-      setError("Password must be at least 8 characters.");
+    if (password !== confirmPassword) {
+      setError("Passwords do not match.");
       return;
     }
     setIsLoading(true);
@@ -90,34 +104,34 @@ export default function ResetPassword() {
             <form onSubmit={handleSubmit} className="space-y-5">
               <div className="space-y-2">
                 <label className="text-sm font-semibold text-foreground">New password</label>
-                <div className="relative">
-                  <LockIcon className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-                  <input
-                    type="password"
-                    required
-                    autoFocus
-                    minLength={8}
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    placeholder="At least 8 characters"
-                    className="w-full pl-12 pr-4 py-3 bg-background border border-border rounded-xl text-foreground focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all"
-                  />
-                </div>
+                <PasswordInput
+                  autoFocus
+                  required
+                  value={password}
+                  onChange={(e) => handlePasswordChange(e.target.value)}
+                  leftIcon={<LockIcon className="w-5 h-5" />}
+                  className="w-full pl-12 pr-10 py-3 bg-background border border-border rounded-xl text-foreground focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all"
+                  placeholder="At least 8 characters"
+                />
+                {passwordError ? (
+                  <p className="text-sm text-destructive">{passwordError}</p>
+                ) : (
+                  <p className="text-xs text-muted-foreground">
+                    Strong password: 8+ chars, uppercase, lowercase, and a number.
+                  </p>
+                )}
               </div>
 
               <div className="space-y-2">
                 <label className="text-sm font-semibold text-foreground">Confirm new password</label>
-                <div className="relative">
-                  <LockIcon className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-                  <input
-                    type="password"
-                    required
-                    value={confirmPassword}
-                    onChange={(e) => setConfirmPassword(e.target.value)}
-                    placeholder="Repeat your password"
-                    className="w-full pl-12 pr-4 py-3 bg-background border border-border rounded-xl text-foreground focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all"
-                  />
-                </div>
+                <PasswordInput
+                  required
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  leftIcon={<LockIcon className="w-5 h-5" />}
+                  className="w-full pl-12 pr-10 py-3 bg-background border border-border rounded-xl text-foreground focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all"
+                  placeholder="Repeat your password"
+                />
               </div>
 
               {error && (
@@ -128,7 +142,7 @@ export default function ResetPassword() {
 
               <button
                 type="submit"
-                disabled={isLoading || !password || !confirmPassword}
+                disabled={isLoading || !password || !confirmPassword || !!passwordError}
                 className="w-full py-3.5 rounded-xl bg-primary text-white font-bold text-base hover:bg-primary/90 transition-all duration-300 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {isLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : "Update Password"}

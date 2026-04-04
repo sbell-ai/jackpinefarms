@@ -3,6 +3,7 @@ import { useLocation } from "wouter";
 import { useQueryClient } from "@tanstack/react-query";
 import { useAdminLogin, getAdminMeQueryKey } from "@workspace/api-client-react";
 import { Store, Loader2, Lock } from "lucide-react";
+import { PasswordInput } from "@/components/ui/PasswordInput";
 
 export default function AdminLogin() {
   const [, setLocation] = useLocation();
@@ -19,8 +20,6 @@ export default function AdminLogin() {
       await loginMutation.mutateAsync({
         data: { email, password }
       });
-      // Write authenticated:true directly into the cache so AdminLayout sees it
-      // immediately on render — no refetch race, no stale-data bounce to login.
       queryClient.setQueryData(getAdminMeQueryKey(), { authenticated: true });
       setLocation("/admin/products");
     } catch (err) {
@@ -57,18 +56,13 @@ export default function AdminLogin() {
 
             <div className="space-y-2">
               <label className="text-sm font-bold text-foreground">Password</label>
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-muted-foreground">
-                  <Lock className="w-5 h-5" />
-                </div>
-                <input
-                  type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="w-full pl-12 pr-4 py-3 rounded-xl bg-background border border-border focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all text-foreground"
-                  placeholder="••••••••"
-                />
-              </div>
+              <PasswordInput
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                leftIcon={<Lock className="w-5 h-5" />}
+                className="w-full pl-12 pr-10 py-3 rounded-xl bg-background border border-border focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all text-foreground"
+                placeholder="••••••••"
+              />
               {loginMutation.isError && (
                 <p className="text-destructive text-sm font-medium mt-2">Invalid credentials</p>
               )}
@@ -82,6 +76,10 @@ export default function AdminLogin() {
               {loginMutation.isPending ? <Loader2 className="w-5 h-5 animate-spin" /> : "Sign In"}
             </button>
           </form>
+
+          <p className="text-center text-xs text-muted-foreground mt-6">
+            Forgot your password? Contact the farm owner to reset it.
+          </p>
         </div>
       </div>
     </div>

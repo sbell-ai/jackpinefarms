@@ -2,6 +2,8 @@ import { useState } from "react";
 import { Link, useLocation } from "wouter";
 import { Loader2, Sprout } from "lucide-react";
 import { useFarmopsRegister } from "@/hooks/useFarmopsAuth";
+import { PasswordInput } from "@/components/ui/PasswordInput";
+import { validatePassword } from "@/lib/passwordStrength";
 
 function slugify(str: string) {
   return str
@@ -23,6 +25,7 @@ export default function FarmOpsRegister() {
   const [ownerName, setOwnerName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [passwordError, setPasswordError] = useState("");
   const [error, setError] = useState<string | null>(null);
 
   const handleFarmNameChange = (v: string) => {
@@ -35,9 +38,24 @@ export default function FarmOpsRegister() {
     setSlugEdited(true);
   };
 
+  const handlePasswordChange = (value: string) => {
+    setPassword(value);
+    if (value) {
+      const result = validatePassword(value);
+      setPasswordError(result.valid ? "" : result.message);
+    } else {
+      setPasswordError("");
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+    const strength = validatePassword(password);
+    if (!strength.valid) {
+      setPasswordError(strength.message);
+      return;
+    }
     try {
       await register.mutateAsync({ farmName, slug, ownerName, email, password });
       setLocation("/farmops/verify-email");
@@ -49,6 +67,7 @@ export default function FarmOpsRegister() {
   const field =
     "w-full px-4 py-3 rounded-xl border border-slate-300 bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500 transition-all text-slate-900 placeholder:text-slate-400 text-sm";
   const label = "block text-sm font-semibold text-slate-700 mb-1.5";
+  const isPasswordValid = password === "" || validatePassword(password).valid;
 
   return (
     <div className="min-h-[calc(100vh-4rem)] flex items-center justify-center py-12 px-4 bg-slate-50">
@@ -127,15 +146,21 @@ export default function FarmOpsRegister() {
 
             <div>
               <label className={label}>Password</label>
-              <input
-                type="password"
-                className={field}
+              <PasswordInput
+                variant="farmops"
+                className="w-full pl-4 pr-10 py-3 rounded-xl border border-slate-300 bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500 transition-all text-slate-900 placeholder:text-slate-400 text-sm"
                 placeholder="At least 8 characters"
                 value={password}
-                onChange={(e) => setPassword(e.target.value)}
+                onChange={(e) => handlePasswordChange(e.target.value)}
                 required
-                minLength={8}
               />
+              {passwordError ? (
+                <p className="text-xs text-red-600 mt-1">{passwordError}</p>
+              ) : (
+                <p className="text-xs text-slate-400 mt-1">
+                  Strong password: 8+ chars, uppercase, lowercase, and a number.
+                </p>
+              )}
             </div>
 
             {error && (
@@ -146,7 +171,7 @@ export default function FarmOpsRegister() {
 
             <button
               type="submit"
-              disabled={register.isPending}
+              disabled={register.isPending || !password || !isPasswordValid}
               className="w-full flex items-center justify-center gap-2 py-3.5 rounded-xl bg-emerald-700 text-white font-semibold hover:bg-emerald-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
             >
               {register.isPending ? (

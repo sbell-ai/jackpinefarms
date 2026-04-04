@@ -4,6 +4,7 @@ import { useAuthLogin } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Loader2, Mail, Lock, Leaf } from "lucide-react";
 import { getAuthMeQueryKey } from "@workspace/api-client-react";
+import { PasswordInput } from "@/components/ui/PasswordInput";
 
 export default function Login() {
   const [, setLocation] = useLocation();
@@ -67,19 +68,14 @@ export default function Login() {
 
             <div className="space-y-2">
               <label className="text-sm font-bold text-foreground">Password</label>
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-muted-foreground">
-                  <Lock className="w-5 h-5" />
-                </div>
-                <input 
-                  type="password" 
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="w-full pl-12 pr-4 py-3 rounded-xl bg-background border border-border focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all text-foreground"
-                  placeholder="••••••••"
-                  required
-                />
-              </div>
+              <PasswordInput
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                leftIcon={<Lock className="w-5 h-5" />}
+                className="w-full pl-12 pr-10 py-3 rounded-xl bg-background border border-border focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all text-foreground"
+                placeholder="••••••••"
+                required
+              />
             </div>
 
             {loginMutation.isError && (

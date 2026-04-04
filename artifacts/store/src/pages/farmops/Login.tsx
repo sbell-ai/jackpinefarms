@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Link, useLocation } from "wouter";
 import { Loader2, Sprout } from "lucide-react";
 import { useFarmopsLogin } from "@/hooks/useFarmopsAuth";
+import { PasswordInput } from "@/components/ui/PasswordInput";
 
 export default function FarmOpsLogin() {
   const [, setLocation] = useLocation();
@@ -63,9 +64,9 @@ export default function FarmOpsLogin() {
                   Forgot password?
                 </Link>
               </div>
-              <input
-                type="password"
-                className={field}
+              <PasswordInput
+                variant="farmops"
+                className="w-full pl-4 pr-10 py-3 rounded-xl border border-slate-300 bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500 transition-all text-slate-900 placeholder:text-slate-400 text-sm"
                 placeholder="••••••••"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
