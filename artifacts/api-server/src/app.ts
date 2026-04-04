@@ -98,4 +98,13 @@ app.get("/farmops", (_req, res) => {
   res.sendFile(path.join(farmopsDistPath, "index.html"));
 });
 
+const storeDistPath = path.resolve(
+  path.dirname(fileURLToPath(import.meta.url)),
+  "../../store/dist/public",
+);
+app.use(express.static(storeDistPath));
+app.get("*", (_req, res) => {
+  res.sendFile(path.join(storeDistPath, "index.html"));
+});
+
 export default app;
