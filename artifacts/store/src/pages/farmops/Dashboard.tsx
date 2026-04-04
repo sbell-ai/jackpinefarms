@@ -4,10 +4,10 @@ import { Loader2, Sprout, Bird, DollarSign, ShoppingBasket, ClipboardList, Alert
 import { useFarmopsMe } from "@/hooks/useFarmopsAuth";
 
 const QUICK_LINKS = [
-  { icon: Bird, label: "Flocks & Animals", href: "/admin/flocks", description: "Manage your flock records" },
-  { icon: ClipboardList, label: "Egg Inventory", href: "/admin/eggs", description: "Track daily collections" },
-  { icon: DollarSign, label: "Expenses", href: "/admin/expenses", description: "Log and review expenses" },
-  { icon: ShoppingBasket, label: "Orders", href: "/admin/orders", description: "Manage customer preorders" },
+  { icon: Bird, label: "Flocks & Animals", href: "/farmops/flocks", description: "Manage your flock records" },
+  { icon: ClipboardList, label: "Egg Inventory", href: "/farmops/eggs", description: "Track daily collections" },
+  { icon: DollarSign, label: "Expenses", href: "/farmops/expenses", description: "Log and review expenses" },
+  { icon: ShoppingBasket, label: "Orders", href: "/farmops/orders", description: "Manage customer preorders" },
 ];
 
 export default function FarmOpsDashboard() {
