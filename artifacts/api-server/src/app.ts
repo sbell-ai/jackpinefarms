@@ -88,6 +88,24 @@ app.use(
   }),
 );
 
+// Block FarmOps users from Jack Pine admin and operational routes
+const farmopsBlockedPaths = [
+  "/api/admin",
+  "/api/batches",
+  "/api/pickup-events",
+  "/api/admin-orders",
+  "/api/admin-customers",
+];
+for (const blockedPath of farmopsBlockedPaths) {
+  app.use(blockedPath, (req: express.Request, res: express.Response, next: express.NextFunction) => {
+    if (req.session.farmopsUserId) {
+      res.status(403).json({ error: "Forbidden" });
+      return;
+    }
+    next();
+  });
+}
+
 app.use("/api", router);
 
 const farmopsDistPath = path.resolve(
