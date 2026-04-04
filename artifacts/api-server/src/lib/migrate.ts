@@ -13,6 +13,25 @@ export async function runMigrations(): Promise<void> {
   logger.info("Running startup migrations…");
 
   try {
+    // ── Session table (connect-pg-simple) ────────────────────────────────────
+    // Created explicitly here so connect-pg-simple never needs to look for its
+    // bundled table.sql file (which fails when running from a compiled dist/).
+    await db.execute(sql`
+      CREATE TABLE IF NOT EXISTS "session" (
+        "sid"    varchar      NOT NULL COLLATE "default",
+        "sess"   json         NOT NULL,
+        "expire" timestamp(6) NOT NULL
+      )
+    `);
+    await db.execute(sql`
+      DO $$ BEGIN
+        ALTER TABLE "session" ADD CONSTRAINT session_pkey PRIMARY KEY ("sid") NOT DEFERRABLE INITIALLY IMMEDIATE;
+      EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+    `);
+    await db.execute(sql`
+      CREATE INDEX IF NOT EXISTS "IDX_session_expire" ON "session" ("expire")
+    `);
+
     // ── Enum types ──────────────────────────────────────────────────────────
 
     await db.execute(sql`
