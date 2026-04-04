@@ -339,11 +339,11 @@ export default function FarmOpsLanding() {
             </blockquote>
             <div className="flex items-center justify-center gap-3">
               <div className="w-10 h-10 rounded-full bg-[hsl(148,26%,30%)] flex items-center justify-center text-white font-bold text-sm">
-                JB
+                SB
               </div>
               <div className="text-left">
-                <div className="text-sm font-semibold text-white">Justine Bell</div>
-                <div className="text-xs text-white/50">Jack Pine Farms · Almonte, ON</div>
+                <div className="text-sm font-semibold text-white">Stephanie Bellinger</div>
+                <div className="text-xs text-white/50">Jack Pine Farm · Reed City & Tustin, MI</div>
               </div>
             </div>
           </div>
