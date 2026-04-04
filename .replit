@@ -4,9 +4,11 @@ modules = ["nodejs-24", "postgresql-16"]
 id = "artifacts/api-server"
 
 [[artifacts]]
-id = "artifacts/mockup-sandbox"
+id = "artifacts/store"
 
 [deployment]
+run = ["node", "artifacts/api-server/dist/index.mjs"]
+build = ["pnpm", "run", "build"]
 router = "application"
 deploymentTarget = "autoscale"
 
@@ -28,23 +30,13 @@ timeoutMs = 20000
 [userenv]
 
 [userenv.development]
+
+[userenv.shared]
 # ADMIN_PASSWORD must be set via Replit Secrets — do not hardcode here
 
 [nix]
 channel = "stable-25_05"
 
 [[ports]]
-localPort = 5174
-externalPort = 80
-
-[[ports]]
 localPort = 8080
-externalPort = 3000
-
-[[ports]]
-localPort = 8081
-externalPort = 3001
-
-[[ports]]
-localPort = 24964
-externalPort = 3002
+externalPort = 80

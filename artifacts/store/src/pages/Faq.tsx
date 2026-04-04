@@ -68,7 +68,9 @@ export default function Faq() {
             <AccordionItem value="item-6" className="border-b-0">
               <AccordionTrigger className="text-left font-medium text-lg py-2 hover:no-underline">What is FarmOps?</AccordionTrigger>
               <AccordionContent className="text-muted-foreground text-base leading-relaxed pt-2">
-                FarmOps is a tool we built initially for Jack Pine Farm to manage our animal inventory, track lineage, and calculate real unit economics (like cost per pound). It's designed for small producers who have outgrown spreadsheets but don't need complex enterprise ag software. We are currently testing it internally before opening it to other producers.
+                FarmOps is a tool we built initially for Jack Pine Farm to manage our animal inventory, track lineage, and calculate real unit economics (like cost per pound). It's designed for small producers who have outgrown spreadsheets but don't need complex enterprise ag software. We love it, and you might too.{" "}<a href="/farmops" className="text-green-700 underline hover:text-green-900">
+                  Learn more about FarmOps →
+                </a>
               </AccordionContent>
             </AccordionItem>
           </Accordion>

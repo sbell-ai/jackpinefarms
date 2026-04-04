@@ -103,7 +103,7 @@ const storeDistPath = path.resolve(
   "../../store/dist/public",
 );
 app.use(express.static(storeDistPath));
-app.get("*", (_req, res) => {
+app.get("/{*path}", (_req, res) => {
   res.sendFile(path.join(storeDistPath, "index.html"));
 });
 
