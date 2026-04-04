@@ -78,7 +78,7 @@ export default function AdminLogin() {
           </form>
 
           <p className="text-center text-xs text-muted-foreground mt-6">
-            Forgot your password? Contact the farm owner to reset it.
+            Forgot your password? Contact the farm owner.
           </p>
         </div>
       </div>
