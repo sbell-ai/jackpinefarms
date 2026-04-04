@@ -18,7 +18,9 @@
       "Bash(ls /home/runner/workspace/artifacts/api-server/dist/*.mjs)",
       "Bash(psql:*)",
       "Bash(find /home/runner/workspace/node_modules/.pnpm -name bcrypt.js -path */bcryptjs/*)",
-      "Bash(BCRYPT_PATH=\"/home/runner/workspace/node_modules/.pnpm/bcryptjs@3.0.3/node_modules/bcryptjs/index.js\")"
+      "Bash(BCRYPT_PATH=\"/home/runner/workspace/node_modules/.pnpm/bcryptjs@3.0.3/node_modules/bcryptjs/index.js\")",
+      "Bash(pnpm install:*)",
+      "Bash(pnpm:*)"
     ]
   }
 }
