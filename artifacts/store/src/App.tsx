@@ -66,6 +66,7 @@ import FarmOpsForgotPassword from "./pages/farmops/ForgotPassword";
 import FarmOpsResetPassword from "./pages/farmops/ResetPassword";
 import FarmOpsDashboard from "./pages/farmops/Dashboard";
 import FarmOpsBilling from "./pages/farmops/Billing";
+import FarmOpsExpenses from "./pages/farmops/Expenses";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -100,6 +101,9 @@ function Router() {
       </Route>
       <Route path="/farmops/billing">
         <FarmOpsLayout><FarmOpsBilling /></FarmOpsLayout>
+      </Route>
+      <Route path="/farmops/expenses">
+        <FarmOpsLayout><FarmOpsExpenses /></FarmOpsLayout>
       </Route>
       <Route path="/farmops" component={FarmOpsLanding} />
 

@@ -1,6 +1,6 @@
 import { ReactNode, useState } from "react";
 import { Link, useLocation } from "wouter";
-import { Menu, X, Sprout, LogOut, LayoutDashboard } from "lucide-react";
+import { Menu, X, Sprout, LogOut, LayoutDashboard, DollarSign } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useFarmopsMe, useFarmopsLogout } from "@/hooks/useFarmopsAuth";
 
@@ -41,6 +41,18 @@ export function FarmOpsLayout({ children }: { children: ReactNode }) {
                 >
                   <LayoutDashboard className="w-4 h-4" />
                   Dashboard
+                </Link>
+                <Link
+                  href="/farmops/expenses"
+                  className={cn(
+                    "flex items-center gap-1.5 text-sm font-medium transition-colors",
+                    location.startsWith("/farmops/expenses")
+                      ? "text-emerald-700"
+                      : "text-slate-600 hover:text-emerald-700"
+                  )}
+                >
+                  <DollarSign className="w-4 h-4" />
+                  Expenses
                 </Link>
                 <button
                   onClick={handleLogout}
@@ -84,6 +96,9 @@ export function FarmOpsLayout({ children }: { children: ReactNode }) {
               <>
                 <Link href="/farmops/dashboard" className="text-sm font-medium" onClick={() => setMobileOpen(false)}>
                   Dashboard
+                </Link>
+                <Link href="/farmops/expenses" className="text-sm font-medium" onClick={() => setMobileOpen(false)}>
+                  Expenses
                 </Link>
                 <button onClick={handleLogout} className="text-sm font-medium text-left text-slate-600">
                   Sign Out
