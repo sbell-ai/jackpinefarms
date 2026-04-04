@@ -10,12 +10,19 @@ if (!process.env.DATABASE_URL) {
   );
 }
 
-const dbUrl = new URL(process.env.DATABASE_URL);
-dbUrl.searchParams.delete("sslmode");
+const isProduction = process.env.NODE_ENV === "production";
+
+let connectionString = process.env.DATABASE_URL;
+if (!isProduction) {
+  // Dev Postgres doesn't require SSL — strip sslmode if present
+  const dbUrl = new URL(connectionString);
+  dbUrl.searchParams.delete("sslmode");
+  connectionString = dbUrl.toString();
+}
 
 export const pool = new Pool({
-  connectionString: dbUrl.toString(),
-  ssl: false,
+  connectionString,
+  ssl: isProduction ? { rejectUnauthorized: false } : false,
 });
 export const db = drizzle(pool, { schema });
 

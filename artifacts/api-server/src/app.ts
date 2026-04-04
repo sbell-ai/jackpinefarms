@@ -8,6 +8,7 @@ import path from "path";
 import { fileURLToPath } from "url";
 import router from "./routes";
 import { logger } from "./lib/logger";
+import { pool } from "@workspace/db";
 
 const PgSession = connectPgSimple(session);
 
@@ -72,8 +73,9 @@ if (!process.env.SESSION_SECRET) {
 app.use(
   session({
     store: new PgSession({
-      conString: process.env.DATABASE_URL,
+      pool,
       tableName: "session",
+      createTableIfMissing: true,
     }),
     secret: process.env.SESSION_SECRET,
     resave: false,
