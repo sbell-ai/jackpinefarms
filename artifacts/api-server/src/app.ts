@@ -88,9 +88,10 @@ app.use(
   }),
 );
 
-// Block FarmOps users from Jack Pine admin and operational routes
+// Block FarmOps users from Jack Pine admin and operational routes.
+// The /api/admin auth endpoints (login, logout, me) are always allowed so a
+// user with a stale FarmOps session cookie can still reach the admin login page.
 const farmopsBlockedPaths = [
-  "/api/admin",
   "/api/batches",
   "/api/pickup-events",
   "/api/admin-orders",
@@ -105,6 +106,17 @@ for (const blockedPath of farmopsBlockedPaths) {
     next();
   });
 }
+
+// Block FarmOps sessions from protected admin routes, but NOT from the
+// auth endpoints (/login, /logout, /me) which must remain publicly accessible.
+const adminAuthExempt = new Set(["/login", "/logout", "/me"]);
+app.use("/api/admin", (req: express.Request, res: express.Response, next: express.NextFunction) => {
+  if (req.session.farmopsUserId && !adminAuthExempt.has(req.path)) {
+    res.status(403).json({ error: "Forbidden" });
+    return;
+  }
+  next();
+});
 
 app.use("/api", router);
 
