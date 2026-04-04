@@ -6,6 +6,9 @@ id = "artifacts/api-server"
 [[artifacts]]
 id = "artifacts/store"
 
+[[artifacts]]
+id = "artifacts/farmops-landing"
+
 [deployment]
 run = ["node", "artifacts/api-server/dist/index.mjs"]
 build = ["pnpm", "run", "build"]
