@@ -120,13 +120,13 @@ app.use("/api/admin", (req: express.Request, res: express.Response, next: expres
 
 app.use("/api", router);
 
-const farmopsDistPath = path.resolve(
-  path.dirname(fileURLToPath(import.meta.url)),
-  "../../farmops-landing/dist",
-);
-app.use("/farmops", express.static(farmopsDistPath));
-app.get("/farmops", (_req, res) => {
-  res.sendFile(path.join(farmopsDistPath, "index.html"));
+// Redirect legacy /farmops/* paths to the FarmOps subdomain.
+// req.url in a sub-mounted handler is the remainder after the mount point and
+// already includes the query string (e.g. /reset-password?token=abc), so a
+// single template literal is sufficient — no req.path + req.search needed.
+// 302 (temporary) is used during migration; promote to 301 once stable.
+app.use("/farmops", (req: express.Request, res: express.Response) => {
+  res.redirect(302, `https://farmops.jackpinefarms.farm${req.url}`);
 });
 
 const storeDistPath = path.resolve(
