@@ -124,21 +124,6 @@ app.use("/api/admin", (req: express.Request, res: express.Response, next: expres
   next();
 });
 
-// ── Debug: dump all headers (temporary — remove after diagnosing subdomain routing) ──
-app.get("/api/debug/request-info", (req, res) => {
-  res.json({
-    headers: req.headers,
-    hostname: req.hostname,
-    host_header: req.headers.host,
-    x_forwarded_host: req.headers["x-forwarded-host"],
-    x_forwarded_for: req.headers["x-forwarded-for"],
-    protocol: req.protocol,
-    secure: req.secure,
-    ip: req.ip,
-    url: req.url,
-  });
-});
-
 app.use("/api", router);
 
 const farmopsLandingDistPath = path.resolve(
@@ -155,18 +140,18 @@ const storeDistPath = path.resolve(
 // /farmops redirect so requests arriving at the subdomain are handled here,
 // not caught by the redirect below and sent into a loop.
 //
-// We check multiple header sources in priority order because Replit's proxy
-// may rewrite Host and/or X-Forwarded-Host in unexpected ways.
-// The debug endpoint at GET /api/debug/request-info reveals exactly what
-// the proxy sends so we can tune this once deployed.
+// X-Forwarded-Host is checked first because Replit's proxy may rewrite the
+// Host header to an internal value while preserving the original domain in
+// X-Forwarded-Host. GET /api/admin/debug/request-info (platform-admin-only)
+// can be used to inspect exactly which headers the proxy sets in production.
 app.use((req, res, next) => {
-  const rawHost   = (req.headers.host               ?? "").split(":")[0];
-  const xfh       = ((req.headers["x-forwarded-host"] as string | undefined) ?? "")
-                      .split(",")[0].trim().split(":")[0];
+  const rawHost = (req.headers.host ?? "").split(":")[0];
+  const xfh     = ((req.headers["x-forwarded-host"] as string | undefined) ?? "")
+                    .split(",")[0].trim().split(":")[0];
   const host = xfh || rawHost;
 
   if (rawHost.includes("jackpine") || xfh.includes("jackpine")) {
-    logger.info({ rawHost, xfh, resolvedHost: host, path: req.path }, "subdomain middleware: custom domain hit");
+    logger.info({ rawHost, xfh, resolvedHost: host, path: req.path }, "subdomain middleware: custom domain request");
   }
 
   if (host !== "farmops.jackpinefarms.farm") return next();

@@ -5,6 +5,7 @@ import bcrypt from "bcryptjs";
 import { eq } from "drizzle-orm";
 import { z } from "zod";
 import { db, platformAdminsTable } from "@workspace/db";
+import { requirePlatformAdmin } from "../middlewares/require-platform-admin.js";
 
 const router: IRouter = Router();
 
@@ -74,6 +75,25 @@ router.post("/admin/logout", async (req, res): Promise<void> => {
 
 router.get("/admin/me", (req, res): void => {
   res.json({ authenticated: Boolean(req.session.platformAdminId) });
+});
+
+// ── GET /admin/debug/request-info ─────────────────────────────────────────────
+// Returns the raw proxy headers as seen by the server. Useful for diagnosing
+// subdomain routing when running behind a reverse proxy (e.g. in production).
+// Requires platform admin authentication.
+
+router.get("/admin/debug/request-info", requirePlatformAdmin, (req, res): void => {
+  res.json({
+    host_header:       req.headers.host,
+    x_forwarded_host:  req.headers["x-forwarded-host"],
+    x_forwarded_for:   req.headers["x-forwarded-for"],
+    x_forwarded_proto: req.headers["x-forwarded-proto"],
+    hostname:          req.hostname,
+    protocol:          req.protocol,
+    secure:            req.secure,
+    ip:                req.ip,
+    url:               req.url,
+  });
 });
 
 export default router;
