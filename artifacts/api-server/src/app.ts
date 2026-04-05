@@ -55,8 +55,10 @@ const ALLOWED_ORIGINS = process.env.CORS_ALLOWED_ORIGINS
       "http://localhost:3000",
       "http://localhost:5173",
       "http://localhost:5174",
+      "http://localhost:5175",
       "https://jackpinefarms.farm",
       "https://farmops.jackpinefarms.farm",
+      "https://superadmin.jackpinefarms.farm",
     ];
 
 app.use(
@@ -145,6 +147,32 @@ const storeDistPath = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
   "../../store/dist/public",
 );
+
+const superadminDistPath = path.resolve(
+  path.dirname(fileURLToPath(import.meta.url)),
+  "../../superadmin/dist/public",
+);
+
+// superadmin.jackpinefarms.farm subdomain routing — serve the superadmin SPA.
+// API routes (/api/*) are already handled above and pass through.
+app.use((req, res, next) => {
+  const rawHost = (req.headers.host ?? "").split(":")[0];
+  const xfh     = ((req.headers["x-forwarded-host"] as string | undefined) ?? "")
+                    .split(",")[0].trim().split(":")[0];
+  const host = xfh || rawHost;
+
+  if (host !== "superadmin.jackpinefarms.farm") return next();
+  logger.info({ rawHost, xfh, path: req.path }, "superadmin subdomain: matched");
+  if (req.path.startsWith("/api")) return next();
+  return express.static(superadminDistPath)(req, res, () => {
+    res.sendFile(path.join(superadminDistPath, "index.html"), (err) => {
+      if (err) {
+        logger.warn({ err }, "superadmin index.html not found — app may not be built yet");
+        res.status(503).send("Super Admin app is not built yet.");
+      }
+    });
+  });
+});
 
 // farmops.jackpinefarms.farm subdomain routing — must come BEFORE the
 // /farmops redirect so requests arriving at the subdomain are handled here,

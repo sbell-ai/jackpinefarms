@@ -1,0 +1,142 @@
+class ApiError extends Error {
+  status: number;
+  constructor(status: number, message: string) {
+    super(message);
+    this.name = "ApiError";
+    this.status = status;
+  }
+}
+
+async function apiFetch<T = unknown>(path: string, opts?: RequestInit): Promise<T> {
+  const res = await fetch(`/api/superadmin${path}`, {
+    credentials: "include",
+    headers: {
+      "Content-Type": "application/json",
+      ...(opts?.headers ?? {}),
+    },
+    ...opts,
+  });
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({ error: `HTTP ${res.status}` }));
+    throw new ApiError(res.status, (body as { error?: string }).error ?? `HTTP ${res.status}`);
+  }
+  return res.json() as Promise<T>;
+}
+
+export interface PlatformAdmin {
+  id: number;
+  email: string;
+  name: string;
+  role: "owner" | "support";
+  isActive: boolean;
+  lastLoginAt: string | null;
+  createdAt: string;
+}
+
+export interface Tenant {
+  id: number;
+  slug: string;
+  name: string;
+  ownerEmail: string;
+  status: "trialing" | "active" | "past_due" | "canceled" | "paused";
+  plan: "starter" | "growth" | "pro";
+  trialEndsAt: string | null;
+  currentPeriodEndsAt: string | null;
+  stripeSubscriptionStatus: string | null;
+  stripeCustomerId: string | null;
+  stripeSubscriptionId: string | null;
+  createdAt: string;
+  userCount?: number;
+}
+
+export interface TenantUser {
+  id: number;
+  email: string;
+  name: string;
+  role: string;
+  emailVerified: boolean;
+  lastLoginAt: string | null;
+  createdAt: string;
+}
+
+export interface DashboardData {
+  counts: { total: number; active: number; trialing: number; past_due: number; canceled: number; paused: number };
+  mrr: number;
+  trialsExpiring: Tenant[];
+  recentSignups: Tenant[];
+}
+
+export interface TenantsResponse {
+  tenants: Tenant[];
+  total: number;
+  page: number;
+  pageSize: number;
+}
+
+export interface TenantDetailResponse {
+  tenant: Tenant;
+  users: TenantUser[];
+  addons: Array<{ id: number; tenantId: number; name: string; quantity: number; createdAt: string }>;
+  usage: { userCount: number; inviteCount: number };
+}
+
+export interface BillingData {
+  counts: { total: number; active: number; trialing: number; past_due: number; canceled: number; paused: number };
+  mrr: number;
+  tenants: Tenant[];
+}
+
+export const api = {
+  login: (email: string, password: string) =>
+    apiFetch<PlatformAdmin>("/login", {
+      method: "POST",
+      body: JSON.stringify({ email, password }),
+    }),
+
+  logout: () =>
+    apiFetch<{ message: string }>("/logout", { method: "POST" }),
+
+  me: () => apiFetch<PlatformAdmin>("/me"),
+
+  dashboard: () => apiFetch<DashboardData>("/dashboard"),
+
+  tenants: (params: Record<string, string>) => {
+    const qs = new URLSearchParams(params).toString();
+    return apiFetch<TenantsResponse>(`/tenants${qs ? `?${qs}` : ""}`);
+  },
+
+  tenant: (id: number) => apiFetch<TenantDetailResponse>(`/tenants/${id}`),
+
+  suspendTenant: (id: number) =>
+    apiFetch<Tenant>(`/tenants/${id}/suspend`, { method: "POST" }),
+
+  reactivateTenant: (id: number) =>
+    apiFetch<Tenant>(`/tenants/${id}/reactivate`, { method: "POST" }),
+
+  changePlan: (id: number, plan: string) =>
+    apiFetch<Tenant>(`/tenants/${id}/change-plan`, {
+      method: "POST",
+      body: JSON.stringify({ plan }),
+    }),
+
+  extendTrial: (id: number, trialEndsAt: string) =>
+    apiFetch<Tenant>(`/tenants/${id}/extend-trial`, {
+      method: "POST",
+      body: JSON.stringify({ trialEndsAt }),
+    }),
+
+  billing: () => apiFetch<BillingData>("/billing"),
+
+  admins: () => apiFetch<PlatformAdmin[]>("/admins"),
+
+  createAdmin: (data: { email: string; name: string; role: "owner" | "support" }) =>
+    apiFetch<PlatformAdmin & { tempPassword: string }>("/admins", {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
+
+  deactivateAdmin: (id: number) =>
+    apiFetch<{ message: string; id: number; email: string }>(`/admins/${id}/deactivate`, {
+      method: "POST",
+    }),
+};

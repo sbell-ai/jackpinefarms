@@ -1,0 +1,31 @@
+kind = "web"
+previewPath = "/superadmin/"
+title = "FarmOps Super Admin"
+version = "1.0.0"
+id = "artifacts/superadmin"
+router = "path"
+
+[[integratedSkills]]
+name = "react-vite"
+version = "1.0.0"
+
+[[services]]
+name = "web"
+paths = [ "/superadmin/" ]
+localPort = 19460
+
+[services.development]
+run = "pnpm --filter @workspace/superadmin run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/superadmin", "run", "build" ]
+publicDir = "artifacts/superadmin/dist/public"
+serve = "static"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "19460"
+BASE_PATH = "/superadmin/"

@@ -25,6 +25,7 @@ import farmopsAuthRouter from "./farmops-auth.js";
 import farmopsExpensesRouter from "./farmops-expenses.js";
 import farmopsBillingRouter from "./farmops-billing.js";
 import platformAdminTenantsRouter from "./platform-admin-tenants.js";
+import platformAdminDashboardRouter from "./platform-admin-dashboard.js";
 
 const router: IRouter = Router();
 
@@ -54,5 +55,6 @@ router.use(farmopsAuthRouter);
 router.use(farmopsExpensesRouter);
 router.use(farmopsBillingRouter);
 router.use(platformAdminTenantsRouter);
+router.use("/superadmin", platformAdminDashboardRouter);
 
 export default router;

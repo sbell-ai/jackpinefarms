@@ -7,11 +7,20 @@ interface SessionCartItem {
   addGiblets: boolean;
 }
 
+interface PlatformAdminRecord {
+  id: number;
+  email: string;
+  name: string;
+  role: string;
+  isActive: boolean;
+}
+
 declare global {
   namespace Express {
     interface Request {
       farmopsTenant?: FarmopsTenant;
       farmopsUser?: FarmopsUser;
+      platformAdmin?: PlatformAdminRecord;
     }
   }
 }

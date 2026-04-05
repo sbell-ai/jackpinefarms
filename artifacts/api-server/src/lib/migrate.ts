@@ -598,6 +598,12 @@ export async function runMigrations(): Promise<void> {
       )
     `);
 
+    // ── Platform admins: role column (Task #29) ──────────────────────────────
+    await db.execute(sql`
+      ALTER TABLE platform_admins
+        ADD COLUMN IF NOT EXISTS role text NOT NULL DEFAULT 'owner'
+    `);
+
     const rawAdminPassword = process.env.ADMIN_PASSWORD;
     if (rawAdminPassword) {
       const hash = await bcrypt.hash(rawAdminPassword, 12);
