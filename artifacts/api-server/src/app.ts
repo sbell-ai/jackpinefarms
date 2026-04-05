@@ -178,9 +178,26 @@ app.use("/farmops", (req: express.Request, res: express.Response) => {
   res.redirect(302, `https://farmops.jackpinefarms.farm${req.url}`);
 });
 
-app.use(express.static(storeDistPath));
-app.get("/{*path}", (_req, res) => {
-  res.sendFile(path.join(storeDistPath, "index.html"));
+logger.info({ storeDistPath, farmopsLandingDistPath }, "Static file paths");
+
+app.use(express.static(storeDistPath, {
+  fallthrough: true,
+}));
+
+// Error-handler for static serving: logs the attempted path before 500ing.
+app.use((err: any, req: express.Request, res: express.Response, _next: express.NextFunction) => {
+  logger.error({ err, path: req.path, storeDistPath }, "Static file error");
+  res.status(500).json({ error: "Static file error", attemptedPath: path.join(storeDistPath, req.path) });
+});
+
+app.get("/{*path}", (req, res) => {
+  const filePath = path.join(storeDistPath, "index.html");
+  res.sendFile(filePath, (err) => {
+    if (err) {
+      logger.error({ err, filePath, storeDistPath }, "Failed to serve store index.html");
+      res.status(500).json({ error: "index.html not found", attemptedPath: filePath });
+    }
+  });
 });
 
 export default app;
