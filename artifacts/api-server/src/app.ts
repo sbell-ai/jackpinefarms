@@ -43,6 +43,11 @@ app.use(
 );
 
 const isProduction = process.env.NODE_ENV === "production";
+// COOKIE_DOMAIN is set explicitly in production artifact config so the cookie
+// is shared across all *.jackpinefarms.farm subdomains.  Falls back to the
+// NODE_ENV-derived value for local development.
+const cookieDomain =
+  process.env.COOKIE_DOMAIN ?? (isProduction ? ".jackpinefarms.farm" : undefined);
 
 const ALLOWED_ORIGINS = process.env.CORS_ALLOWED_ORIGINS
   ? process.env.CORS_ALLOWED_ORIGINS.split(",")
@@ -93,7 +98,7 @@ app.use(
       sameSite: isProduction ? "none" : "lax",
       // Share sessions across all *.jackpinefarms.farm subdomains in production.
       // The leading dot allows farmops. and superadmin. to read the same cookie.
-      domain: isProduction ? ".jackpinefarms.farm" : undefined,
+      domain: cookieDomain,
       maxAge: 7 * 24 * 60 * 60 * 1000,
     },
   }),
@@ -155,9 +160,8 @@ app.use((req, res, next) => {
                     .split(",")[0].trim().split(":")[0];
   const host = xfh || rawHost;
 
-  logger.info({ rawHost, xfh, resolvedHost: host, path: req.path }, "subdomain check");
-
   if (host !== "farmops.jackpinefarms.farm") return next();
+  logger.info({ rawHost, xfh, path: req.path }, "farmops subdomain: matched");
   // API calls always pass through
   if (req.path.startsWith("/api")) return next();
   // FarmOps tenant UI routes — serve store SPA
@@ -179,6 +183,19 @@ app.use((req, res, next) => {
 // 302 (temporary) is used during migration; promote to 301 once stable.
 app.use("/farmops", (req: express.Request, res: express.Response) => {
   res.redirect(302, `https://farmops.jackpinefarms.farm${req.url}`);
+});
+
+// Serve the farmops-landing marketing SPA at /farmops-landing/.
+// The store's index.html contains a client-side redirect that sends any
+// farmops.jackpinefarms.farm visitor here.  Replit's platform-level static
+// handler intercepts HTML requests before Express, so this path-based approach
+// is required — the subdomain middleware above only fires for requests that
+// actually reach Express (i.e. /api/* and /farmops* requests).
+// The SPA is built with BASE_PATH=/farmops-landing/ so all asset URLs are
+// rooted at /farmops-landing/assets/... and resolve correctly.
+app.use("/farmops-landing", express.static(farmopsLandingDistPath));
+app.use("/farmops-landing", (_req: express.Request, res: express.Response) => {
+  res.sendFile(path.join(farmopsLandingDistPath, "index.html"));
 });
 
 logger.info({ storeDistPath, farmopsLandingDistPath }, "Static file paths");

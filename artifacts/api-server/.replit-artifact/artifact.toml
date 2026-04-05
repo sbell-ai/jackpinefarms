@@ -1,24 +1,26 @@
 kind = "api"
-previewPath = "/api"
-title = "API Server"
-version = "1.0.0"
-id = "3B4_FFSkEVBkAeYMFRJ2e"
+  previewPath = "/api"
+  title = "API Server"
+  version = "1.0.0"
+  id = "3B4_FFSkEVBkAeYMFRJ2e"
 
-[[services]]
-localPort = 8080
-name = "API Server"
-paths = ["/api", "/farmops"]
+  [[services]]
+  localPort = 8080
+  name = "API Server"
+  paths = ["/api", "/farmops", "/farmops-landing"]
 
-[services.development]
-run = "pnpm --filter @workspace/api-server run dev"
+  [services.development]
+  run = "pnpm --filter @workspace/api-server run dev"
 
-[services.production]
-build = ["bash", "scripts/build-production.sh"]
-run = ["node", "--enable-source-maps", "artifacts/api-server/dist/index.mjs"]
+  [services.production]
+  build = ["bash", "scripts/build-production.sh"]
+  run = ["node", "--enable-source-maps", "artifacts/api-server/dist/index.mjs"]
 
-[services.env]
-PORT = "8080"
-NODE_ENV = "production"
+  [services.env]
+  PORT = "8080"
+  NODE_ENV = "production"
+  COOKIE_DOMAIN = ".jackpinefarms.farm"
 
-[services.production.health.startup]
-path = "/api/healthz"
+  [services.production.health.startup]
+  path = "/api/healthz"
+  
