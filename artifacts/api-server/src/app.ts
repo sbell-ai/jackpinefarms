@@ -129,30 +129,33 @@ app.use("/farmops", (req: express.Request, res: express.Response) => {
   res.redirect(302, `https://farmops.jackpinefarms.farm${req.url}`);
 });
 
-const farmopsDistPath = path.resolve(
+const farmopsLandingDistPath = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
   "../../farmops-landing/dist",
 );
-
-// Serve FarmOps frontend for subdomain requests.
-// API calls always pass through to the router regardless of hostname.
-// Static assets are served first; any unmatched path falls back to index.html
-// so client-side SPA routing works correctly.
-app.use((req: express.Request, res: express.Response, next: express.NextFunction) => {
-  const host = req.hostname;
-  if (host === "farmops.jackpinefarms.farm" || host === "farmops.jackpinefarms.farm.") {
-    if (req.path.startsWith("/api")) return next();
-    return express.static(farmopsDistPath)(req, res, () => {
-      res.sendFile(path.join(farmopsDistPath, "index.html"));
-    });
-  }
-  next();
-});
 
 const storeDistPath = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
   "../../store/dist/public",
 );
+
+// farmops.jackpinefarms.farm subdomain routing
+app.use((req, res, next) => {
+  if (req.hostname !== "farmops.jackpinefarms.farm") return next();
+  // API calls always pass through
+  if (req.path.startsWith("/api")) return next();
+  // FarmOps tenant UI routes — serve store SPA
+  if (req.path.startsWith("/farmops")) {
+    return express.static(storeDistPath)(req, res, () => {
+      res.sendFile(path.join(storeDistPath, "index.html"));
+    });
+  }
+  // Everything else — serve farmops-landing marketing page
+  return express.static(farmopsLandingDistPath)(req, res, () => {
+    res.sendFile(path.join(farmopsLandingDistPath, "index.html"));
+  });
+});
+
 app.use(express.static(storeDistPath));
 app.get("/{*path}", (_req, res) => {
   res.sendFile(path.join(storeDistPath, "index.html"));
