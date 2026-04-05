@@ -101,8 +101,11 @@ Jack Pine Farm Store — React + Vite frontend.
   - CustomerDetail — customer info + full order history
 **Public utility page**: Unsubscribe — token-based email unsubscribe/global-unsubscribe (no login)
 
-- Layouts: PublicLayout (public nav + footer), AdminLayout (sidebar with nav items incl. Expenses, auth guard)
+**FarmOps pages** (`src/pages/farmops/`): Landing, Login, Register, Dashboard, Billing, Expenses, VerifyEmail, ForgotPassword, ResetPassword — served on the `farmops.jackpinefarms.farm` subdomain
+
+- Layouts: PublicLayout (public nav + footer), AdminLayout (sidebar with nav items incl. Expenses, auth guard), FarmOpsLayout (farmops nav)
 - Router: wouter, base path from `BASE_URL` env var (set to `/`)
+- Subdomain routing: `App.tsx` detects `isFarmOpsSubdomain` (hostname === `farmops.jackpinefarms.farm`) — renders FarmOps routes (`FarmOpsLanding` at `/`, auth & app pages at `/farmops/*`); main domain renders store routes
 - API client: `@workspace/api-client-react` (React Query hooks)
 - CSS: Tailwind v4, custom theme (farm green palette, serif display font)
 - Toast: `@/hooks/use-toast` (not `@/components/ui/use-toast`)

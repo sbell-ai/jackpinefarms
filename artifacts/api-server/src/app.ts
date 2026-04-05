@@ -164,16 +164,11 @@ app.use((req, res, next) => {
   logger.info({ rawHost, xfh, path: req.path }, "farmops subdomain: matched");
   // API calls always pass through
   if (req.path.startsWith("/api")) return next();
-  // FarmOps tenant UI routes — serve store SPA
-  // Use exact-segment matching: /farmops or /farmops/<anything> but NOT /farmops-landing
-  if (req.path === "/farmops" || req.path.startsWith("/farmops/")) {
-    return express.static(storeDistPath)(req, res, () => {
-      res.sendFile(path.join(storeDistPath, "index.html"));
-    });
-  }
-  // Everything else — serve farmops-landing marketing page
-  return express.static(farmopsLandingDistPath)(req, res, () => {
-    res.sendFile(path.join(farmopsLandingDistPath, "index.html"));
+  // All other paths — serve the store SPA.
+  // The React app detects isFarmOpsSubdomain and renders the FarmOps route
+  // tree: Landing.tsx at /, /farmops/login, /farmops/dashboard, etc.
+  return express.static(storeDistPath)(req, res, () => {
+    res.sendFile(path.join(storeDistPath, "index.html"));
   });
 });
 

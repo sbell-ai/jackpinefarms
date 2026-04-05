@@ -33,6 +33,18 @@ import PickupEvents from "./pages/PickupEvents";
 import AccountProfile from "./pages/account/Profile";
 import AccountOrderDetail from "./pages/account/OrderDetail";
 
+// FarmOps Pages
+import FarmOpsLanding from "./pages/farmops/Landing";
+import FarmOpsLogin from "./pages/farmops/Login";
+import FarmOpsRegister from "./pages/farmops/Register";
+import FarmOpsDashboard from "./pages/farmops/Dashboard";
+import FarmOpsBilling from "./pages/farmops/Billing";
+import FarmOpsExpenses from "./pages/farmops/Expenses";
+import FarmOpsVerifyEmail from "./pages/farmops/VerifyEmail";
+import FarmOpsForgotPassword from "./pages/farmops/ForgotPassword";
+import FarmOpsResetPassword from "./pages/farmops/ResetPassword";
+import { FarmOpsLayout } from "./components/farmops/FarmOpsLayout";
+
 // Admin Pages
 import AdminLogin from "./pages/admin/Login";
 import AdminDashboard from "./pages/admin/Dashboard";
@@ -67,14 +79,40 @@ const queryClient = new QueryClient({
 });
 
 function Router() {
+  const isFarmOpsSubdomain =
+    window.location.hostname === "farmops.jackpinefarms.farm" ||
+    window.location.hostname.startsWith("farmops.jackpinefarms.");
+
   return (
     <Switch>
-      {/* FarmOps has moved to farmops.jackpinefarms.farm */}
+      {/* ── FarmOps App Routes ─────────────────────────────────────────────
+          Specific routes must come before the wildcard redirect below.
+          They are served on both domains so internal navigation always works.
+       ─────────────────────────────────────────────────────────────────── */}
+      <Route path="/farmops/login"><FarmOpsLogin /></Route>
+      <Route path="/farmops/register"><FarmOpsRegister /></Route>
+      <Route path="/farmops/forgot-password"><FarmOpsForgotPassword /></Route>
+      <Route path="/farmops/reset-password"><FarmOpsResetPassword /></Route>
+      <Route path="/farmops/verify-email"><FarmOpsVerifyEmail /></Route>
+      <Route path="/farmops/dashboard">
+        <FarmOpsLayout><FarmOpsDashboard /></FarmOpsLayout>
+      </Route>
+      <Route path="/farmops/billing">
+        <FarmOpsLayout><FarmOpsBilling /></FarmOpsLayout>
+      </Route>
+      <Route path="/farmops/expenses">
+        <FarmOpsLayout><FarmOpsExpenses /></FarmOpsLayout>
+      </Route>
+      <Route path="/farmops/landing"><FarmOpsLanding /></Route>
+
+      {/* Redirect any unhandled /farmops/* path from main domain to subdomain */}
       <Route path="/farmops/:rest*">
         {(params) => {
-          const rest = (params as Record<string, string>).rest ?? "";
-          const search = window.location.search;
-          window.location.replace(`https://farmops.jackpinefarms.farm/${rest}${search}`);
+          if (!isFarmOpsSubdomain) {
+            const rest = (params as Record<string, string>).rest ?? "";
+            const search = window.location.search;
+            window.location.replace(`https://farmops.jackpinefarms.farm/${rest}${search}`);
+          }
           return null;
         }}
       </Route>
@@ -224,7 +262,7 @@ function Router() {
         <PublicLayout><SalesReturnsPolicy /></PublicLayout>
       </Route>
       <Route path="/">
-        <PublicLayout><Home /></PublicLayout>
+        {isFarmOpsSubdomain ? <FarmOpsLanding /> : <PublicLayout><Home /></PublicLayout>}
       </Route>
 
       {/* Catch-all */}
