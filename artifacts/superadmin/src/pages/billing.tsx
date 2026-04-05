@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { Link } from "wouter";
+import { useLocation } from "wouter";
 import { api } from "@/lib/api";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -45,6 +45,8 @@ function fmt(n: number) {
 }
 
 export default function Billing() {
+  const [_, setLocation] = useLocation();
+
   const { data, isLoading, isError } = useQuery({
     queryKey: ["billing"],
     queryFn: api.billing,
@@ -83,6 +85,8 @@ export default function Billing() {
       acc[t.plan] = (acc[t.plan] ?? 0) + 1;
       return acc;
     }, {} as Record<string, number>);
+
+  const showStripeColumn = tenants.some((t) => t.stripeSubscriptionStatus != null);
 
   return (
     <div className="p-8 space-y-8">
@@ -162,35 +166,41 @@ export default function Billing() {
                     <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wide">Status</th>
                     <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wide">Plan</th>
                     <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wide hidden md:table-cell">MRR</th>
-                    <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wide hidden lg:table-cell">Stripe Status</th>
+                    {showStripeColumn && (
+                      <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wide hidden lg:table-cell">Stripe Status</th>
+                    )}
                     <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wide hidden xl:table-cell">Joined</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border">
                   {tenants.map((t) => (
-                    <Link key={t.id} href={`/tenants/${t.id}`}>
-                      <tr className="hover:bg-muted/40 cursor-pointer transition-colors">
-                        <td className="px-6 py-3">
-                          <p className="font-medium text-foreground">{t.name}</p>
-                          <p className="text-xs text-muted-foreground">{t.ownerEmail}</p>
-                        </td>
-                        <td className="px-4 py-3"><StatusBadge status={t.status} /></td>
-                        <td className="px-4 py-3"><PlanBadge plan={t.plan} /></td>
-                        <td className="px-4 py-3 hidden md:table-cell text-muted-foreground">
-                          {t.status === "active" ? fmt(PLAN_PRICES[t.plan] ?? 0) : "-"}
-                        </td>
+                    <tr
+                      key={t.id}
+                      className="hover:bg-muted/40 cursor-pointer transition-colors"
+                      onClick={() => setLocation(`/tenants/${t.id}`)}
+                    >
+                      <td className="px-6 py-3">
+                        <p className="font-medium text-foreground">{t.name}</p>
+                        <p className="text-xs text-muted-foreground">{t.ownerEmail}</p>
+                      </td>
+                      <td className="px-4 py-3"><StatusBadge status={t.status} /></td>
+                      <td className="px-4 py-3"><PlanBadge plan={t.plan} /></td>
+                      <td className="px-4 py-3 hidden md:table-cell text-muted-foreground">
+                        {t.status === "active" ? fmt(PLAN_PRICES[t.plan] ?? 0) : "-"}
+                      </td>
+                      {showStripeColumn && (
                         <td className="px-4 py-3 hidden lg:table-cell">
                           {t.stripeSubscriptionStatus ? (
                             <StatusBadge status={t.stripeSubscriptionStatus} />
                           ) : (
-                            <span className="text-muted-foreground text-xs">—</span>
+                            <span className="text-muted-foreground text-xs">&mdash;</span>
                           )}
                         </td>
-                        <td className="px-4 py-3 hidden xl:table-cell text-muted-foreground text-xs">
-                          {formatDistanceToNow(new Date(t.createdAt), { addSuffix: true })}
-                        </td>
-                      </tr>
-                    </Link>
+                      )}
+                      <td className="px-4 py-3 hidden xl:table-cell text-muted-foreground text-xs">
+                        {formatDistanceToNow(new Date(t.createdAt), { addSuffix: true })}
+                      </td>
+                    </tr>
                   ))}
                 </tbody>
               </table>

@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Link } from "wouter";
+import { useLocation } from "wouter";
 import { api } from "@/lib/api";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -39,6 +39,7 @@ function PlanBadge({ plan }: { plan: string }) {
 }
 
 export default function Tenants() {
+  const [_, setLocation] = useLocation();
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState<string>("all");
   const [plan, setPlan] = useState<string>("all");
@@ -156,26 +157,28 @@ export default function Tenants() {
                 </thead>
                 <tbody className="divide-y divide-border">
                   {data.tenants.map((t) => (
-                    <Link key={t.id} href={`/tenants/${t.id}`}>
-                      <tr className="hover:bg-muted/40 cursor-pointer transition-colors">
-                        <td className="px-6 py-4">
-                          <p className="font-medium text-foreground">{t.name}</p>
-                          <p className="text-xs text-muted-foreground">{t.ownerEmail}</p>
-                        </td>
-                        <td className="px-4 py-4">
-                          <StatusBadge status={t.status} />
-                        </td>
-                        <td className="px-4 py-4">
-                          <PlanBadge plan={t.plan} />
-                        </td>
-                        <td className="px-4 py-4 hidden md:table-cell text-muted-foreground">
-                          {t.userCount ?? "-"}
-                        </td>
-                        <td className="px-4 py-4 hidden lg:table-cell text-muted-foreground text-xs">
-                          {formatDistanceToNow(new Date(t.createdAt), { addSuffix: true })}
-                        </td>
-                      </tr>
-                    </Link>
+                    <tr
+                      key={t.id}
+                      className="hover:bg-muted/40 cursor-pointer transition-colors"
+                      onClick={() => setLocation(`/tenants/${t.id}`)}
+                    >
+                      <td className="px-6 py-4">
+                        <p className="font-medium text-foreground">{t.name}</p>
+                        <p className="text-xs text-muted-foreground">{t.ownerEmail}</p>
+                      </td>
+                      <td className="px-4 py-4">
+                        <StatusBadge status={t.status} />
+                      </td>
+                      <td className="px-4 py-4">
+                        <PlanBadge plan={t.plan} />
+                      </td>
+                      <td className="px-4 py-4 hidden md:table-cell text-muted-foreground">
+                        {t.userCount ?? "-"}
+                      </td>
+                      <td className="px-4 py-4 hidden lg:table-cell text-muted-foreground text-xs">
+                        {formatDistanceToNow(new Date(t.createdAt), { addSuffix: true })}
+                      </td>
+                    </tr>
                   ))}
                 </tbody>
               </table>

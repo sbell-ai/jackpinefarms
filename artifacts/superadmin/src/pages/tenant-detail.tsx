@@ -59,6 +59,8 @@ export default function TenantDetail() {
   const { data: me } = useMe();
   const isOwner = me?.role === "owner";
 
+  const [showSuspend, setShowSuspend] = useState(false);
+  const [showReactivate, setShowReactivate] = useState(false);
   const [showChangePlan, setShowChangePlan] = useState(false);
   const [showExtendTrial, setShowExtendTrial] = useState(false);
   const [newPlan, setNewPlan] = useState<"starter" | "growth" | "pro">("starter");
@@ -267,22 +269,18 @@ export default function TenantDetail() {
                     variant="outline"
                     className="w-full text-green-700 border-green-200 hover:bg-green-50"
                     disabled={reactivate.isPending}
-                    onClick={() => reactivate.mutate()}
+                    onClick={() => setShowReactivate(true)}
                   >
-                    {reactivate.isPending ? "Reactivating..." : "Reactivate Tenant"}
+                    Reactivate Tenant
                   </Button>
                 ) : (
                   <Button
                     variant="outline"
                     className="w-full text-yellow-700 border-yellow-200 hover:bg-yellow-50"
                     disabled={suspend.isPending}
-                    onClick={() => {
-                      if (confirm(`Suspend ${tenant.name}? This will pause their access.`)) {
-                        suspend.mutate();
-                      }
-                    }}
+                    onClick={() => setShowSuspend(true)}
                   >
-                    {suspend.isPending ? "Suspending..." : "Suspend Tenant"}
+                    Suspend Tenant
                   </Button>
                 )}
                 <Button
@@ -330,6 +328,47 @@ export default function TenantDetail() {
           </div>
         )}
       </div>
+
+      <Dialog open={showSuspend} onOpenChange={setShowSuspend}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Suspend Tenant</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground py-2">
+            Are you sure you want to suspend <strong>{data?.tenant.name}</strong>? This will pause their access immediately.
+          </p>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowSuspend(false)}>Cancel</Button>
+            <Button
+              variant="destructive"
+              onClick={() => { setShowSuspend(false); suspend.mutate(); }}
+              disabled={suspend.isPending}
+            >
+              {suspend.isPending ? "Suspending..." : "Suspend"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={showReactivate} onOpenChange={setShowReactivate}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Reactivate Tenant</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground py-2">
+            Reactivate <strong>{data?.tenant.name}</strong>? Their access will be restored.
+          </p>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowReactivate(false)}>Cancel</Button>
+            <Button
+              onClick={() => { setShowReactivate(false); reactivate.mutate(); }}
+              disabled={reactivate.isPending}
+            >
+              {reactivate.isPending ? "Reactivating..." : "Reactivate"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={showChangePlan} onOpenChange={setShowChangePlan}>
         <DialogContent>
