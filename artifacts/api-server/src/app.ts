@@ -29,6 +29,8 @@ app.use(
           id: req.id,
           method: req.method,
           url: req.url?.split("?")[0],
+          host: req.headers?.host,
+          xfh:  req.headers?.["x-forwarded-host"],
         };
       },
       res(res) {
@@ -153,9 +155,7 @@ app.use((req, res, next) => {
                     .split(",")[0].trim().split(":")[0];
   const host = xfh || rawHost;
 
-  if (rawHost.includes("jackpine") || xfh.includes("jackpine")) {
-    logger.info({ rawHost, xfh, resolvedHost: host, path: req.path }, "subdomain middleware: custom domain request");
-  }
+  logger.info({ rawHost, xfh, resolvedHost: host, path: req.path }, "subdomain check");
 
   if (host !== "farmops.jackpinefarms.farm") return next();
   // API calls always pass through
