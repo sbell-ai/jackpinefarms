@@ -14,16 +14,6 @@ const PgSession = connectPgSimple(session);
 
 const app: Express = express();
 
-app.use((req, _res, next) => {
-  console.log("[HOST DEBUG]", JSON.stringify({
-    hostname: req.hostname,
-    host: req.headers.host,
-    xForwardedHost: req.headers["x-forwarded-host"],
-    path: req.path,
-  }));
-  next();
-});
-
 // Trust the first proxy hop (Replit's production reverse proxy).
 // Without this, req.secure is false (the Node.js process receives plain HTTP
 // from the proxy), and express-session with secure:true will refuse to set
