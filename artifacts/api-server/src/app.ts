@@ -89,6 +89,9 @@ app.use(
       httpOnly: true,
       secure: isProduction,
       sameSite: isProduction ? "none" : "lax",
+      // Share sessions across all *.jackpinefarms.farm subdomains in production.
+      // The leading dot allows farmops. and superadmin. to read the same cookie.
+      domain: isProduction ? ".jackpinefarms.farm" : undefined,
       maxAge: 7 * 24 * 60 * 60 * 1000,
     },
   }),
