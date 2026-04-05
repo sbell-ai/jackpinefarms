@@ -4,8 +4,9 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "export NODE_ENV=development && pnpm run build && pnpm run start",
+    "dev": "export NODE_ENV=development && pnpm run build-spas && pnpm run build && pnpm run start",
     "build": "node ./build.mjs",
+    "build-spas": "pnpm --filter @workspace/store run build && pnpm --filter @workspace/farmops-landing run build",
     "start": "node --enable-source-maps ./dist/index.mjs",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
