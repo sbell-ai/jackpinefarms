@@ -15,6 +15,7 @@ import {
 } from "@workspace/db";
 import { requirePlatformAdmin, requirePlatformAdminRole } from "../middlewares/require-platform-admin.js";
 import { logAuditEvent } from "../lib/audit.js";
+import { sendEmail } from "../lib/email.js";
 
 const router: IRouter = Router();
 
@@ -359,6 +360,12 @@ router.post("/tenants/:id/suspend", requirePlatformAdminRole("owner"), async (re
   if (!updated) { res.status(404).json({ error: "Tenant not found" }); return; }
   req.log.info({ adminId: req.session.platformAdminId, tenantId: updated.id }, "Tenant suspended");
   void logAuditEvent(req.session.platformAdminId!, "tenant.suspend", "tenant", updated.id);
+  sendEmail({
+    to:      updated.ownerEmail,
+    subject: "Your FarmOps account has been suspended",
+    text:    `Hi,\n\nYour FarmOps account (${updated.name}) has been suspended by a platform administrator. If you believe this is an error, please contact support.\n\nThe FarmOps Team`,
+    html:    `<p>Hi,</p><p>Your FarmOps account <strong>${updated.name}</strong> has been suspended by a platform administrator. If you believe this is an error, please contact support.</p><p>The FarmOps Team</p>`,
+  }).catch((err: unknown) => req.log.warn({ err }, "Tenant suspension email failed"));
   res.json(updated);
 });
 
@@ -377,6 +384,12 @@ router.post("/tenants/:id/reactivate", requirePlatformAdminRole("owner"), async 
   if (!updated) { res.status(404).json({ error: "Tenant not found" }); return; }
   req.log.info({ adminId: req.session.platformAdminId, tenantId: updated.id }, "Tenant reactivated");
   void logAuditEvent(req.session.platformAdminId!, "tenant.reactivate", "tenant", updated.id);
+  sendEmail({
+    to:      updated.ownerEmail,
+    subject: "Your FarmOps account has been reactivated",
+    text:    `Hi,\n\nYour FarmOps account (${updated.name}) has been reactivated. You now have full access again.\n\nThe FarmOps Team`,
+    html:    `<p>Hi,</p><p>Your FarmOps account <strong>${updated.name}</strong> has been reactivated. You now have full access again.</p><p>The FarmOps Team</p>`,
+  }).catch((err: unknown) => req.log.warn({ err }, "Tenant reactivation email failed"));
   res.json(updated);
 });
 
@@ -402,6 +415,12 @@ router.post("/tenants/:id/change-plan", requirePlatformAdminRole("owner"), async
   if (!updated) { res.status(404).json({ error: "Tenant not found" }); return; }
   req.log.info({ adminId: req.session.platformAdminId, tenantId: updated.id, plan: body.data.plan }, "Tenant plan changed");
   void logAuditEvent(req.session.platformAdminId!, "tenant.change_plan", "tenant", updated.id, { plan: body.data.plan });
+  sendEmail({
+    to:      updated.ownerEmail,
+    subject: `Your FarmOps plan has been updated to ${body.data.plan}`,
+    text:    `Hi,\n\nYour FarmOps account (${updated.name}) has been moved to the ${body.data.plan} plan.\n\nThe FarmOps Team`,
+    html:    `<p>Hi,</p><p>Your FarmOps account <strong>${updated.name}</strong> has been moved to the <strong>${body.data.plan}</strong> plan.</p><p>The FarmOps Team</p>`,
+  }).catch((err: unknown) => req.log.warn({ err }, "Tenant plan-change email failed"));
   res.json(updated);
 });
 

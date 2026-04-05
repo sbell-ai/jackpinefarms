@@ -26,7 +26,7 @@ export async function runMigrations(): Promise<void> {
     await db.execute(sql`
       DO $$ BEGIN
         ALTER TABLE "session" ADD CONSTRAINT session_pkey PRIMARY KEY ("sid") NOT DEFERRABLE INITIALLY IMMEDIATE;
-      EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+      EXCEPTION WHEN OTHERS THEN NULL; END $$;
     `);
     await db.execute(sql`
       CREATE INDEX IF NOT EXISTS "IDX_session_expire" ON "session" ("expire")

@@ -44,10 +44,11 @@ app.use(
 
 const isProduction = process.env.NODE_ENV === "production";
 // COOKIE_DOMAIN is set explicitly in production artifact config so the cookie
-// is shared across all *.jackpinefarms.farm subdomains.  Falls back to the
-// NODE_ENV-derived value for local development.
-const cookieDomain =
-  process.env.COOKIE_DOMAIN ?? (isProduction ? ".jackpinefarms.farm" : undefined);
+// is shared across all *.jackpinefarms.farm subdomains.  In development the
+// domain is intentionally left unset so the cookie works on any preview domain.
+const cookieDomain = isProduction
+  ? (process.env.COOKIE_DOMAIN ?? ".jackpinefarms.farm")
+  : undefined;
 
 const ALLOWED_ORIGINS = process.env.CORS_ALLOWED_ORIGINS
   ? process.env.CORS_ALLOWED_ORIGINS.split(",")
@@ -153,8 +154,22 @@ const superadminDistPath = path.resolve(
   "../../superadmin/dist/public",
 );
 
-// superadmin.jackpinefarms.farm subdomain routing — serve the superadmin SPA.
-// API routes (/api/*) are already handled above and pass through.
+// Path-based routing for /superadmin — serves the built SPA for both the Replit
+// preview (repl-domain/superadmin/) and subdomain asset requests
+// (superadmin.jackpinefarms.farm/superadmin/assets/...).
+// Built with BASE_PATH=/superadmin/ so all assets are rooted here.
+app.use("/superadmin", express.static(superadminDistPath));
+app.get(["/superadmin", "/superadmin/*path"], (_req: express.Request, res: express.Response) => {
+  res.sendFile(path.join(superadminDistPath, "index.html"), (err) => {
+    if (err) {
+      logger.warn({ err }, "superadmin index.html not found — app may not be built yet");
+      res.status(503).send("Super Admin app is not built yet.");
+    }
+  });
+});
+
+// superadmin.jackpinefarms.farm subdomain routing — redirect root to /superadmin/
+// so the browser resolves BASE_PATH=/superadmin/ assets correctly.
 app.use((req, res, next) => {
   const rawHost = (req.headers.host ?? "").split(":")[0];
   const xfh     = ((req.headers["x-forwarded-host"] as string | undefined) ?? "")
@@ -164,14 +179,8 @@ app.use((req, res, next) => {
   if (host !== "superadmin.jackpinefarms.farm") return next();
   logger.info({ rawHost, xfh, path: req.path }, "superadmin subdomain: matched");
   if (req.path.startsWith("/api")) return next();
-  return express.static(superadminDistPath)(req, res, () => {
-    res.sendFile(path.join(superadminDistPath, "index.html"), (err) => {
-      if (err) {
-        logger.warn({ err }, "superadmin index.html not found — app may not be built yet");
-        res.status(503).send("Super Admin app is not built yet.");
-      }
-    });
-  });
+  if (req.path.startsWith("/superadmin")) return next();
+  return res.redirect(302, "/superadmin/");
 });
 
 // farmops.jackpinefarms.farm subdomain routing — must come BEFORE the

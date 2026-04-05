@@ -23,7 +23,8 @@
       "Bash(pnpm:*)",
       "WebSearch",
       "WebFetch(domain:docs.replit.com)",
-      "WebFetch(domain:replit.discourse.group)"
+      "WebFetch(domain:replit.discourse.group)",
+      "Bash(node_modules/.bin/vitest run:*)"
     ]
   }
 }
