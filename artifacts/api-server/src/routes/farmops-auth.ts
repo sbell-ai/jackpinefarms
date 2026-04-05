@@ -168,7 +168,7 @@ router.post("/farmops/auth/register", registerLimiter, async (req, res): Promise
       ``,
       `Please verify your email address: ${verifyUrl}`,
       ``,
-      `Your farm URL: ${farmopsBaseUrl().replace("/farmops", "")}/${slug}`,
+      `Your farm URL: ${new URL(`/${slug}`, farmopsBaseUrl()).href}`,
     ].join("\n"),
     html: [
       `<p>Hi ${user.name},</p>`,
