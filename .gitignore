@@ -47,3 +47,6 @@ Thumbs.db
 # Replit
 .cache/
 .local/
+
+# Agent-pasted spec/asset files (not source code)
+attached_assets/

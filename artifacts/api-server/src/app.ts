@@ -184,10 +184,11 @@ app.use(express.static(storeDistPath, {
   fallthrough: true,
 }));
 
-// Error-handler for static serving: logs the attempted path before 500ing.
-app.use((err: any, req: express.Request, res: express.Response, _next: express.NextFunction) => {
+// Error-handler for static serving: logs the full path server-side but does
+// not expose filesystem details to the client.
+app.use((err: unknown, req: express.Request, res: express.Response, _next: express.NextFunction) => {
   logger.error({ err, path: req.path, storeDistPath }, "Static file error");
-  res.status(500).json({ error: "Static file error", attemptedPath: path.join(storeDistPath, req.path) });
+  res.status(500).json({ error: "Internal server error" });
 });
 
 app.get("/{*path}", (req, res) => {
