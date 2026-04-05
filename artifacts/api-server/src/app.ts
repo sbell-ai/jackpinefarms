@@ -54,7 +54,13 @@ const isProduction = process.env.NODE_ENV === "production";
 
 const ALLOWED_ORIGINS = process.env.CORS_ALLOWED_ORIGINS
   ? process.env.CORS_ALLOWED_ORIGINS.split(",")
-  : ["http://localhost:3000"];
+  : [
+      "http://localhost:3000",
+      "http://localhost:5173",
+      "http://localhost:5174",
+      "https://jackpinefarms.farm",
+      "https://farmops.jackpinefarms.farm",
+    ];
 
 app.use(
   cors({
@@ -130,15 +136,6 @@ app.use("/api/admin", (req: express.Request, res: express.Response, next: expres
 
 app.use("/api", router);
 
-// Redirect legacy /farmops/* paths to the FarmOps subdomain.
-// req.url in a sub-mounted handler is the remainder after the mount point and
-// already includes the query string (e.g. /reset-password?token=abc), so a
-// single template literal is sufficient — no req.path + req.search needed.
-// 302 (temporary) is used during migration; promote to 301 once stable.
-app.use("/farmops", (req: express.Request, res: express.Response) => {
-  res.redirect(302, `https://farmops.jackpinefarms.farm${req.url}`);
-});
-
 const farmopsLandingDistPath = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
   "../../farmops-landing/dist",
@@ -149,7 +146,9 @@ const storeDistPath = path.resolve(
   "../../store/dist/public",
 );
 
-// farmops.jackpinefarms.farm subdomain routing
+// farmops.jackpinefarms.farm subdomain routing — must come BEFORE the
+// /farmops redirect so requests arriving at the subdomain are handled here,
+// not caught by the redirect below and sent into a loop.
 // Use req.headers.host (raw Host header) rather than req.hostname because
 // req.hostname reads X-Forwarded-Host when trust proxy is set, and Replit's
 // reverse proxy may set that to an internal value, not the custom domain.
@@ -168,6 +167,15 @@ app.use((req, res, next) => {
   return express.static(farmopsLandingDistPath)(req, res, () => {
     res.sendFile(path.join(farmopsLandingDistPath, "index.html"));
   });
+});
+
+// Redirect legacy /farmops/* paths to the FarmOps subdomain.
+// req.url in a sub-mounted handler is the remainder after the mount point and
+// already includes the query string (e.g. /reset-password?token=abc), so a
+// single template literal is sufficient — no req.path + req.search needed.
+// 302 (temporary) is used during migration; promote to 301 once stable.
+app.use("/farmops", (req: express.Request, res: express.Response) => {
+  res.redirect(302, `https://farmops.jackpinefarms.farm${req.url}`);
 });
 
 app.use(express.static(storeDistPath));
