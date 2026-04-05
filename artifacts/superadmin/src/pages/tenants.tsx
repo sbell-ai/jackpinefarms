@@ -1,13 +1,17 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { api } from "@/lib/api";
+import { useMe } from "@/hooks/use-me";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Search, ChevronLeft, ChevronRight, AlertCircle } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import { Plus, Search, ChevronLeft, ChevronRight, AlertCircle } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 
 function StatusBadge({ status }: { status: string }) {
@@ -38,13 +42,27 @@ function PlanBadge({ plan }: { plan: string }) {
   );
 }
 
+const BLANK_FORM = {
+  slug: "", name: "", ownerEmail: "",
+  plan: "starter" as "starter" | "growth" | "pro",
+  status: "trialing" as "trialing" | "active" | "past_due" | "canceled" | "paused",
+  trialEndsAt: "",
+};
+
 export default function Tenants() {
   const [_, setLocation] = useLocation();
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+  const { data: me } = useMe();
+  const isOwner = me?.role === "owner";
+
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState<string>("all");
   const [plan, setPlan] = useState<string>("all");
   const [page, setPage] = useState(1);
   const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [showCreate, setShowCreate] = useState(false);
+  const [form, setForm] = useState(BLANK_FORM);
 
   const params: Record<string, string> = { page: String(page) };
   if (debouncedSearch) params.search = debouncedSearch;
@@ -54,6 +72,21 @@ export default function Tenants() {
   const { data, isLoading, isError } = useQuery({
     queryKey: ["tenants", params],
     queryFn: () => api.tenants(params),
+  });
+
+  const createTenant = useMutation({
+    mutationFn: () =>
+      api.createTenant({
+        ...form,
+        trialEndsAt: form.trialEndsAt || undefined,
+      }),
+    onSuccess: (tenant) => {
+      queryClient.invalidateQueries({ queryKey: ["tenants"] });
+      setShowCreate(false);
+      setForm(BLANK_FORM);
+      setLocation(`/tenants/${tenant.id}`);
+    },
+    onError: (e: Error) => toast({ title: "Error", description: e.message, variant: "destructive" }),
   });
 
   function handleSearch(val: string) {
@@ -79,11 +112,19 @@ export default function Tenants() {
 
   return (
     <div className="p-8 space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold text-foreground">Tenants</h1>
-        <p className="text-sm text-muted-foreground mt-1">
-          {data ? `${data.total} total tenants` : "Manage all farm tenants"}
-        </p>
+      <div className="flex items-start justify-between">
+        <div>
+          <h1 className="text-2xl font-semibold text-foreground">Tenants</h1>
+          <p className="text-sm text-muted-foreground mt-1">
+            {data ? `${data.total} total tenants` : "Manage all farm tenants"}
+          </p>
+        </div>
+        {isOwner && (
+          <Button onClick={() => { setForm(BLANK_FORM); setShowCreate(true); }}>
+            <Plus className="h-4 w-4 mr-2" />
+            Create Tenant
+          </Button>
+        )}
       </div>
 
       <div className="flex flex-col sm:flex-row gap-3">
@@ -212,6 +253,95 @@ export default function Tenants() {
           </div>
         </div>
       )}
+
+      <Dialog open={showCreate} onOpenChange={setShowCreate}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Create Tenant</DialogTitle>
+          </DialogHeader>
+          <form
+            onSubmit={(e) => { e.preventDefault(); createTenant.mutate(); }}
+            className="space-y-4 py-2"
+          >
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="ct-name">Name</Label>
+                <Input
+                  id="ct-name"
+                  value={form.name}
+                  onChange={(e) => setForm({ ...form, name: e.target.value })}
+                  placeholder="Sunny Acres Farm"
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="ct-slug">Slug</Label>
+                <Input
+                  id="ct-slug"
+                  value={form.slug}
+                  onChange={(e) => setForm({ ...form, slug: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, "-") })}
+                  placeholder="sunny-acres-farm"
+                  required
+                />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="ct-email">Owner Email</Label>
+              <Input
+                id="ct-email"
+                type="email"
+                value={form.ownerEmail}
+                onChange={(e) => setForm({ ...form, ownerEmail: e.target.value })}
+                placeholder="owner@example.com"
+                required
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Plan</Label>
+                <Select value={form.plan} onValueChange={(v) => setForm({ ...form, plan: v as typeof form.plan })}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="starter">Starter ($29/mo)</SelectItem>
+                    <SelectItem value="growth">Growth ($79/mo)</SelectItem>
+                    <SelectItem value="pro">Pro ($149/mo)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>Status</Label>
+                <Select value={form.status} onValueChange={(v) => setForm({ ...form, status: v as typeof form.status })}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="trialing">Trialing</SelectItem>
+                    <SelectItem value="active">Active</SelectItem>
+                    <SelectItem value="past_due">Past Due</SelectItem>
+                    <SelectItem value="paused">Paused</SelectItem>
+                    <SelectItem value="canceled">Canceled</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            {form.status === "trialing" && (
+              <div className="space-y-2">
+                <Label htmlFor="ct-trial">Trial End Date <span className="text-muted-foreground">(defaults to +14 days)</span></Label>
+                <Input
+                  id="ct-trial"
+                  type="date"
+                  value={form.trialEndsAt}
+                  onChange={(e) => setForm({ ...form, trialEndsAt: e.target.value })}
+                />
+              </div>
+            )}
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setShowCreate(false)}>Cancel</Button>
+              <Button type="submit" disabled={createTenant.isPending}>
+                {createTenant.isPending ? "Creating..." : "Create Tenant"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

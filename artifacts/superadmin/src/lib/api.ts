@@ -74,10 +74,18 @@ export interface TenantsResponse {
   pageSize: number;
 }
 
+export interface SubscriptionAddon {
+  id: number;
+  tenantId: number;
+  addonType: "custom_domain" | "sms_notifications" | "extra_admin_users" | "white_label";
+  quantity: number;
+  createdAt: string;
+}
+
 export interface TenantDetailResponse {
   tenant: Tenant;
   users: TenantUser[];
-  addons: Array<{ id: number; tenantId: number; name: string; quantity: number; createdAt: string }>;
+  addons: SubscriptionAddon[];
   usage: { userCount: number; inviteCount: number };
 }
 
@@ -145,6 +153,19 @@ export const api = {
       body: JSON.stringify({ trialEndsAt }),
     }),
 
+  createTenant: (data: {
+    slug: string;
+    name: string;
+    ownerEmail: string;
+    plan: "starter" | "growth" | "pro";
+    status: "trialing" | "active" | "past_due" | "canceled" | "paused";
+    trialEndsAt?: string;
+  }) =>
+    apiFetch<Tenant>("/tenants", {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
+
   billing: () => apiFetch<BillingData>("/billing"),
 
   admins: () => apiFetch<PlatformAdmin[]>("/admins"),
@@ -169,6 +190,17 @@ export const api = {
     apiFetch<{ message: string }>("/me/change-password", {
       method: "POST",
       body: JSON.stringify({ currentPassword, newPassword }),
+    }),
+
+  addAddon: (tenantId: number, addonType: string, quantity: number) =>
+    apiFetch<SubscriptionAddon>(`/tenants/${tenantId}/addons`, {
+      method: "POST",
+      body: JSON.stringify({ addonType, quantity }),
+    }),
+
+  removeAddon: (tenantId: number, addonType: string) =>
+    apiFetch<{ message: string }>(`/tenants/${tenantId}/addons/${addonType}`, {
+      method: "DELETE",
     }),
 
   auditLogs: (params: Record<string, string>) => {

@@ -614,6 +614,13 @@ export async function runMigrations(): Promise<void> {
         ADD COLUMN IF NOT EXISTS password_reset_at TIMESTAMPTZ
     `);
 
+    // ── farmops_tenants: admin-created column (Task #36) ────────────────────
+    await db.execute(sql`
+      ALTER TABLE farmops_tenants
+        ADD COLUMN IF NOT EXISTS created_by_admin_id INTEGER
+          REFERENCES platform_admins(id) ON DELETE SET NULL
+    `);
+
     // ── Platform admin audit log (Task #33) ──────────────────────────────────
     await db.execute(sql`
       CREATE TABLE IF NOT EXISTS platform_admin_audit_logs (

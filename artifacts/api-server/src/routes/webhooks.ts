@@ -332,6 +332,7 @@ async function updateTenantFromSubscription(
   };
   if (ourPlan) update.plan = ourPlan as any;
   if (currentPeriodEndsAt) update.currentPeriodEndsAt = currentPeriodEndsAt;
+  if (subscription.trial_end) update.trialEndsAt = new Date(subscription.trial_end * 1000);
 
   await db
     .update(farmopsTenantsTable)

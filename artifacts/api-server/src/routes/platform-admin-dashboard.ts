@@ -220,6 +220,60 @@ router.get("/dashboard", requirePlatformAdmin, async (_req, res): Promise<void> 
   res.json({ counts: totals, mrr, trialsExpiring, recentSignups });
 });
 
+// ── POST /superadmin/tenants ──────────────────────────────────────────────────
+
+const CreateTenantBody = z.object({
+  slug:        z.string().min(1).regex(/^[a-z0-9-]+$/, "Slug may only contain lowercase letters, digits, and hyphens"),
+  name:        z.string().min(1),
+  ownerEmail:  z.string().email(),
+  plan:        z.enum(["starter", "growth", "pro"]).default("starter"),
+  status:      z.enum(["trialing", "active", "past_due", "canceled", "paused"]).default("trialing"),
+  trialEndsAt: z.string().datetime({ offset: true }).or(z.string().date()).optional(),
+});
+
+router.post("/tenants", requirePlatformAdminRole("owner"), async (req, res): Promise<void> => {
+  const body = CreateTenantBody.safeParse(req.body);
+  if (!body.success) {
+    res.status(400).json({ error: body.error.issues.map((i) => i.message).join("; ") });
+    return;
+  }
+
+  const { slug, name, ownerEmail, plan, status, trialEndsAt } = body.data;
+
+  const [existing] = await db
+    .select({ id: farmopsTenantsTable.id })
+    .from(farmopsTenantsTable)
+    .where(eq(farmopsTenantsTable.slug, slug))
+    .limit(1);
+  if (existing) {
+    res.status(409).json({ error: `The slug "${slug}" is already taken` });
+    return;
+  }
+
+  const trialDate = trialEndsAt
+    ? new Date(trialEndsAt)
+    : status === "trialing"
+    ? new Date(Date.now() + 14 * 24 * 60 * 60 * 1000)
+    : null;
+
+  const [tenant] = await db
+    .insert(farmopsTenantsTable)
+    .values({
+      slug,
+      name,
+      ownerEmail:       ownerEmail.toLowerCase(),
+      plan,
+      status,
+      trialEndsAt:      trialDate,
+      createdByAdminId: req.session.platformAdminId ?? null,
+    })
+    .returning();
+
+  req.log.info({ adminId: req.session.platformAdminId, tenantId: tenant.id, slug }, "Tenant created manually");
+  void logAuditEvent(req.session.platformAdminId!, "tenant.create", "tenant", tenant.id, { slug, plan, status });
+  res.status(201).json(tenant);
+});
+
 // ── GET /superadmin/tenants ───────────────────────────────────────────────────
 
 const TenantsQuery = z.object({
@@ -440,6 +494,13 @@ router.post("/tenants/:id/extend-trial", requirePlatformAdminRole("owner"), asyn
   const newDate = new Date(body.data.trialEndsAt);
   if (isNaN(newDate.getTime())) {
     res.status(400).json({ error: "Invalid date" });
+    return;
+  }
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  if (newDate < today) {
+    res.status(400).json({ error: "trialEndsAt must be today or a future date" });
     return;
   }
 
@@ -690,6 +751,75 @@ router.get("/audit-logs", requirePlatformAdmin, async (req, res): Promise<void> 
   ]);
 
   res.json({ logs, total, page, pageSize: PAGE_SIZE });
+});
+
+// ── POST /superadmin/tenants/:id/addons ──────────────────────────────────────
+
+const ADDON_TYPES = ["custom_domain", "sms_notifications", "extra_admin_users", "white_label"] as const;
+
+const AddAddonBody = z.object({
+  addonType: z.enum(ADDON_TYPES),
+  quantity:  z.number().int().min(1).default(1),
+});
+
+router.post("/tenants/:id/addons", requirePlatformAdminRole("owner"), async (req, res): Promise<void> => {
+  const params = idParam.safeParse({ id: req.params.id });
+  if (!params.success) { res.status(400).json({ error: "Invalid tenant ID" }); return; }
+
+  const body = AddAddonBody.safeParse(req.body);
+  if (!body.success) { res.status(400).json({ error: "addonType is required; quantity must be ≥ 1" }); return; }
+
+  const [tenantExists] = await db
+    .select({ id: farmopsTenantsTable.id })
+    .from(farmopsTenantsTable)
+    .where(eq(farmopsTenantsTable.id, params.data.id))
+    .limit(1);
+  if (!tenantExists) { res.status(404).json({ error: "Tenant not found" }); return; }
+
+  const [addon] = await db
+    .insert(farmopsSubscriptionAddonsTable)
+    .values({
+      tenantId:  params.data.id,
+      addonType: body.data.addonType,
+      quantity:  body.data.quantity,
+    })
+    .onConflictDoUpdate({
+      target: [farmopsSubscriptionAddonsTable.tenantId, farmopsSubscriptionAddonsTable.addonType],
+      set: { quantity: body.data.quantity, updatedAt: new Date() },
+    })
+    .returning();
+
+  req.log.info({ adminId: req.session.platformAdminId, tenantId: params.data.id, addonType: body.data.addonType }, "Tenant add-on upserted");
+  void logAuditEvent(req.session.platformAdminId!, "tenant.addon_add", "tenant", params.data.id, { addonType: body.data.addonType, quantity: body.data.quantity });
+  res.status(201).json(addon);
+});
+
+// ── DELETE /superadmin/tenants/:id/addons/:addonType ─────────────────────────
+
+const addonTypeParam = z.object({ addonType: z.enum(ADDON_TYPES) });
+
+router.delete("/tenants/:id/addons/:addonType", requirePlatformAdminRole("owner"), async (req, res): Promise<void> => {
+  const params = idParam.safeParse({ id: req.params.id });
+  if (!params.success) { res.status(400).json({ error: "Invalid tenant ID" }); return; }
+
+  const addonParam = addonTypeParam.safeParse({ addonType: req.params.addonType });
+  if (!addonParam.success) { res.status(400).json({ error: "Invalid add-on type" }); return; }
+
+  const [deleted] = await db
+    .delete(farmopsSubscriptionAddonsTable)
+    .where(
+      and(
+        eq(farmopsSubscriptionAddonsTable.tenantId, params.data.id),
+        eq(farmopsSubscriptionAddonsTable.addonType, addonParam.data.addonType),
+      )
+    )
+    .returning({ id: farmopsSubscriptionAddonsTable.id });
+
+  if (!deleted) { res.status(404).json({ error: "Add-on not found" }); return; }
+
+  req.log.info({ adminId: req.session.platformAdminId, tenantId: params.data.id, addonType: addonParam.data.addonType }, "Tenant add-on removed");
+  void logAuditEvent(req.session.platformAdminId!, "tenant.addon_remove", "tenant", params.data.id, { addonType: addonParam.data.addonType });
+  res.json({ message: "Add-on removed" });
 });
 
 export default router;

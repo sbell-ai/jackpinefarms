@@ -7,6 +7,7 @@ import {
   pgEnum,
   unique,
 } from "drizzle-orm/pg-core";
+import { platformAdminsTable } from "./platform-admins";
 
 export const farmopsTenantStatusEnum = pgEnum("farmops_tenant_status", [
   "trialing",
@@ -45,6 +46,8 @@ export const farmopsTenantsTable = pgTable("farmops_tenants", {
   // One-time onboarding add-on
   onboardingPurchasedAt:     timestamp("onboarding_purchased_at", { withTimezone: true }),
   stripeOnboardingPaymentId: text("stripe_onboarding_payment_id"),
+  createdByAdminId:          integer("created_by_admin_id")
+                               .references(() => platformAdminsTable.id, { onDelete: "set null" }),
   createdAt:                 timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt:                 timestamp("updated_at", { withTimezone: true })
                                .notNull()

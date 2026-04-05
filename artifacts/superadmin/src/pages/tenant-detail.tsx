@@ -11,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
-import { AlertCircle, ArrowLeft, Users } from "lucide-react";
+import { AlertCircle, ArrowLeft, Plus, Users } from "lucide-react";
 import { format } from "date-fns";
 
 function StatusBadge({ status }: { status: string }) {
@@ -65,6 +65,9 @@ export default function TenantDetail() {
   const [showExtendTrial, setShowExtendTrial] = useState(false);
   const [newPlan, setNewPlan] = useState<"starter" | "growth" | "pro">("starter");
   const [newTrialDate, setNewTrialDate] = useState("");
+  const [showAddAddon, setShowAddAddon] = useState(false);
+  const [addonType, setAddonType] = useState<string>("");
+  const [addonQty, setAddonQty] = useState(1);
 
   const { data, isLoading, isError } = useQuery({
     queryKey: ["tenant", tenantId],
@@ -106,6 +109,27 @@ export default function TenantDetail() {
       toast({ title: "Trial extended" });
       setShowExtendTrial(false);
       invalidate();
+    },
+    onError: (e: Error) => toast({ title: "Error", description: e.message, variant: "destructive" }),
+  });
+
+  const addAddon = useMutation({
+    mutationFn: () => api.addAddon(tenantId, addonType, addonQty),
+    onSuccess: () => {
+      toast({ title: "Add-on saved" });
+      setShowAddAddon(false);
+      setAddonType("");
+      setAddonQty(1);
+      queryClient.invalidateQueries({ queryKey: ["tenant", tenantId] });
+    },
+    onError: (e: Error) => toast({ title: "Error", description: e.message, variant: "destructive" }),
+  });
+
+  const removeAddon = useMutation({
+    mutationFn: (type: string) => api.removeAddon(tenantId, type),
+    onSuccess: () => {
+      toast({ title: "Add-on removed" });
+      queryClient.invalidateQueries({ queryKey: ["tenant", tenantId] });
     },
     onError: (e: Error) => toast({ title: "Error", description: e.message, variant: "destructive" }),
   });
@@ -238,23 +262,54 @@ export default function TenantDetail() {
             </CardContent>
           </Card>
 
-          {addons.length > 0 && (
-            <Card className="shadow-sm">
-              <CardHeader className="pb-3">
-                <CardTitle className="text-base">Add-ons</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-2">
+          <Card className="shadow-sm">
+            <CardHeader className="pb-3 flex flex-row items-center justify-between">
+              <CardTitle className="text-base">Add-ons</CardTitle>
+              {isOwner && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => { setAddonType(""); setAddonQty(1); setShowAddAddon(true); }}
+                >
+                  <Plus className="h-3.5 w-3.5 mr-1.5" />
+                  Add Add-on
+                </Button>
+              )}
+            </CardHeader>
+            <CardContent>
+              {addons.length === 0 ? (
+                <p className="text-sm text-muted-foreground text-center py-4">No add-ons active.</p>
+              ) : (
+                <div className="space-y-1">
                   {addons.map((a) => (
-                    <div key={a.id} className="flex justify-between text-sm py-1.5 border-b border-border last:border-0">
-                      <span>{a.name}</span>
-                      <span className="text-muted-foreground">x{a.quantity}</span>
+                    <div key={a.id} className="flex items-center justify-between text-sm py-2 border-b border-border last:border-0">
+                      <div>
+                        <span className="font-medium capitalize">{a.addonType.replace(/_/g, " ")}</span>
+                        {a.addonType === "extra_admin_users" && (
+                          <span className="ml-2 text-muted-foreground text-xs">×{a.quantity}</span>
+                        )}
+                      </div>
+                      {isOwner && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="text-destructive hover:text-destructive hover:bg-destructive/10 text-xs h-7 px-2"
+                          disabled={removeAddon.isPending}
+                          onClick={() => {
+                            if (confirm(`Remove "${a.addonType.replace(/_/g, " ")}" add-on?`)) {
+                              removeAddon.mutate(a.addonType);
+                            }
+                          }}
+                        >
+                          Remove
+                        </Button>
+                      )}
                     </div>
                   ))}
                 </div>
-              </CardContent>
-            </Card>
-          )}
+              )}
+            </CardContent>
+          </Card>
         </div>
 
         {isOwner && (
@@ -419,6 +474,51 @@ export default function TenantDetail() {
               disabled={extendTrial.isPending || !newTrialDate}
             >
               {extendTrial.isPending ? "Saving..." : "Save"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={showAddAddon} onOpenChange={setShowAddAddon}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Add Add-on</DialogTitle>
+          </DialogHeader>
+          <div className="py-4 space-y-4">
+            <div className="space-y-2">
+              <Label>Add-on Type</Label>
+              <Select value={addonType} onValueChange={setAddonType}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select an add-on…" />
+                </SelectTrigger>
+                <SelectContent>
+                  {(["custom_domain", "sms_notifications", "extra_admin_users", "white_label"] as const)
+                    .filter((t) => !addons.some((a) => a.addonType === t))
+                    .map((t) => (
+                      <SelectItem key={t} value={t}>
+                        {t.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())}
+                      </SelectItem>
+                    ))}
+                </SelectContent>
+              </Select>
+            </div>
+            {addonType === "extra_admin_users" && (
+              <div className="space-y-2">
+                <Label htmlFor="addon-qty">Quantity</Label>
+                <Input
+                  id="addon-qty"
+                  type="number"
+                  min={1}
+                  value={addonQty}
+                  onChange={(e) => setAddonQty(Math.max(1, Number(e.target.value)))}
+                />
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowAddAddon(false)}>Cancel</Button>
+            <Button onClick={() => addAddon.mutate()} disabled={addAddon.isPending || !addonType}>
+              {addAddon.isPending ? "Saving..." : "Save"}
             </Button>
           </DialogFooter>
         </DialogContent>
