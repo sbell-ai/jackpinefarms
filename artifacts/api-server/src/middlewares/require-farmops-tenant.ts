@@ -1,6 +1,6 @@
 import "../types/session.d.ts";
 import { Request, Response, NextFunction } from "express";
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { db, farmopsTenantsTable, farmopsUsersTable } from "@workspace/db";
 
 // Plan hierarchy — higher index = higher tier.
@@ -72,6 +72,20 @@ export async function requireFarmopsTenant(
 
   req.farmopsTenant = tenant;
   req.farmopsUser = user;
+
+  // Set the Postgres session variable so RLS policies allow this tenant's rows.
+  // Uses set_config with is_local=false so it persists for the pooled connection
+  // checkout. requireFarmopsTenant runs on every authenticated request and resets
+  // it each time, so this is safe.
+  try {
+    await db.execute(
+      sql`SELECT set_config('app.current_tenant_id', ${String(tenant.id)}, false)`
+    );
+  } catch {
+    // Non-fatal: RLS is a safety net, app-level scoping is the primary guard.
+    console.warn("[RLS] Failed to set app.current_tenant_id", tenant.id);
+  }
+
   next();
 }
 
