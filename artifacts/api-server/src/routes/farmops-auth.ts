@@ -153,6 +153,8 @@ router.post("/farmops/auth/register", registerLimiter, async (req, res): Promise
 
   req.session.farmopsUserId = user.id;
   req.session.farmopsTenantId = tenant.id;
+  delete req.session.platformAdminId;
+  delete req.session.admin;
   await saveSession(req.session);
 
   const verifyUrl = `${farmopsBaseUrl()}/verify-email?token=${verificationToken}`;
@@ -248,6 +250,8 @@ router.post("/farmops/auth/login", loginLimiter, async (req, res): Promise<void>
 
   req.session.farmopsUserId = user.id;
   req.session.farmopsTenantId = tenant.id;
+  delete req.session.platformAdminId;
+  delete req.session.admin;
   await saveSession(req.session);
 
   await db

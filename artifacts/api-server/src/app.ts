@@ -111,7 +111,7 @@ for (const blockedPath of farmopsBlockedPaths) {
 // auth endpoints (/login, /logout, /me) which must remain publicly accessible.
 const adminAuthExempt = new Set(["/login", "/logout", "/me"]);
 app.use("/api/admin", (req: express.Request, res: express.Response, next: express.NextFunction) => {
-  if (req.session.farmopsUserId && !adminAuthExempt.has(req.path)) {
+  if (req.session.farmopsUserId && !req.session.platformAdminId && req.session.admin !== true && !adminAuthExempt.has(req.path)) {
     res.status(403).json({ error: "Forbidden" });
     return;
   }

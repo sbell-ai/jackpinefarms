@@ -18,7 +18,7 @@ export async function requirePlatformAdmin(
   next: NextFunction
 ): Promise<void> {
   // Block FarmOps users from ever accessing Jack Pine admin routes
-  if (req.session.farmopsUserId) {
+  if (req.session.farmopsUserId && !req.session.platformAdminId && req.session.admin !== true) {
     res.status(403).json({ error: "Forbidden" });
     return;
   }

@@ -50,6 +50,8 @@ router.post("/admin/login", adminLoginLimiter, async (req, res): Promise<void> =
   }
 
   req.session.platformAdminId = admin.id;
+  delete req.session.farmopsUserId;
+  delete req.session.farmopsTenantId;
   await saveSession(req.session);
 
   await db
