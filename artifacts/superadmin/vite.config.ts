@@ -4,28 +4,13 @@ import tailwindcss from "@tailwindcss/vite";
 import path from "path";
 import runtimeErrorOverlay from "@replit/vite-plugin-runtime-error-modal";
 
-const port = Number(process.env.PORT ?? "3001");
+const rawPort = process.env.PORT;
+const port = rawPort ? Number(rawPort) : 3001;
 const basePath = process.env.BASE_PATH ?? "/";
-
-// Redirect root requests to basePath so Replit's health check (GET /) returns 200
-const rootRedirectPlugin = {
-  name: "root-redirect",
-  configureServer(server: import("vite").ViteDevServer) {
-    server.middlewares.use((req, res, next) => {
-      if (req.url === "/" && basePath !== "/") {
-        res.writeHead(200, { "Content-Type": "text/html" });
-        res.end(`<!doctype html><meta http-equiv="refresh" content="0;url=${basePath}">`);
-        return;
-      }
-      next();
-    });
-  },
-};
 
 export default defineConfig({
   base: basePath,
   plugins: [
-    rootRedirectPlugin,
     react(),
     tailwindcss(),
     runtimeErrorOverlay(),
