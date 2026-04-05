@@ -21,6 +21,7 @@ export default function PlatformAdmins() {
 
   const [showCreate, setShowCreate] = useState(false);
   const [showTempPw, setShowTempPw] = useState(false);
+  const [tempPwMode, setTempPwMode] = useState<"created" | "reset">("created");
   const [tempPassword, setTempPassword] = useState("");
   const [newAdminEmail, setNewAdminEmail] = useState("");
   const [copiedPw, setCopiedPw] = useState(false);
@@ -42,6 +43,7 @@ export default function PlatformAdmins() {
       queryClient.invalidateQueries({ queryKey: ["admins"] });
       setTempPassword(data.tempPassword);
       setNewAdminEmail(data.email);
+      setTempPwMode("created");
       setShowCreate(false);
       setShowTempPw(true);
       setForm({ email: "", name: "", role: "support" });
@@ -54,6 +56,17 @@ export default function PlatformAdmins() {
     onSuccess: () => {
       toast({ title: "Admin deactivated" });
       queryClient.invalidateQueries({ queryKey: ["admins"] });
+    },
+    onError: (e: Error) => toast({ title: "Error", description: e.message, variant: "destructive" }),
+  });
+
+  const resetPassword = useMutation({
+    mutationFn: (id: number) => api.resetAdminPassword(id),
+    onSuccess: (data) => {
+      setTempPassword(data.tempPassword);
+      setNewAdminEmail(data.email);
+      setTempPwMode("reset");
+      setShowTempPw(true);
     },
     onError: (e: Error) => toast({ title: "Error", description: e.message, variant: "destructive" }),
   });
@@ -138,7 +151,22 @@ export default function PlatformAdmins() {
                       {a.lastLoginAt ? format(new Date(a.lastLoginAt), "MMM d, yyyy") : "Never"}
                     </td>
                     {isOwner && (
-                      <td className="px-6 py-3 text-right">
+                      <td className="px-6 py-3 text-right space-x-1">
+                        {a.isActive && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="text-xs"
+                            disabled={resetPassword.isPending}
+                            onClick={() => {
+                              if (confirm(`Reset password for ${a.name}? A new temporary password will be generated.`)) {
+                                resetPassword.mutate(a.id);
+                              }
+                            }}
+                          >
+                            Reset Password
+                          </Button>
+                        )}
                         {a.isActive && a.id !== me?.id && (
                           <Button
                             variant="ghost"
@@ -224,11 +252,14 @@ export default function PlatformAdmins() {
       <Dialog open={showTempPw} onOpenChange={(open) => { if (!open) setShowTempPw(false); }}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Admin Created</DialogTitle>
+            <DialogTitle>{tempPwMode === "created" ? "Admin Created" : "Password Reset"}</DialogTitle>
           </DialogHeader>
           <div className="py-4 space-y-4">
             <p className="text-sm text-muted-foreground">
-              The account for <strong>{newAdminEmail}</strong> has been created. Share this temporary password securely. It will not be shown again.
+              {tempPwMode === "created"
+                ? <>The account for <strong>{newAdminEmail}</strong> has been created. Share this temporary password securely. It will not be shown again.</>
+                : <>The password for <strong>{newAdminEmail}</strong> has been reset. Share this temporary password securely. It will not be shown again.</>
+              }
             </p>
             <div className="rounded-md bg-muted p-3 flex items-center gap-3">
               <code className="flex-1 text-sm font-mono break-all">{tempPassword}</code>

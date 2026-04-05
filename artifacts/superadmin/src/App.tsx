@@ -10,6 +10,8 @@ import Tenants from "@/pages/tenants";
 import TenantDetail from "@/pages/tenant-detail";
 import Billing from "@/pages/billing";
 import PlatformAdmins from "@/pages/platform-admins";
+import AuditLogs from "@/pages/audit-logs";
+import ChangePassword from "@/pages/change-password";
 import NotFound from "@/pages/not-found";
 
 const queryClient = new QueryClient({
@@ -27,17 +29,23 @@ const queryClient = new QueryClient({
 function ProtectedApp() {
   return (
     <AuthGuard>
-      <Layout>
-        <Switch>
-          <Route path="/">{() => <Redirect to="/dashboard" />}</Route>
-          <Route path="/dashboard" component={Dashboard} />
-          <Route path="/tenants/:id" component={TenantDetail} />
-          <Route path="/tenants" component={Tenants} />
-          <Route path="/billing" component={Billing} />
-          <Route path="/admins" component={PlatformAdmins} />
-          <Route component={NotFound} />
-        </Switch>
-      </Layout>
+      <Switch>
+        <Route path="/change-password" component={ChangePassword} />
+        <Route>
+          <Layout>
+            <Switch>
+              <Route path="/">{() => <Redirect to="/dashboard" />}</Route>
+              <Route path="/dashboard" component={Dashboard} />
+              <Route path="/tenants/:id" component={TenantDetail} />
+              <Route path="/tenants" component={Tenants} />
+              <Route path="/billing" component={Billing} />
+              <Route path="/admins" component={PlatformAdmins} />
+              <Route path="/audit-logs" component={AuditLogs} />
+              <Route component={NotFound} />
+            </Switch>
+          </Layout>
+        </Route>
+      </Switch>
     </AuthGuard>
   );
 }

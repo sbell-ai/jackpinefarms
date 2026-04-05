@@ -604,6 +604,37 @@ export async function runMigrations(): Promise<void> {
         ADD COLUMN IF NOT EXISTS role text NOT NULL DEFAULT 'owner'
     `);
 
+    // ── Platform admins: password-reset columns (Task #31) ───────────────────
+    await db.execute(sql`
+      ALTER TABLE platform_admins
+        ADD COLUMN IF NOT EXISTS must_change_password BOOLEAN NOT NULL DEFAULT FALSE
+    `);
+    await db.execute(sql`
+      ALTER TABLE platform_admins
+        ADD COLUMN IF NOT EXISTS password_reset_at TIMESTAMPTZ
+    `);
+
+    // ── Platform admin audit log (Task #33) ──────────────────────────────────
+    await db.execute(sql`
+      CREATE TABLE IF NOT EXISTS platform_admin_audit_logs (
+        id          SERIAL PRIMARY KEY,
+        admin_id    INTEGER REFERENCES platform_admins(id) ON DELETE SET NULL,
+        action      TEXT NOT NULL,
+        target_type TEXT,
+        target_id   INTEGER,
+        metadata    JSONB,
+        created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      )
+    `);
+    await db.execute(sql`
+      CREATE INDEX IF NOT EXISTS idx_audit_logs_admin_created
+        ON platform_admin_audit_logs (admin_id, created_at DESC)
+    `);
+    await db.execute(sql`
+      CREATE INDEX IF NOT EXISTS idx_audit_logs_created
+        ON platform_admin_audit_logs (created_at DESC)
+    `);
+
     const rawAdminPassword = process.env.ADMIN_PASSWORD;
     if (rawAdminPassword) {
       const hash = await bcrypt.hash(rawAdminPassword, 12);

@@ -8,11 +8,13 @@ import rateLimit from "express-rate-limit";
 import {
   db,
   platformAdminsTable,
+  platformAdminAuditLogsTable,
   farmopsTenantsTable,
   farmopsUsersTable,
   farmopsSubscriptionAddonsTable,
 } from "@workspace/db";
 import { requirePlatformAdmin, requirePlatformAdminRole } from "../middlewares/require-platform-admin.js";
+import { logAuditEvent } from "../lib/audit.js";
 
 const router: IRouter = Router();
 
@@ -70,6 +72,7 @@ router.post("/login", loginLimiter, async (req, res): Promise<void> => {
     .where(eq(platformAdminsTable.id, admin.id));
 
   req.log.info({ adminId: admin.id, email: admin.email }, "Super admin logged in");
+  void logAuditEvent(admin.id, "admin.login", "admin", admin.id);
   res.json({
     id:    admin.id,
     email: admin.email,
@@ -81,7 +84,9 @@ router.post("/login", loginLimiter, async (req, res): Promise<void> => {
 // ── POST /superadmin/logout ───────────────────────────────────────────────────
 
 router.post("/logout", async (req, res): Promise<void> => {
+  const adminId = req.session.platformAdminId ?? null;
   await new Promise<void>((resolve) => req.session.destroy(() => resolve()));
+  if (adminId) void logAuditEvent(adminId, "admin.logout", "admin", adminId);
   res.json({ message: "Logged out" });
 });
 
@@ -93,7 +98,55 @@ router.get("/me", requirePlatformAdmin, (req, res): void => {
     res.status(401).json({ error: "Unauthorized" });
     return;
   }
-  res.json(admin);
+  res.json({
+    id:                 admin.id,
+    email:              admin.email,
+    name:               admin.name,
+    role:               admin.role,
+    mustChangePassword: admin.mustChangePassword,
+  });
+});
+
+// ── POST /superadmin/me/change-password ───────────────────────────────────────
+
+const ChangePasswordBody = z.object({
+  currentPassword: z.string().min(1),
+  newPassword:     z.string().min(8),
+});
+
+router.post("/me/change-password", requirePlatformAdmin, async (req, res): Promise<void> => {
+  const body = ChangePasswordBody.safeParse(req.body);
+  if (!body.success) {
+    res.status(400).json({ error: "currentPassword and newPassword (min 8 chars) are required" });
+    return;
+  }
+
+  const [admin] = await db
+    .select({ id: platformAdminsTable.id, passwordHash: platformAdminsTable.passwordHash })
+    .from(platformAdminsTable)
+    .where(eq(platformAdminsTable.id, req.platformAdmin!.id))
+    .limit(1);
+
+  if (!admin) {
+    res.status(404).json({ error: "Admin not found" });
+    return;
+  }
+
+  const valid = await bcrypt.compare(body.data.currentPassword, admin.passwordHash);
+  if (!valid) {
+    res.status(400).json({ error: "Current password is incorrect" });
+    return;
+  }
+
+  const newHash = await bcrypt.hash(body.data.newPassword, 12);
+  await db
+    .update(platformAdminsTable)
+    .set({ passwordHash: newHash, mustChangePassword: false, passwordResetAt: null })
+    .where(eq(platformAdminsTable.id, admin.id));
+
+  req.log.info({ adminId: admin.id }, "Platform admin changed their password");
+  void logAuditEvent(req.platformAdmin!.id, "admin.change_password", "admin", admin.id);
+  res.json({ message: "Password updated" });
 });
 
 // ── GET /superadmin/dashboard ─────────────────────────────────────────────────
@@ -305,6 +358,7 @@ router.post("/tenants/:id/suspend", requirePlatformAdminRole("owner"), async (re
 
   if (!updated) { res.status(404).json({ error: "Tenant not found" }); return; }
   req.log.info({ adminId: req.session.platformAdminId, tenantId: updated.id }, "Tenant suspended");
+  void logAuditEvent(req.session.platformAdminId!, "tenant.suspend", "tenant", updated.id);
   res.json(updated);
 });
 
@@ -322,6 +376,7 @@ router.post("/tenants/:id/reactivate", requirePlatformAdminRole("owner"), async 
 
   if (!updated) { res.status(404).json({ error: "Tenant not found" }); return; }
   req.log.info({ adminId: req.session.platformAdminId, tenantId: updated.id }, "Tenant reactivated");
+  void logAuditEvent(req.session.platformAdminId!, "tenant.reactivate", "tenant", updated.id);
   res.json(updated);
 });
 
@@ -346,6 +401,7 @@ router.post("/tenants/:id/change-plan", requirePlatformAdminRole("owner"), async
 
   if (!updated) { res.status(404).json({ error: "Tenant not found" }); return; }
   req.log.info({ adminId: req.session.platformAdminId, tenantId: updated.id, plan: body.data.plan }, "Tenant plan changed");
+  void logAuditEvent(req.session.platformAdminId!, "tenant.change_plan", "tenant", updated.id, { plan: body.data.plan });
   res.json(updated);
 });
 
@@ -376,6 +432,7 @@ router.post("/tenants/:id/extend-trial", requirePlatformAdminRole("owner"), asyn
 
   if (!updated) { res.status(404).json({ error: "Tenant not found" }); return; }
   req.log.info({ adminId: req.session.platformAdminId, tenantId: updated.id, trialEndsAt: newDate }, "Tenant trial extended");
+  void logAuditEvent(req.session.platformAdminId!, "tenant.extend_trial", "tenant", updated.id, { trialEndsAt: newDate.toISOString() });
   res.json(updated);
 });
 
@@ -483,10 +540,11 @@ router.post("/admins", requirePlatformAdminRole("owner"), async (req, res): Prom
   const [admin] = await db
     .insert(platformAdminsTable)
     .values({
-      email:        body.data.email.toLowerCase(),
-      name:         body.data.name,
+      email:              body.data.email.toLowerCase(),
+      name:               body.data.name,
       passwordHash,
-      role:         body.data.role,
+      role:               body.data.role,
+      mustChangePassword: true,
     })
     .returning({
       id:        platformAdminsTable.id,
@@ -498,8 +556,37 @@ router.post("/admins", requirePlatformAdminRole("owner"), async (req, res): Prom
     });
 
   req.log.info({ createdBy: req.session.platformAdminId, adminId: admin.id }, "Platform admin created");
+  void logAuditEvent(req.session.platformAdminId!, "admin.create", "admin", admin.id, { email: admin.email, role: admin.role });
 
   res.status(201).json({ ...admin, tempPassword });
+});
+
+// ── POST /superadmin/admins/:id/reset-password ───────────────────────────────
+
+router.post("/admins/:id/reset-password", requirePlatformAdminRole("owner"), async (req, res): Promise<void> => {
+  const params = idParam.safeParse({ id: req.params.id });
+  if (!params.success) { res.status(400).json({ error: "Invalid admin ID" }); return; }
+
+  const [target] = await db
+    .select({ id: platformAdminsTable.id, email: platformAdminsTable.email, isActive: platformAdminsTable.isActive })
+    .from(platformAdminsTable)
+    .where(eq(platformAdminsTable.id, params.data.id))
+    .limit(1);
+
+  if (!target) { res.status(404).json({ error: "Admin not found" }); return; }
+  if (!target.isActive) { res.status(400).json({ error: "Cannot reset password for an inactive admin" }); return; }
+
+  const tempPassword = crypto.randomBytes(12).toString("base64url").slice(0, 16);
+  const passwordHash = await bcrypt.hash(tempPassword, 12);
+
+  await db
+    .update(platformAdminsTable)
+    .set({ passwordHash, mustChangePassword: true, passwordResetAt: new Date() })
+    .where(eq(platformAdminsTable.id, target.id));
+
+  req.log.info({ actorId: req.session.platformAdminId, targetId: target.id }, "Platform admin password reset");
+  void logAuditEvent(req.session.platformAdminId!, "admin.reset_password", "admin", target.id, { email: target.email });
+  res.json({ id: target.id, email: target.email, tempPassword });
 });
 
 // ── POST /superadmin/admins/:id/deactivate ────────────────────────────────────
@@ -522,7 +609,68 @@ router.post("/admins/:id/deactivate", requirePlatformAdminRole("owner"), async (
   if (!updated) { res.status(404).json({ error: "Admin not found" }); return; }
 
   req.log.info({ actorId: req.session.platformAdminId, targetId: updated.id }, "Platform admin deactivated");
+  void logAuditEvent(req.session.platformAdminId!, "admin.deactivate", "admin", updated.id, { email: updated.email });
   res.json({ message: "Admin deactivated", ...updated });
+});
+
+// ── GET /superadmin/audit-logs ────────────────────────────────────────────────
+
+const AuditLogsQuery = z.object({
+  adminId:    z.coerce.number().int().positive().optional(),
+  action:     z.string().optional(),
+  targetType: z.string().optional(),
+  from:       z.string().datetime({ offset: true }).optional(),
+  to:         z.string().datetime({ offset: true }).optional(),
+  page:       z.coerce.number().int().min(1).default(1),
+});
+
+router.get("/audit-logs", requirePlatformAdmin, async (req, res): Promise<void> => {
+  const q = AuditLogsQuery.safeParse(req.query);
+  if (!q.success) {
+    res.status(400).json({ error: "Invalid query parameters" });
+    return;
+  }
+
+  const { adminId, action, targetType, from, to, page } = q.data;
+  const PAGE_SIZE = 100;
+  const offset = (page - 1) * PAGE_SIZE;
+
+  const conditions = [];
+  if (adminId)    conditions.push(eq(platformAdminAuditLogsTable.adminId, adminId));
+  if (action)     conditions.push(ilike(platformAdminAuditLogsTable.action, `%${action}%`));
+  if (targetType) conditions.push(eq(platformAdminAuditLogsTable.targetType, targetType));
+  if (from)       conditions.push(gte(platformAdminAuditLogsTable.createdAt, new Date(from)));
+  if (to)         conditions.push(lt(platformAdminAuditLogsTable.createdAt, new Date(to)));
+
+  const where = conditions.length > 0 ? and(...conditions) : undefined;
+
+  const [logs, [{ total }]] = await Promise.all([
+    db
+      .select({
+        id:           platformAdminAuditLogsTable.id,
+        action:       platformAdminAuditLogsTable.action,
+        targetType:   platformAdminAuditLogsTable.targetType,
+        targetId:     platformAdminAuditLogsTable.targetId,
+        metadata:     platformAdminAuditLogsTable.metadata,
+        createdAt:    platformAdminAuditLogsTable.createdAt,
+        adminId:      platformAdminAuditLogsTable.adminId,
+        adminEmail:   platformAdminsTable.email,
+        adminName:    platformAdminsTable.name,
+      })
+      .from(platformAdminAuditLogsTable)
+      .leftJoin(platformAdminsTable, eq(platformAdminAuditLogsTable.adminId, platformAdminsTable.id))
+      .where(where)
+      .orderBy(desc(platformAdminAuditLogsTable.createdAt))
+      .limit(PAGE_SIZE)
+      .offset(offset),
+
+    db
+      .select({ total: sql<number>`COUNT(*)::int` })
+      .from(platformAdminAuditLogsTable)
+      .where(where),
+  ]);
+
+  res.json({ logs, total, page, pageSize: PAGE_SIZE });
 });
 
 export default router;

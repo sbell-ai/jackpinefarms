@@ -4,13 +4,16 @@ import { useMe } from "@/hooks/use-me";
 
 export function AuthGuard({ children }: { children: React.ReactNode }) {
   const { data, isLoading, isError } = useMe();
-  const [, navigate] = useLocation();
+  const [location, navigate] = useLocation();
 
   useEffect(() => {
-    if (!isLoading && (isError || !data)) {
+    if (isLoading) return;
+    if (isError || !data) {
       navigate("/login");
+    } else if (data.mustChangePassword && location !== "/change-password") {
+      navigate("/change-password");
     }
-  }, [isLoading, isError, data, navigate]);
+  }, [isLoading, isError, data, location, navigate]);
 
   if (isLoading) {
     return (

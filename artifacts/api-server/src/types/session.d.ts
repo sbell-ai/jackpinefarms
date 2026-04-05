@@ -13,6 +13,7 @@ interface PlatformAdminRecord {
   name: string;
   role: string;
   isActive: boolean;
+  mustChangePassword: boolean;
 }
 
 declare global {

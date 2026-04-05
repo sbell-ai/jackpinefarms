@@ -8,14 +8,16 @@ import {
   Users,
   CreditCard,
   ShieldCheck,
+  ClipboardList,
   LogOut,
 } from "lucide-react";
 
 const NAV = [
-  { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/tenants", label: "Tenants", icon: Users },
-  { href: "/billing", label: "Billing", icon: CreditCard },
-  { href: "/admins", label: "Admins", icon: ShieldCheck },
+  { href: "/dashboard",  label: "Dashboard",  icon: LayoutDashboard },
+  { href: "/tenants",    label: "Tenants",    icon: Users },
+  { href: "/billing",    label: "Billing",    icon: CreditCard },
+  { href: "/admins",     label: "Admins",     icon: ShieldCheck },
+  { href: "/audit-logs", label: "Audit Logs", icon: ClipboardList },
 ];
 
 export function Layout({ children }: { children: React.ReactNode }) {

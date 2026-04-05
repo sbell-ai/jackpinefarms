@@ -10,14 +10,16 @@ import { pgTable, serial, text, boolean, timestamp } from "drizzle-orm/pg-core";
  * The first row is seeded by the startup migration from ADMIN_PASSWORD (bcrypt-hashed).
  */
 export const platformAdminsTable = pgTable("platform_admins", {
-  id:           serial("id").primaryKey(),
-  email:        text("email").notNull().unique(),
-  name:         text("name").notNull(),
-  passwordHash: text("password_hash").notNull(),
-  isActive:     boolean("is_active").notNull().default(true),
-  role:         text("role").notNull().default("owner"),
-  lastLoginAt:  timestamp("last_login_at", { withTimezone: true }),
-  createdAt:    timestamp("created_at",    { withTimezone: true }).notNull().defaultNow(),
+  id:                serial("id").primaryKey(),
+  email:             text("email").notNull().unique(),
+  name:              text("name").notNull(),
+  passwordHash:      text("password_hash").notNull(),
+  isActive:          boolean("is_active").notNull().default(true),
+  role:              text("role").notNull().default("owner"),
+  mustChangePassword: boolean("must_change_password").notNull().default(false),
+  passwordResetAt:   timestamp("password_reset_at", { withTimezone: true }),
+  lastLoginAt:       timestamp("last_login_at",     { withTimezone: true }),
+  createdAt:         timestamp("created_at",         { withTimezone: true }).notNull().defaultNow(),
 });
 
 export type PlatformAdmin = typeof platformAdminsTable.$inferSelect;

@@ -27,11 +27,12 @@ export async function requirePlatformAdmin(
   if (req.session.platformAdminId) {
     const [admin] = await db
       .select({
-        id:       platformAdminsTable.id,
-        email:    platformAdminsTable.email,
-        name:     platformAdminsTable.name,
-        role:     platformAdminsTable.role,
-        isActive: platformAdminsTable.isActive,
+        id:                 platformAdminsTable.id,
+        email:              platformAdminsTable.email,
+        name:               platformAdminsTable.name,
+        role:               platformAdminsTable.role,
+        isActive:           platformAdminsTable.isActive,
+        mustChangePassword: platformAdminsTable.mustChangePassword,
       })
       .from(platformAdminsTable)
       .where(eq(platformAdminsTable.id, req.session.platformAdminId))
@@ -83,11 +84,12 @@ export function requirePlatformAdminRole(role: string) {
 
     const [admin] = await db
       .select({
-        id:       platformAdminsTable.id,
-        email:    platformAdminsTable.email,
-        name:     platformAdminsTable.name,
-        role:     platformAdminsTable.role,
-        isActive: platformAdminsTable.isActive,
+        id:                 platformAdminsTable.id,
+        email:              platformAdminsTable.email,
+        name:               platformAdminsTable.name,
+        role:               platformAdminsTable.role,
+        isActive:           platformAdminsTable.isActive,
+        mustChangePassword: platformAdminsTable.mustChangePassword,
       })
       .from(platformAdminsTable)
       .where(eq(platformAdminsTable.id, req.session.platformAdminId))

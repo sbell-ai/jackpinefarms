@@ -29,6 +29,7 @@ export interface PlatformAdmin {
   name: string;
   role: "owner" | "support";
   isActive: boolean;
+  mustChangePassword: boolean;
   lastLoginAt: string | null;
   createdAt: string;
 }
@@ -78,6 +79,25 @@ export interface TenantDetailResponse {
   users: TenantUser[];
   addons: Array<{ id: number; tenantId: number; name: string; quantity: number; createdAt: string }>;
   usage: { userCount: number; inviteCount: number };
+}
+
+export interface AuditLog {
+  id: number;
+  action: string;
+  targetType: string | null;
+  targetId: number | null;
+  metadata: Record<string, unknown> | null;
+  createdAt: string;
+  adminId: number | null;
+  adminEmail: string | null;
+  adminName: string | null;
+}
+
+export interface AuditLogsResponse {
+  logs: AuditLog[];
+  total: number;
+  page: number;
+  pageSize: number;
 }
 
 export interface BillingData {
@@ -139,4 +159,20 @@ export const api = {
     apiFetch<{ message: string; id: number; email: string }>(`/admins/${id}/deactivate`, {
       method: "POST",
     }),
+
+  resetAdminPassword: (id: number) =>
+    apiFetch<{ id: number; email: string; tempPassword: string }>(`/admins/${id}/reset-password`, {
+      method: "POST",
+    }),
+
+  changeMyPassword: (currentPassword: string, newPassword: string) =>
+    apiFetch<{ message: string }>("/me/change-password", {
+      method: "POST",
+      body: JSON.stringify({ currentPassword, newPassword }),
+    }),
+
+  auditLogs: (params: Record<string, string>) => {
+    const qs = new URLSearchParams(params).toString();
+    return apiFetch<AuditLogsResponse>(`/audit-logs${qs ? `?${qs}` : ""}`);
+  },
 };
