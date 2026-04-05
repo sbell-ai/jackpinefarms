@@ -1,5 +1,22 @@
 import { ReactNode, useState, useEffect } from "react";
 import { Link, useLocation } from "wouter";
+
+function resolveHref(url: string): string {
+  if (url.startsWith("http://") || url.startsWith("https://")) return url;
+  return url.startsWith("/") ? url : `/${url}`;
+}
+
+function NavLink({ href, label, className }: { href: string; label: string; className: string }) {
+  const resolved = resolveHref(href);
+  if (resolved.startsWith("http://") || resolved.startsWith("https://")) {
+    return (
+      <a href={resolved} target="_blank" rel="noopener noreferrer" className={className}>
+        {label}
+      </a>
+    );
+  }
+  return <Link href={resolved} className={className}>{label}</Link>;
+}
 import { Menu, X, ShoppingCart, Leaf, User } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
@@ -80,16 +97,15 @@ export function PublicLayout({ children }: { children: ReactNode }) {
             {/* Desktop Nav */}
             <nav className="hidden lg:flex items-center gap-8">
               {navLinks.map((link) => (
-                <Link
+                <NavLink
                   key={link.href}
                   href={link.href}
+                  label={link.label}
                   className={cn(
                     "text-sm font-medium transition-colors hover:text-accent",
                     location === link.href ? "text-accent" : "text-foreground/80"
                   )}
-                >
-                  {link.label}
-                </Link>
+                />
               ))}
             </nav>
 
@@ -153,16 +169,15 @@ export function PublicLayout({ children }: { children: ReactNode }) {
           >
             <nav className="flex flex-col gap-6 text-center">
               {navLinks.map((link) => (
-                <Link
+                <NavLink
                   key={link.href}
                   href={link.href}
+                  label={link.label}
                   className={cn(
                     "text-2xl font-serif font-medium transition-colors",
                     location === link.href ? "text-accent" : "text-primary"
                   )}
-                >
-                  {link.label}
-                </Link>
+                />
               ))}
               <div className="w-12 h-px bg-border mx-auto my-4" />
               
