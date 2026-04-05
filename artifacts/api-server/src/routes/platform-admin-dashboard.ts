@@ -75,10 +75,11 @@ router.post("/login", loginLimiter, async (req, res): Promise<void> => {
   req.log.info({ adminId: admin.id, email: admin.email }, "Super admin logged in");
   void logAuditEvent(admin.id, "admin.login", "admin", admin.id);
   res.json({
-    id:    admin.id,
-    email: admin.email,
-    name:  admin.name,
-    role:  admin.role,
+    id:                 admin.id,
+    email:              admin.email,
+    name:               admin.name,
+    role:               admin.role,
+    mustChangePassword: admin.mustChangePassword,
   });
 });
 
