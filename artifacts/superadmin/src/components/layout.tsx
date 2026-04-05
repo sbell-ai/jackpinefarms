@@ -9,15 +9,17 @@ import {
   CreditCard,
   ShieldCheck,
   ClipboardList,
+  KeyRound,
   LogOut,
 } from "lucide-react";
 
 const NAV = [
-  { href: "/dashboard",  label: "Dashboard",  icon: LayoutDashboard },
-  { href: "/tenants",    label: "Tenants",    icon: Users },
-  { href: "/billing",    label: "Billing",    icon: CreditCard },
-  { href: "/admins",     label: "Admins",     icon: ShieldCheck },
-  { href: "/audit-logs", label: "Audit Logs", icon: ClipboardList },
+  { href: "/dashboard",        label: "Dashboard",       icon: LayoutDashboard },
+  { href: "/tenants",          label: "Tenants",         icon: Users },
+  { href: "/billing",          label: "Billing",         icon: CreditCard },
+  { href: "/admins",           label: "Admins",          icon: ShieldCheck },
+  { href: "/audit-logs",       label: "Audit Logs",      icon: ClipboardList },
+  { href: "/change-password",  label: "Change Password", icon: KeyRound },
 ];
 
 export function Layout({ children }: { children: React.ReactNode }) {
@@ -29,7 +31,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
     mutationFn: api.logout,
     onSuccess: () => {
       queryClient.clear();
-      window.location.replace("/login");
+      window.location.replace("/superadmin/login");
     },
   });
 
