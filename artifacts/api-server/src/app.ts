@@ -165,7 +165,8 @@ app.use((req, res, next) => {
   // API calls always pass through
   if (req.path.startsWith("/api")) return next();
   // FarmOps tenant UI routes — serve store SPA
-  if (req.path.startsWith("/farmops")) {
+  // Use exact-segment matching: /farmops or /farmops/<anything> but NOT /farmops-landing
+  if (req.path === "/farmops" || req.path.startsWith("/farmops/")) {
     return express.static(storeDistPath)(req, res, () => {
       res.sendFile(path.join(storeDistPath, "index.html"));
     });
