@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "export NODE_ENV=development && pnpm run build-spas && pnpm run build && pnpm run start",
     "build": "node ./build.mjs",
-    "build-spas": "pnpm --filter @workspace/store run build && BASE_PATH=/farmops-landing/ pnpm --filter @workspace/farmops-landing run build",
+    "build-spas": "pnpm --filter @workspace/store run build && BASE_PATH=/farmops-landing/ pnpm --filter @workspace/farmops-landing run build && rm -rf ../store/dist/public/farmops-landing && cp -r ../farmops-landing/dist ../store/dist/public/farmops-landing",
     "start": "node --enable-source-maps ./dist/index.mjs",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },

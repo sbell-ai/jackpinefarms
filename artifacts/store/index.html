@@ -6,7 +6,9 @@
     <script>
       (function () {
         var h = window.location.hostname;
-        if (h === 'farmops.jackpinefarms.farm' || h.startsWith('farmops.jackpinefarms.')) {
+        var p = window.location.pathname;
+        if ((h === 'farmops.jackpinefarms.farm' || h.startsWith('farmops.jackpinefarms.'))
+            && !p.startsWith('/farmops-landing')) {
           window.location.replace('/farmops-landing/');
         }
       }());
