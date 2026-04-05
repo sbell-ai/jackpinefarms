@@ -140,8 +140,12 @@ const storeDistPath = path.resolve(
 );
 
 // farmops.jackpinefarms.farm subdomain routing
+// Use req.headers.host (raw Host header) rather than req.hostname because
+// req.hostname reads X-Forwarded-Host when trust proxy is set, and Replit's
+// reverse proxy may set that to an internal value, not the custom domain.
 app.use((req, res, next) => {
-  if (req.hostname !== "farmops.jackpinefarms.farm") return next();
+  const host = (req.headers.host ?? "").split(":")[0];
+  if (host !== "farmops.jackpinefarms.farm") return next();
   // API calls always pass through
   if (req.path.startsWith("/api")) return next();
   // FarmOps tenant UI routes — serve store SPA
