@@ -162,7 +162,7 @@ export default function Billing() {
                     <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wide">Status</th>
                     <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wide">Plan</th>
                     <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wide hidden md:table-cell">MRR</th>
-                    <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wide hidden lg:table-cell">Stripe ID</th>
+                    <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wide hidden lg:table-cell">Stripe Status</th>
                     <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wide hidden xl:table-cell">Joined</th>
                   </tr>
                 </thead>
@@ -179,10 +179,12 @@ export default function Billing() {
                         <td className="px-4 py-3 hidden md:table-cell text-muted-foreground">
                           {t.status === "active" ? fmt(PLAN_PRICES[t.plan] ?? 0) : "-"}
                         </td>
-                        <td className="px-4 py-3 hidden lg:table-cell text-muted-foreground text-xs">
-                          {t.stripeSubscriptionId ? (
-                            <span className="font-mono">{t.stripeSubscriptionId.slice(0, 14)}...</span>
-                          ) : "-"}
+                        <td className="px-4 py-3 hidden lg:table-cell">
+                          {t.stripeSubscriptionStatus ? (
+                            <StatusBadge status={t.stripeSubscriptionStatus} />
+                          ) : (
+                            <span className="text-muted-foreground text-xs">—</span>
+                          )}
                         </td>
                         <td className="px-4 py-3 hidden xl:table-cell text-muted-foreground text-xs">
                           {formatDistanceToNow(new Date(t.createdAt), { addSuffix: true })}
