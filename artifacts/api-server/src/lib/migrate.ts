@@ -655,6 +655,33 @@ export async function runMigrations(): Promise<void> {
       logger.warn("ADMIN_PASSWORD not set — platform_admins table seeded empty. Set the env var and restart to create the first admin.");
     }
 
+    // ── FarmOps SMS messages (Task #40) ─────────────────────────────────────
+    // Enum + table for the SMS notifications add-on.
+
+    await db.execute(sql`
+      DO $$ BEGIN
+        CREATE TYPE farmops_sms_status AS ENUM ('sent','failed');
+      EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+    `);
+
+    await db.execute(sql`
+      CREATE TABLE IF NOT EXISTS farmops_sms_messages (
+        id            SERIAL PRIMARY KEY,
+        tenant_id     INTEGER NOT NULL REFERENCES farmops_tenants(id) ON DELETE CASCADE,
+        to_phone      TEXT NOT NULL,
+        body          TEXT NOT NULL,
+        status        farmops_sms_status NOT NULL,
+        twilio_sid    TEXT,
+        error_message TEXT,
+        created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      )
+    `);
+
+    await db.execute(sql`
+      CREATE INDEX IF NOT EXISTS idx_farmops_sms_tenant_created
+        ON farmops_sms_messages (tenant_id, created_at DESC)
+    `);
+
     logger.info("Startup migrations complete.");
   } catch (err) {
     logger.error({ err }, "Startup migration failed — server will still start");

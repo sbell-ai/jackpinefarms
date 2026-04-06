@@ -7,8 +7,8 @@
  *   3. Set TWILIO_FROM_NUMBER  — your Twilio phone number (e.g. "+15551234567")
  *
  * Until credentials are configured, SMS messages are logged to the console
- * and the function returns { sent: false, provider: "stub" }. This is safe
- * for development and staging environments.
+ * and the function returns { sent: true, provider: "stub" }. This treats stub
+ * sends as successful so dev/staging message history reflects expected UX.
  */
 
 export interface SmsMessage {
