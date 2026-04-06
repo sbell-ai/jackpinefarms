@@ -91,7 +91,7 @@ const PLANS = [
   },
   {
     name: "Growth",
-    price: "$79",
+    price: "$59",
     description: "For farms that are scaling and need more horsepower.",
     highlight: true,
     features: [
@@ -105,7 +105,7 @@ const PLANS = [
   },
   {
     name: "Pro",
-    price: "$149",
+    price: "$99",
     description: "For established operations with full teams.",
     highlight: false,
     features: [

@@ -154,7 +154,7 @@ router.post("/me/change-password", requirePlatformAdmin, async (req, res): Promi
 // ── GET /superadmin/dashboard ─────────────────────────────────────────────────
 // Stats grid + trials expiring in 7 days + recent signups
 
-const PLAN_PRICES: Record<string, number> = { starter: 29, growth: 79, pro: 149 };
+const PLAN_PRICES: Record<string, number> = { starter: 29, growth: 59, pro: 99 };
 
 router.get("/dashboard", requirePlatformAdmin, async (_req, res): Promise<void> => {
   const now = new Date();
@@ -520,7 +520,7 @@ router.post("/tenants/:id/extend-trial", requirePlatformAdminRole("owner"), asyn
 // ── GET /superadmin/billing ───────────────────────────────────────────────────
 
 router.get("/billing", requirePlatformAdmin, async (_req, res): Promise<void> => {
-  const planPrices: Record<string, number> = { starter: 29, growth: 79, pro: 149 };
+  const planPrices: Record<string, number> = { starter: 29, growth: 59, pro: 99 };
 
   const [statusCounts, planCounts, tenants] = await Promise.all([
     db
