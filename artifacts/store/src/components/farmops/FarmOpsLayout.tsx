@@ -1,6 +1,6 @@
 import { ReactNode, useState } from "react";
 import { Link, useLocation } from "wouter";
-import { Menu, X, Sprout, LogOut, LayoutDashboard, DollarSign } from "lucide-react";
+import { Menu, X, Sprout, LogOut, LayoutDashboard, DollarSign, MessageSquare } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useFarmopsMe, useFarmopsLogout } from "@/hooks/useFarmopsAuth";
 
@@ -54,6 +54,18 @@ export function FarmOpsLayout({ children }: { children: ReactNode }) {
                   <DollarSign className="w-4 h-4" />
                   Expenses
                 </Link>
+                <Link
+                  href="/farmops/sms"
+                  className={cn(
+                    "flex items-center gap-1.5 text-sm font-medium transition-colors",
+                    location.startsWith("/farmops/sms")
+                      ? "text-emerald-700"
+                      : "text-slate-600 hover:text-emerald-700"
+                  )}
+                >
+                  <MessageSquare className="w-4 h-4" />
+                  SMS
+                </Link>
                 <button
                   onClick={handleLogout}
                   className="flex items-center gap-1.5 text-sm font-medium text-slate-600 hover:text-emerald-700 transition-colors"
@@ -99,6 +111,9 @@ export function FarmOpsLayout({ children }: { children: ReactNode }) {
                 </Link>
                 <Link href="/farmops/expenses" className="text-sm font-medium" onClick={() => setMobileOpen(false)}>
                   Expenses
+                </Link>
+                <Link href="/farmops/sms" className="text-sm font-medium" onClick={() => setMobileOpen(false)}>
+                  SMS
                 </Link>
                 <button onClick={handleLogout} className="text-sm font-medium text-left text-slate-600">
                   Sign Out

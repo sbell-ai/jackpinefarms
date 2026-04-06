@@ -24,6 +24,7 @@ import adminCmsMenusRouter from "./admin-cms-menus.js";
 import farmopsAuthRouter from "./farmops-auth.js";
 import farmopsExpensesRouter from "./farmops-expenses.js";
 import farmopsBillingRouter from "./farmops-billing.js";
+import farmopsSmsRouter from "./farmops-sms.js";
 import platformAdminTenantsRouter from "./platform-admin-tenants.js";
 import platformAdminDashboardRouter from "./platform-admin-dashboard.js";
 
@@ -54,6 +55,7 @@ router.use(adminCmsMenusRouter);
 router.use(farmopsAuthRouter);
 router.use(farmopsExpensesRouter);
 router.use(farmopsBillingRouter);
+router.use(farmopsSmsRouter);
 router.use(platformAdminTenantsRouter);
 router.use("/superadmin", platformAdminDashboardRouter);
 

@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { Link, useLocation } from "wouter";
-import { Loader2, Sprout, Bird, DollarSign, ShoppingBasket, ClipboardList, AlertTriangle } from "lucide-react";
+import { Loader2, Sprout, Bird, DollarSign, ShoppingBasket, ClipboardList, AlertTriangle, MessageSquare } from "lucide-react";
 import { useFarmopsMe } from "@/hooks/useFarmopsAuth";
 
 const QUICK_LINKS = [
@@ -8,6 +8,7 @@ const QUICK_LINKS = [
   { icon: ClipboardList, label: "Egg Inventory", href: "/farmops/eggs", description: "Track daily collections" },
   { icon: DollarSign, label: "Expenses", href: "/farmops/expenses", description: "Log and review expenses" },
   { icon: ShoppingBasket, label: "Orders", href: "/farmops/orders", description: "Manage customer preorders" },
+  { icon: MessageSquare, label: "SMS", href: "/farmops/sms", description: "Send texts to customers" },
 ];
 
 export default function FarmOpsDashboard() {

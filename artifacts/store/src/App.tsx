@@ -40,6 +40,7 @@ import FarmOpsRegister from "./pages/farmops/Register";
 import FarmOpsDashboard from "./pages/farmops/Dashboard";
 import FarmOpsBilling from "./pages/farmops/Billing";
 import FarmOpsExpenses from "./pages/farmops/Expenses";
+import FarmOpsSMS from "./pages/farmops/SMS";
 import FarmOpsVerifyEmail from "./pages/farmops/VerifyEmail";
 import FarmOpsForgotPassword from "./pages/farmops/ForgotPassword";
 import FarmOpsResetPassword from "./pages/farmops/ResetPassword";
@@ -102,6 +103,9 @@ function Router() {
       </Route>
       <Route path="/farmops/expenses">
         <FarmOpsLayout><FarmOpsExpenses /></FarmOpsLayout>
+      </Route>
+      <Route path="/farmops/sms">
+        <FarmOpsLayout><FarmOpsSMS /></FarmOpsLayout>
       </Route>
       <Route path="/farmops/landing"><FarmOpsLanding /></Route>
 
