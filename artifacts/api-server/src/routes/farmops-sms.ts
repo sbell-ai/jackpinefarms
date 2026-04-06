@@ -17,8 +17,13 @@ const SMS_MAX_RECIPIENTS = 100;
 // E.164 format: optional leading + followed by 7–15 significant digits
 const E164_RE = /^\+?[1-9]\d{6,14}$/;
 
+/** Strip common formatting characters (spaces, dashes, parens, dots) */
+function normalizePhone(phone: string): string {
+  return phone.replace(/[\s\-().]/g, "");
+}
+
 function isValidPhone(phone: string): boolean {
-  return E164_RE.test(phone.replace(/[\s\-().]/g, ""));
+  return E164_RE.test(normalizePhone(phone));
 }
 
 // ── POST /farmops/sms/send ────────────────────────────────────────────────────
@@ -65,7 +70,8 @@ router.post(
     let failedCount = 0;
     const results: Array<{ to: string; status: "sent" | "failed"; sid?: string; error?: string }> = [];
 
-    for (const to of recipients) {
+    for (const rawTo of recipients) {
+      const to = normalizePhone(rawTo);
       const result = await sendSms({ to, body: message });
       const status: "sent" | "failed" = result.sent ? "sent" : "failed";
 
