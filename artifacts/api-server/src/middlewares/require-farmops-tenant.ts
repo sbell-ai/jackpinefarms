@@ -1,7 +1,7 @@
 import "../types/session.d.ts";
 import { Request, Response, NextFunction } from "express";
-import { eq, sql } from "drizzle-orm";
-import { db, farmopsTenantsTable, farmopsUsersTable } from "@workspace/db";
+import { eq, sql, and } from "drizzle-orm";
+import { db, farmopsTenantsTable, farmopsUsersTable, farmopsSubscriptionAddonsTable } from "@workspace/db";
 
 // Plan hierarchy — higher index = higher tier.
 const PLAN_TIERS = ["starter", "growth", "pro"] as const;
@@ -113,6 +113,52 @@ export function requireFarmopsPlan(minimumPlan: FarmopsPlan) {
         message: `This feature requires the ${minimumPlan} plan or higher.`,
         currentPlan: tenant.plan,
         requiredPlan: minimumPlan,
+      });
+      return;
+    }
+
+    next();
+  };
+}
+
+// ── requireFarmopsAddon ───────────────────────────────────────────────────────
+//
+// Factory that returns async middleware enforcing that the tenant has a specific
+// add-on active in farmops_subscription_addons.
+// Usage: router.post("/route", requireFarmopsTenant, requireFarmopsAddon("sms_notifications"), handler)
+//
+// requireFarmopsTenant must run first so req.farmopsTenant is populated.
+
+export type FarmopsAddonType =
+  | "custom_domain"
+  | "sms_notifications"
+  | "extra_admin_users"
+  | "white_label";
+
+export function requireFarmopsAddon(addonType: FarmopsAddonType) {
+  return async function addonGuard(req: Request, res: Response, next: NextFunction): Promise<void> {
+    const tenant = req.farmopsTenant;
+    if (!tenant) {
+      res.status(401).json({ error: "Not authenticated" });
+      return;
+    }
+
+    const [row] = await db
+      .select({ id: farmopsSubscriptionAddonsTable.id })
+      .from(farmopsSubscriptionAddonsTable)
+      .where(
+        and(
+          eq(farmopsSubscriptionAddonsTable.tenantId, tenant.id),
+          eq(farmopsSubscriptionAddonsTable.addonType, addonType)
+        )
+      )
+      .limit(1);
+
+    if (!row) {
+      res.status(403).json({
+        error: "addon_required",
+        requiredAddon: addonType,
+        message: `The ${addonType} add-on is required for this feature.`,
       });
       return;
     }

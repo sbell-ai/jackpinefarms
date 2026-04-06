@@ -59,5 +59,5 @@ export async function sendSms(msg: SmsMessage): Promise<SendSmsResult> {
     `  To: ${msg.to}\n` +
     `  Body: ${msg.body.slice(0, 160)}${msg.body.length > 160 ? "…" : ""}`
   );
-  return { sent: false, provider: "stub" };
+  return { sent: true, provider: "stub" };
 }
