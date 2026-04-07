@@ -35,7 +35,6 @@ timeoutMs = 20000
 [userenv.development]
 
 [userenv.shared]
-SMTP_PASS = "zwzc xera xqqc sfpq"
 SMTP_HOST = "smtp.gmail.com"
 SMTP_PORT = "587"
 SMTP_SECURE = "false"
