@@ -36,6 +36,10 @@ timeoutMs = 20000
 
 [userenv.shared]
 SMTP_PASS = "zwzc xera xqqc sfpq"
+SMTP_HOST = "smtp.gmail.com"
+SMTP_PORT = "587"
+SMTP_SECURE = "false"
+EMAIL_FROM = "JP FarmOps <noreply@jackpinefarms.farm>"
 # ADMIN_PASSWORD must be set via Replit Secrets — do not hardcode here
 
 [nix]
