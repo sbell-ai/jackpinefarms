@@ -96,7 +96,9 @@ async function sendViaSmtp(msg: EmailMessage, from: string): Promise<void> {
  *   3. Stub — logs to console (no credentials configured)
  */
 export async function sendEmail(msg: EmailMessage): Promise<SendEmailResult> {
-  const from = process.env.EMAIL_FROM ?? "Jack Pine Farm <noreply@jackpinefarm.ca>";
+  const from =
+    process.env.EMAIL_FROM ??
+    (process.env.SMTP_USER ? `JP FarmOps <${process.env.SMTP_USER}>` : "Jack Pine Farm <noreply@jackpinefarm.ca>");
 
   if (process.env.SENDGRID_API_KEY) {
     try {
