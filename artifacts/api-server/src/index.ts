@@ -4,6 +4,11 @@ console.log("[startup] ENV CHECK", {
   ADMIN_PASSWORD: !!process.env.ADMIN_PASSWORD,
   NODE_ENV: process.env.NODE_ENV,
   PORT: process.env.PORT,
+  SMTP_HOST: process.env.SMTP_HOST ?? null,
+  SMTP_PORT: process.env.SMTP_PORT ?? null,
+  SMTP_USER: !!process.env.SMTP_USER,
+  SMTP_PASS: !!process.env.SMTP_PASS,
+  EMAIL_FROM: process.env.EMAIL_FROM ?? null,
 });
 
 import app from "./app";
