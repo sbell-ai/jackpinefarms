@@ -35,7 +35,7 @@ async function apiFetch<T>(path: string, options?: RequestInit): Promise<T> {
 // ── Plan display data ─────────────────────────────────────────────────────────
 
 const PLANS = [
-  { key: "starter", label: "Starter", price: "$29/mo", description: "Up to 50 orders/month, basic reporting" },
+  { key: "starter", label: "Starter", price: "$29/mo", description: "Up to 100 orders/month, basic reporting" },
   { key: "growth",  label: "Growth",  price: "$59/mo", description: "Unlimited orders, advanced analytics, export" },
   { key: "pro",     label: "Pro",     price: "$99/mo", description: "Everything + white-label & priority support" },
 ] as const;

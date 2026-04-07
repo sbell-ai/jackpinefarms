@@ -82,9 +82,11 @@ const PLANS = [
     description: "Perfect for sole operators and very small flocks.",
     highlight: false,
     features: [
+      "Up to 100 orders/month",
       "1 admin user",
       "Flock & egg tracking",
       "Expense tracking",
+      "CSV Report Exports",
       "Order & pickup management",
       "Email support",
     ],
@@ -95,9 +97,9 @@ const PLANS = [
     description: "For farms that are scaling and need more horsepower.",
     highlight: true,
     features: [
-      "Up to 5 users",
       "Everything in Starter",
-      "CSV data exports",
+      "Unlimited Orders",
+      "Up to 5 users",
       "Priority email support",
       "Reporting dashboards",
       "Custom domain (included)",
@@ -120,9 +122,9 @@ const PLANS = [
 
 const ADDONS = [
   { name: "Custom domain", price: "+$10/mo" },
-  { name: "SMS notifications", price: "+$15/mo" },
+  { name: "SMS notifications", price: "+$15/mo/1000 SMS messages" },
   { name: "Additional admin users", price: "+$10/mo per user" },
-  { name: "White-label branding", price: "+$25/mo" },
+  { name: "White-label branding", price: "+$49/mo" },
   { name: "Onboarding & setup assistance", price: "$99 one-time" },
 ];
 
