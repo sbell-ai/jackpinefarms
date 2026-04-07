@@ -13,6 +13,7 @@ import {
   X,
   Quote,
   AlertCircle,
+  ChevronRight,
 } from "lucide-react";
 import { BASE_URL } from "./config";
 
@@ -436,12 +437,20 @@ export default function App() {
             </div>
             <div className="divide-y divide-stone-100">
               {ADDONS.map(({ name, price }) => (
-                <div key={name} className="flex items-center justify-between px-8 py-4">
-                  <span className="text-sm font-medium text-stone-700">{name}</span>
-                  <span className="text-sm font-bold text-[hsl(148,26%,30%)] ml-4 whitespace-nowrap">
-                    {price}
-                  </span>
-                </div>
+                <details key={name} className="group">
+                  <summary className="flex items-center justify-between px-8 py-4 cursor-pointer list-none">
+                    <div className="flex items-center gap-2">
+                      <ChevronRight className="w-4 h-4 text-stone-400 transition-transform group-open:rotate-90" />
+                      <span className="text-sm font-medium text-stone-700">{name}</span>
+                    </div>
+                    <span className="text-sm font-bold text-[hsl(148,26%,30%)] ml-4 whitespace-nowrap">
+                      {price}
+                    </span>
+                  </summary>
+                  <div className="px-8 pb-4 pt-1 text-sm text-stone-500 pl-14">
+                    Details coming soon.
+                  </div>
+                </details>
               ))}
             </div>
           </div>
