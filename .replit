@@ -35,6 +35,7 @@ timeoutMs = 20000
 [userenv.development]
 
 [userenv.shared]
+SMTP_PASS = "zwzc xera xqqc sfpq"
 # ADMIN_PASSWORD must be set via Replit Secrets — do not hardcode here
 
 [nix]
