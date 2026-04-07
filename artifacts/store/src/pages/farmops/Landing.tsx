@@ -369,7 +369,7 @@ export default function FarmOpsLanding() {
             {PLANS.map((plan) => (
               <div
                 key={plan.name}
-                className={`relative rounded-2xl border transition-all ${
+                className={`relative rounded-2xl border transition-all h-full ${
                   plan.highlight
                     ? "bg-[hsl(148,26%,23%)] border-[hsl(148,26%,35%)] shadow-2xl md:scale-[1.04] md:-translate-y-2"
                     : "bg-white border-stone-200 shadow-sm hover:shadow-md hover:-translate-y-1"
@@ -383,7 +383,7 @@ export default function FarmOpsLanding() {
                   </div>
                 )}
 
-                <div className="p-8">
+                  <div className="p-8 flex flex-col h-full">
                   <h3 className={`text-xl font-bold mb-1 ${plan.highlight ? "text-white" : "text-stone-900"}`}>
                     {plan.name}
                   </h3>
@@ -399,7 +399,7 @@ export default function FarmOpsLanding() {
                     </span>
                   </div>
 
-                  <ul className="space-y-3 mb-8">
+                    <ul className="space-y-3 mb-8 flex-1">
                     {plan.features.map((f) => (
                       <li key={f} className="flex items-start gap-2.5 text-sm">
                         <CheckCircle2
