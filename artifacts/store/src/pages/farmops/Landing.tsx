@@ -365,7 +365,7 @@ export default function FarmOpsLanding() {
           </div>
 
           {/* Plan cards */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-start mb-12">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-stretch mb-12">
             {PLANS.map((plan) => (
               <div
                 key={plan.name}
