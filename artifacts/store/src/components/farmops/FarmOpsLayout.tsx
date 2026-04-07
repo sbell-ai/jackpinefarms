@@ -23,7 +23,7 @@ export function FarmOpsLayout({ children }: { children: ReactNode }) {
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
           <Link href="/farmops" className="flex items-center gap-2 font-bold text-xl text-emerald-700">
             <Sprout className="w-6 h-6" />
-            FarmOps
+            JP FarmOps
           </Link>
 
           {/* Desktop nav */}
@@ -148,7 +148,7 @@ export function FarmOpsLayout({ children }: { children: ReactNode }) {
             <div>
               <div className="flex items-center gap-2 text-white font-bold text-lg mb-3">
                 <Sprout className="w-5 h-5 text-emerald-400" />
-                FarmOps
+                JP FarmOps
               </div>
               <p className="text-sm max-w-xs leading-relaxed">
                 Farm management software built for small and mid-scale operations. Raise better, manage smarter.
@@ -173,7 +173,7 @@ export function FarmOpsLayout({ children }: { children: ReactNode }) {
             </div>
           </div>
           <div className="mt-10 pt-6 border-t border-slate-800 text-sm text-center text-slate-500">
-            © {new Date().getFullYear()} Jack Pine Farm · FarmOps
+            © {new Date().getFullYear()} Jack Pine Farm · JP FarmOps
           </div>
         </div>
       </footer>

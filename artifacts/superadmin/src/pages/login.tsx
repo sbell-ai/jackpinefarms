@@ -39,7 +39,7 @@ export default function Login() {
     <div className="min-h-screen flex items-center justify-center bg-background px-4">
       <Card className="w-full max-w-sm shadow-md">
         <CardHeader className="space-y-1">
-          <CardTitle className="text-xl">FarmOps Super Admin</CardTitle>
+          <CardTitle className="text-xl">JP FarmOps Super Admin</CardTitle>
           <CardDescription>Sign in to manage the platform</CardDescription>
         </CardHeader>
         <CardContent>

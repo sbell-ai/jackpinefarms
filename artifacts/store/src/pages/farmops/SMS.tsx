@@ -126,7 +126,7 @@ export default function FarmOpsSMS() {
         </div>
         <h1 className="text-2xl font-bold text-slate-900 mb-3">SMS Notifications</h1>
         <p className="text-slate-500 mb-8 max-w-md mx-auto">
-          Send text messages to your customers directly from FarmOps. Upgrade to add the SMS
+          Send text messages to your customers directly from JP FarmOps. Upgrade to add the SMS
           Notifications add-on to your subscription.
         </p>
         <Link

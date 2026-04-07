@@ -39,7 +39,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
     <div className="flex h-screen overflow-hidden bg-background">
       <aside className="w-60 flex-shrink-0 bg-sidebar flex flex-col border-r border-sidebar-border">
         <div className="px-6 py-5 border-b border-sidebar-border">
-          <p className="text-white font-semibold text-base leading-tight">FarmOps</p>
+          <p className="text-white font-semibold text-base leading-tight">JP FarmOps</p>
           <p className="text-sidebar-foreground/50 text-xs mt-0.5 uppercase tracking-wider">Super Admin</p>
         </div>
 

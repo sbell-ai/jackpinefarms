@@ -61,7 +61,7 @@ export default function AdminDashboard() {
     <div className="space-y-8">
       <div>
         <h1 className="text-2xl font-bold text-foreground">Dashboard</h1>
-        <p className="text-muted-foreground mt-1">Welcome back to FarmOps.</p>
+        <p className="text-muted-foreground mt-1">Welcome back to JP FarmOps.</p>
       </div>
 
       {/* Action Items */}

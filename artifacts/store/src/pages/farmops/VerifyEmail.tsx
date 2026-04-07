@@ -82,7 +82,7 @@ export default function FarmOpsVerifyEmail() {
           We sent a verification link to your email address. Click the link to confirm your account.
         </p>
         <p className="text-slate-400 text-sm mb-8">
-          Your 14-day trial is already running — you can use FarmOps right away.
+          Your 14-day trial is already running — you can use JP FarmOps right away.
         </p>
         <Link
           href="/farmops/dashboard"

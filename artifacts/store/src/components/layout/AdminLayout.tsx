@@ -72,7 +72,7 @@ export function AdminLayout({ children }: { children: ReactNode }) {
       ? location === item.href
       : location.startsWith(item.href) && item.href !== "/admin";
 
-  const currentPage = navItems.find(i => isActive(i))?.label ?? "FarmOps";
+  const currentPage = navItems.find(i => isActive(i))?.label ?? "JP FarmOps";
 
   function NavLinks({ onClick }: { onClick?: () => void }) {
     return (
@@ -130,7 +130,7 @@ export function AdminLayout({ children }: { children: ReactNode }) {
           <div className="w-8 h-8 rounded-md bg-primary text-white flex items-center justify-center">
             <Store className="w-5 h-5" />
           </div>
-          <span className="font-serif font-bold text-lg text-primary">FarmOps</span>
+          <span className="font-serif font-bold text-lg text-primary">JP FarmOps</span>
         </div>
         <NavLinks />
       </aside>
@@ -144,7 +144,7 @@ export function AdminLayout({ children }: { children: ReactNode }) {
               <div className="w-8 h-8 rounded-md bg-primary text-white flex items-center justify-center">
                 <Store className="w-5 h-5" />
               </div>
-              <span className="font-serif font-bold text-lg text-primary">FarmOps</span>
+              <span className="font-serif font-bold text-lg text-primary">JP FarmOps</span>
             </div>
             <button
               className="text-muted-foreground hover:text-foreground"

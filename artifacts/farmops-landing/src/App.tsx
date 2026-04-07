@@ -146,7 +146,7 @@ function Nav() {
               <Sprout className="w-4 h-4 text-white" />
             </div>
             <span className="font-bold text-xl text-[hsl(148,26%,23%)] tracking-tight">
-              Farm<span className="text-[hsl(14,52%,54%)]">Ops</span>
+              JP Farm<span className="text-[hsl(14,52%,54%)]">Ops</span>
             </span>
           </a>
 
@@ -226,7 +226,7 @@ export default function App() {
             </h1>
 
             <p className="text-lg md:text-xl text-white/70 leading-relaxed mb-10 max-w-2xl">
-              FarmOps gives small farms a professional online presence, automated
+              JP FarmOps gives small farms a professional online presence, automated
               preorder management, and the tools to grow — without the tech
               headaches.
             </p>
@@ -329,7 +329,7 @@ export default function App() {
           <div className="relative bg-white/5 border border-white/10 rounded-3xl px-8 md:px-14 py-12">
             <Quote className="absolute top-8 left-8 w-8 h-8 text-[hsl(14,52%,54%)]/40" />
             <blockquote className="text-lg md:text-xl text-white/80 leading-relaxed mb-8 italic">
-              "Before FarmOps, I was juggling spreadsheets, texts, and sticky
+              "Before JP FarmOps, I was juggling spreadsheets, texts, and sticky
               notes just to manage preorders. Now customers sign up online, I
               know my inventory in real time, and I'm not spending my evenings
               doing data entry. It's exactly what we needed."
@@ -482,7 +482,7 @@ export default function App() {
             <div className="w-6 h-6 rounded-md bg-[hsl(148,26%,30%)] flex items-center justify-center">
               <Sprout className="w-3.5 h-3.5 text-white" />
             </div>
-            <span className="font-semibold text-white/60">FarmOps</span>
+            <span className="font-semibold text-white/60">JP FarmOps</span>
             <span className="text-white/20">·</span>
             <span>© {new Date().getFullYear()}</span>
           </div>

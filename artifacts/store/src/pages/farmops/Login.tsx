@@ -37,7 +37,7 @@ export default function FarmOpsLogin() {
             <Sprout className="w-7 h-7 text-emerald-700" />
           </div>
           <h1 className="text-3xl font-bold text-slate-900">Welcome back</h1>
-          <p className="text-slate-500 mt-2 text-sm">Sign in to your FarmOps account</p>
+          <p className="text-slate-500 mt-2 text-sm">Sign in to your JP FarmOps account</p>
         </div>
 
         <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-8">

@@ -256,7 +256,7 @@ export function PublicLayout({ children }: { children: ReactNode }) {
             <div className="flex items-center gap-4">
               <Link href="/policies/sales-returns" className="hover:text-white transition-colors">Sales &amp; Returns Policy</Link>
               <span className="text-primary-foreground/30">·</span>
-              <Link href="/admin/login" className="hover:text-white transition-colors">FarmOps Admin</Link>
+              <Link href="/admin/login" className="hover:text-white transition-colors">JP FarmOps Admin</Link>
             </div>
           </div>
         </div>

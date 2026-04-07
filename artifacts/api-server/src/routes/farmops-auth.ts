@@ -160,11 +160,11 @@ router.post("/farmops/auth/register", registerLimiter, async (req, res): Promise
   const verifyUrl = `${farmopsBaseUrl()}/verify-email?token=${verificationToken}`;
   await sendEmail({
     to: user.email,
-    subject: "Welcome to FarmOps — please verify your email",
+    subject: "Welcome to JP FarmOps — please verify your email",
     text: [
       `Hi ${user.name},`,
       ``,
-      `Welcome to FarmOps! Your 14-day free trial has started.`,
+      `Welcome to JP FarmOps! Your 14-day free trial has started.`,
       ``,
       `Please verify your email address: ${verifyUrl}`,
       ``,
@@ -172,7 +172,7 @@ router.post("/farmops/auth/register", registerLimiter, async (req, res): Promise
     ].join("\n"),
     html: [
       `<p>Hi ${user.name},</p>`,
-      `<p>Welcome to FarmOps! Your 14-day free trial has started.</p>`,
+      `<p>Welcome to JP FarmOps! Your 14-day free trial has started.</p>`,
       `<p><a href="${verifyUrl}">Verify your email address</a></p>`,
       `<p>Your farm dashboard will be available once your subscription is active.</p>`,
     ].join("\n"),
@@ -399,10 +399,10 @@ router.post("/farmops/auth/forgot-password", resetLimiter, async (req, res): Pro
     const resetUrl = `${farmopsBaseUrl()}/reset-password?token=${token}`;
     await sendEmail({
       to: user.email,
-      subject: "FarmOps — password reset request",
-      text: `Reset your FarmOps password: ${resetUrl}\n\nThis link expires in 1 hour.`,
+      subject: "JP FarmOps — password reset request",
+      text: `Reset your JP FarmOps password: ${resetUrl}\n\nThis link expires in 1 hour.`,
       html: [
-        `<p>You requested a password reset for your FarmOps account.</p>`,
+        `<p>You requested a password reset for your JP FarmOps account.</p>`,
         `<p><a href="${resetUrl}">Reset your password</a></p>`,
         `<p>This link expires in 1 hour. If you didn't request this, you can ignore this email.</p>`,
       ].join("\n"),

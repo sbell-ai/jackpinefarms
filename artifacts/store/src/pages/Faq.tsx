@@ -60,16 +60,16 @@ export default function Faq() {
 
         {/* FarmOps */}
         <div className="bg-primary/5 rounded-3xl p-8 border border-primary/10 mt-16">
-          <h2 className="text-2xl font-serif font-bold text-primary mb-4">About FarmOps</h2>
+          <h2 className="text-2xl font-serif font-bold text-primary mb-4">About JP FarmOps</h2>
           <p className="text-muted-foreground mb-6">
             Are you a fellow farmer? You might be interested in the software powering this store.
           </p>
           <Accordion type="single" collapsible className="w-full">
             <AccordionItem value="item-6" className="border-b-0">
-              <AccordionTrigger className="text-left font-medium text-lg py-2 hover:no-underline">What is FarmOps?</AccordionTrigger>
+              <AccordionTrigger className="text-left font-medium text-lg py-2 hover:no-underline">What is JP FarmOps?</AccordionTrigger>
               <AccordionContent className="text-muted-foreground text-base leading-relaxed pt-2">
-                FarmOps is a tool we built initially for Jack Pine Farm to manage our animal inventory, track lineage, and calculate real unit economics (like cost per pound). It's designed for small producers who have outgrown spreadsheets but don't need complex enterprise ag software. We love it, and you might too.{" "}<a href="/farmops" className="text-green-700 underline hover:text-green-900">
-                  Learn more about FarmOps →
+                JP FarmOps is a tool we built initially for Jack Pine Farm to manage our animal inventory, track lineage, and calculate real unit economics (like cost per pound). It's designed for small producers who have outgrown spreadsheets but don't need complex enterprise ag software. We love it, and you might too.{" "}<a href="/farmops" className="text-green-700 underline hover:text-green-900">
+                  Learn more about JP FarmOps →
                 </a>
               </AccordionContent>
             </AccordionItem>
