@@ -5,20 +5,21 @@ import * as schema from "./schema";
 
 const { Pool } = pg;
 
-if (!process.env.DATABASE_URL) {
+const dbUrl = process.env.SUPABASE_DB_URL || process.env.DATABASE_URL;
+if (!dbUrl) {
   throw new Error(
-    "DATABASE_URL must be set. Did you forget to provision a database?",
+    "SUPABASE_DB_URL must be set. Did you forget to configure the database?",
   );
 }
 
 const isProduction = process.env.NODE_ENV === "production";
 
-let connectionString = process.env.DATABASE_URL;
+let connectionString = dbUrl;
 if (!isProduction) {
   // Dev Postgres doesn't require SSL — strip sslmode if present
-  const dbUrl = new URL(connectionString);
-  dbUrl.searchParams.delete("sslmode");
-  connectionString = dbUrl.toString();
+  const parsedUrl = new URL(connectionString);
+  parsedUrl.searchParams.delete("sslmode");
+  connectionString = parsedUrl.toString();
 }
 
 export const pool = new Pool({

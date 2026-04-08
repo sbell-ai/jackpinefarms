@@ -1,5 +1,6 @@
 console.log("[startup] ENV CHECK", {
-  DATABASE_URL: !!process.env.DATABASE_URL,
+  SUPABASE_DB_URL: !!process.env.SUPABASE_DB_URL,
+  DATABASE_URL_fallback: !process.env.SUPABASE_DB_URL && !!process.env.DATABASE_URL,
   SESSION_SECRET: !!process.env.SESSION_SECRET,
   ADMIN_PASSWORD: !!process.env.ADMIN_PASSWORD,
   NODE_ENV: process.env.NODE_ENV,

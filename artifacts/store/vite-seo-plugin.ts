@@ -5,7 +5,7 @@ import { createRequire } from "module";
 const _require = createRequire(import.meta.url);
 const { Pool } = _require("pg") as typeof import("pg");
 
-const pool = new Pool({ connectionString: process.env["DATABASE_URL"] });
+const pool = new Pool({ connectionString: process.env["SUPABASE_DB_URL"] || process.env["DATABASE_URL"] });
 
 interface CmsPageRow {
   slug: string;
