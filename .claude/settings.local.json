@@ -24,7 +24,10 @@
       "WebSearch",
       "WebFetch(domain:docs.replit.com)",
       "WebFetch(domain:replit.discourse.group)",
-      "Bash(node_modules/.bin/vitest run:*)"
+      "Bash(node_modules/.bin/vitest run:*)",
+      "Bash(printf 'n\\\\n')",
+      "Bash(find:*)",
+      "Bash(npx tsc:*)"
     ]
   }
 }
