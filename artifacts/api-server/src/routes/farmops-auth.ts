@@ -158,7 +158,7 @@ router.post("/farmops/auth/register", registerLimiter, async (req, res): Promise
   await saveSession(req.session);
 
   const verifyUrl = `${farmopsBaseUrl()}/verify-email?token=${verificationToken}`;
-  await sendEmail({
+  const welcomeEmailResult = await sendEmail({
     to: user.email,
     subject: "Welcome to JP FarmOps — please verify your email",
     text: [
@@ -177,6 +177,12 @@ router.post("/farmops/auth/register", registerLimiter, async (req, res): Promise
       `<p>Your farm dashboard will be available once your subscription is active.</p>`,
     ].join("\n"),
   });
+
+  if (welcomeEmailResult.sent) {
+    req.log.info({ userId: user.id, provider: welcomeEmailResult.provider, to: user.email }, "FarmOps welcome email sent");
+  } else {
+    req.log.error({ userId: user.id, provider: welcomeEmailResult.provider, error: welcomeEmailResult.error, to: user.email }, "FarmOps welcome email failed");
+  }
 
   req.log.info({ tenantId: tenant.id, userId: user.id }, "FarmOps tenant registered");
 
@@ -397,7 +403,7 @@ router.post("/farmops/auth/forgot-password", resetLimiter, async (req, res): Pro
       .where(eq(farmopsUsersTable.id, user.id));
 
     const resetUrl = `${farmopsBaseUrl()}/reset-password?token=${token}`;
-    await sendEmail({
+    const resetEmailResult = await sendEmail({
       to: user.email,
       subject: "JP FarmOps — password reset request",
       text: `Reset your JP FarmOps password: ${resetUrl}\n\nThis link expires in 1 hour.`,
@@ -407,6 +413,12 @@ router.post("/farmops/auth/forgot-password", resetLimiter, async (req, res): Pro
         `<p>This link expires in 1 hour. If you didn't request this, you can ignore this email.</p>`,
       ].join("\n"),
     });
+
+    if (resetEmailResult.sent) {
+      req.log.info({ userId: user.id, provider: resetEmailResult.provider, to: user.email }, "FarmOps password reset email sent");
+    } else {
+      req.log.error({ userId: user.id, provider: resetEmailResult.provider, error: resetEmailResult.error, to: user.email }, "FarmOps password reset email failed");
+    }
 
     req.log.info({ userId: user.id }, "FarmOps password reset requested");
   }
