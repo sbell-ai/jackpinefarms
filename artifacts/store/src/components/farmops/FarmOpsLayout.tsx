@@ -1,6 +1,6 @@
 import { ReactNode, useState } from "react";
 import { Link, useLocation } from "wouter";
-import { Menu, X, Sprout, LogOut, LayoutDashboard, DollarSign, MessageSquare } from "lucide-react";
+import { Menu, X, Sprout, LogOut, LayoutDashboard, DollarSign, MessageSquare, ShoppingBasket, Bird, Egg, Settings, Users } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useFarmopsMe, useFarmopsLogout } from "@/hooks/useFarmopsAuth";
 
@@ -55,6 +55,42 @@ export function FarmOpsLayout({ children }: { children: ReactNode }) {
                   Expenses
                 </Link>
                 <Link
+                  href="/farmops/orders"
+                  className={cn(
+                    "flex items-center gap-1.5 text-sm font-medium transition-colors",
+                    location.startsWith("/farmops/orders")
+                      ? "text-emerald-700"
+                      : "text-slate-600 hover:text-emerald-700"
+                  )}
+                >
+                  <ShoppingBasket className="w-4 h-4" />
+                  Orders
+                </Link>
+                <Link
+                  href="/farmops/flocks"
+                  className={cn(
+                    "flex items-center gap-1.5 text-sm font-medium transition-colors",
+                    location.startsWith("/farmops/flocks")
+                      ? "text-emerald-700"
+                      : "text-slate-600 hover:text-emerald-700"
+                  )}
+                >
+                  <Bird className="w-4 h-4" />
+                  Flocks
+                </Link>
+                <Link
+                  href="/farmops/eggs"
+                  className={cn(
+                    "flex items-center gap-1.5 text-sm font-medium transition-colors",
+                    location.startsWith("/farmops/eggs")
+                      ? "text-emerald-700"
+                      : "text-slate-600 hover:text-emerald-700"
+                  )}
+                >
+                  <Egg className="w-4 h-4" />
+                  Eggs
+                </Link>
+                <Link
                   href="/farmops/sms"
                   className={cn(
                     "flex items-center gap-1.5 text-sm font-medium transition-colors",
@@ -65,6 +101,30 @@ export function FarmOpsLayout({ children }: { children: ReactNode }) {
                 >
                   <MessageSquare className="w-4 h-4" />
                   SMS
+                </Link>
+                <Link
+                  href="/farmops/team"
+                  className={cn(
+                    "flex items-center gap-1.5 text-sm font-medium transition-colors",
+                    location.startsWith("/farmops/team")
+                      ? "text-emerald-700"
+                      : "text-slate-600 hover:text-emerald-700"
+                  )}
+                >
+                  <Users className="w-4 h-4" />
+                  Team
+                </Link>
+                <Link
+                  href="/farmops/settings"
+                  className={cn(
+                    "flex items-center gap-1.5 text-sm font-medium transition-colors",
+                    location.startsWith("/farmops/settings")
+                      ? "text-emerald-700"
+                      : "text-slate-600 hover:text-emerald-700"
+                  )}
+                >
+                  <Settings className="w-4 h-4" />
+                  Settings
                 </Link>
                 <button
                   onClick={handleLogout}
@@ -112,8 +172,23 @@ export function FarmOpsLayout({ children }: { children: ReactNode }) {
                 <Link href="/farmops/expenses" className="text-sm font-medium" onClick={() => setMobileOpen(false)}>
                   Expenses
                 </Link>
+                <Link href="/farmops/orders" className="text-sm font-medium" onClick={() => setMobileOpen(false)}>
+                  Orders
+                </Link>
+                <Link href="/farmops/flocks" className="text-sm font-medium" onClick={() => setMobileOpen(false)}>
+                  Flocks
+                </Link>
+                <Link href="/farmops/eggs" className="text-sm font-medium" onClick={() => setMobileOpen(false)}>
+                  Eggs
+                </Link>
                 <Link href="/farmops/sms" className="text-sm font-medium" onClick={() => setMobileOpen(false)}>
                   SMS
+                </Link>
+                <Link href="/farmops/team" className="text-sm font-medium" onClick={() => setMobileOpen(false)}>
+                  Team
+                </Link>
+                <Link href="/farmops/settings" className="text-sm font-medium" onClick={() => setMobileOpen(false)}>
+                  Settings
                 </Link>
                 <button onClick={handleLogout} className="text-sm font-medium text-left text-slate-600">
                   Sign Out

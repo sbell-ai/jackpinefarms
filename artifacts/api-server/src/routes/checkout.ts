@@ -153,10 +153,12 @@ export async function createOrderFromData(data: {
   claimTokenExpiresAt?: Date | null;
   appliedCouponCode?: string | null;
   pickupEventId?: number | null;
+  tenantId?: number | null;
 }) {
   const [order] = await db
     .insert(ordersTable)
     .values({
+      tenantId: data.tenantId ?? null,
       customerId: data.customerId,
       customerName: data.customerName,
       customerEmail: data.customerEmail,
@@ -290,8 +292,11 @@ router.post("/checkout/stripe", async (req, res): Promise<void> => {
 
   const checkoutSession = await stripe.checkout.sessions.create(sessionParams);
 
+  const stripeTenantId: number | null = session.farmopsTenantId ?? null;
+
   await db.insert(stripePendingCheckoutsTable).values({
     stripeSessionId: checkoutSession.id,
+    tenantId: stripeTenantId,
     customerId: session.customerId ?? null,
     customerName,
     customerEmail,
@@ -361,7 +366,10 @@ router.post("/checkout/cash", async (req, res): Promise<void> => {
   const claimToken = isGuest ? generateClaimToken() : null;
   const claimTokenExpiresAt = claimToken ? new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) : null; // 30 days
 
+  const cashTenantId: number | null = session.farmopsTenantId ?? null;
+
   const order = await createOrderFromData({
+    tenantId: cashTenantId,
     customerId: session.customerId ?? null,
     customerName,
     customerEmail,

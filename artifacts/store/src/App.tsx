@@ -40,7 +40,13 @@ import FarmOpsRegister from "./pages/farmops/Register";
 import FarmOpsDashboard from "./pages/farmops/Dashboard";
 import FarmOpsBilling from "./pages/farmops/Billing";
 import FarmOpsExpenses from "./pages/farmops/Expenses";
+import FarmOpsOrders from "./pages/farmops/Orders";
 import FarmOpsSMS from "./pages/farmops/SMS";
+import FarmOpsFlocks from "./pages/farmops/Flocks";
+import FarmOpsEggs from "./pages/farmops/Eggs";
+import FarmOpsSettings from "./pages/farmops/Settings";
+import FarmOpsTeam from "./pages/farmops/Team";
+import FarmOpsAcceptInvite from "./pages/farmops/AcceptInvite";
 import FarmOpsVerifyEmail from "./pages/farmops/VerifyEmail";
 import FarmOpsForgotPassword from "./pages/farmops/ForgotPassword";
 import FarmOpsResetPassword from "./pages/farmops/ResetPassword";
@@ -104,8 +110,26 @@ function Router() {
       <Route path="/farmops/expenses">
         <FarmOpsLayout><FarmOpsExpenses /></FarmOpsLayout>
       </Route>
+      <Route path="/farmops/orders">
+        <FarmOpsLayout><FarmOpsOrders /></FarmOpsLayout>
+      </Route>
       <Route path="/farmops/sms">
         <FarmOpsLayout><FarmOpsSMS /></FarmOpsLayout>
+      </Route>
+      <Route path="/farmops/flocks">
+        <FarmOpsLayout><FarmOpsFlocks /></FarmOpsLayout>
+      </Route>
+      <Route path="/farmops/eggs">
+        <FarmOpsLayout><FarmOpsEggs /></FarmOpsLayout>
+      </Route>
+      <Route path="/farmops/settings">
+        <FarmOpsLayout><FarmOpsSettings /></FarmOpsLayout>
+      </Route>
+      <Route path="/farmops/team">
+        <FarmOpsLayout><FarmOpsTeam /></FarmOpsLayout>
+      </Route>
+      <Route path="/farmops/accept-invite">
+        <FarmOpsAcceptInvite />
       </Route>
       <Route path="/farmops/landing"><FarmOpsLanding /></Route>
 

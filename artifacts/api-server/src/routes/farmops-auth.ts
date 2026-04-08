@@ -5,7 +5,8 @@ import crypto from "node:crypto";
 import { eq, or } from "drizzle-orm";
 import rateLimit from "express-rate-limit";
 import { z } from "zod";
-import { db, farmopsTenantsTable, farmopsUsersTable } from "@workspace/db";
+import { db, farmopsTenantsTable, farmopsUsersTable, farmopsInvitationsTable } from "@workspace/db";
+import { and, gt, isNull } from "drizzle-orm";
 import { sendEmail } from "../lib/email.js";
 
 const router: IRouter = Router();
@@ -458,6 +459,97 @@ router.post("/farmops/auth/reset-password", resetLimiter, async (req, res): Prom
 
   req.log.info({ userId: user.id }, "FarmOps password reset completed");
   res.json({ message: "Password updated successfully. You can now log in." });
+});
+
+// ── POST /farmops/auth/accept-invite ─────────────────────────────────────────
+// Public — no auth required. Validates invite token, creates user, auto-login.
+
+const AcceptInviteBody = z.object({
+  token: z.string().min(1),
+  name: z.string().min(2, "Name must be at least 2 characters").max(100),
+  password: z.string().min(8, "Password must be at least 8 characters"),
+});
+
+router.post("/farmops/auth/accept-invite", async (req, res): Promise<void> => {
+  const parsed = AcceptInviteBody.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.issues[0]?.message ?? "Invalid request" });
+    return;
+  }
+
+  const { token, name, password } = parsed.data;
+  const now = new Date();
+
+  // Find valid, pending, non-expired invitation
+  const [invitation] = await db
+    .select()
+    .from(farmopsInvitationsTable)
+    .where(
+      and(
+        eq(farmopsInvitationsTable.token, token),
+        isNull(farmopsInvitationsTable.acceptedAt),
+        gt(farmopsInvitationsTable.expiresAt, now)
+      )
+    )
+    .limit(1);
+
+  if (!invitation) {
+    res.status(404).json({ error: "This invitation link is invalid or has expired." });
+    return;
+  }
+
+  // Check email not already a user on this tenant
+  const [existingUser] = await db
+    .select({ id: farmopsUsersTable.id })
+    .from(farmopsUsersTable)
+    .where(
+      and(
+        eq(farmopsUsersTable.tenantId, invitation.tenantId),
+        eq(farmopsUsersTable.email, invitation.email)
+      )
+    )
+    .limit(1);
+
+  if (existingUser) {
+    res.status(409).json({ error: "An account with this email already exists for this team." });
+    return;
+  }
+
+  const passwordHash = await bcrypt.hash(password, 12);
+
+  const [user] = await db
+    .insert(farmopsUsersTable)
+    .values({
+      tenantId: invitation.tenantId,
+      email: invitation.email,
+      passwordHash,
+      name,
+      role: invitation.role,
+      emailVerified: true, // email confirmed by clicking the invite link
+    })
+    .returning();
+
+  // Mark invitation as accepted
+  await db
+    .update(farmopsInvitationsTable)
+    .set({ acceptedAt: now })
+    .where(eq(farmopsInvitationsTable.id, invitation.id));
+
+  // Fetch tenant for response
+  const [tenant] = await db
+    .select({ id: farmopsTenantsTable.id, name: farmopsTenantsTable.name, slug: farmopsTenantsTable.slug })
+    .from(farmopsTenantsTable)
+    .where(eq(farmopsTenantsTable.id, invitation.tenantId))
+    .limit(1);
+
+  // Auto-login
+  req.session.farmopsUserId = user.id;
+  req.session.farmopsTenantId = invitation.tenantId;
+
+  res.status(201).json({
+    user: { id: user.id, name: user.name, email: user.email, role: user.role },
+    tenant: { id: tenant.id, name: tenant.name, slug: tenant.slug },
+  });
 });
 
 export default router;

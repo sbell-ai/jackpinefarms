@@ -1,6 +1,7 @@
 import { pgTable, text, integer, timestamp, jsonb } from "drizzle-orm/pg-core";
 import { customersTable } from "./customers";
 import { pickupEventsTable } from "./pickup-events";
+import { farmopsTenantsTable } from "./farmops-tenants";
 
 export type CartLineItem = {
   productId: number;
@@ -15,6 +16,8 @@ export type CartLineItem = {
 
 export const stripePendingCheckoutsTable = pgTable("stripe_pending_checkouts", {
   stripeSessionId: text("stripe_session_id").primaryKey(),
+  tenantId: integer("tenant_id")
+    .references(() => farmopsTenantsTable.id, { onDelete: "set null" }),
   customerId: integer("customer_id").references(() => customersTable.id),
   customerName: text("customer_name").notNull(),
   customerEmail: text("customer_email").notNull(),

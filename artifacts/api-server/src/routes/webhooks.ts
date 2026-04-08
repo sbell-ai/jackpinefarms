@@ -82,6 +82,7 @@ router.post("/webhooks/stripe", async (req, res): Promise<void> => {
       const actualTotalInCents = checkoutSession.amount_total ?? pending.totalInCents;
 
       const order = await createOrderFromData({
+        tenantId: pending.tenantId ?? null,
         customerId: pending.customerId ?? null,
         customerName: pending.customerName,
         customerEmail: pending.customerEmail,

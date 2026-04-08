@@ -14,6 +14,7 @@ import { customersTable } from "./customers";
 import { productsTable } from "./products";
 import { preorderBatchesTable } from "./preorder-batches";
 import { pickupEventsTable } from "./pickup-events";
+import { farmopsTenantsTable } from "./farmops-tenants";
 
 export const orderStatusEnum = pgEnum("order_status", [
   "pending_payment",
@@ -34,6 +35,8 @@ export const paymentMethodEnum = pgEnum("payment_method", [
 
 export const ordersTable = pgTable("orders", {
   id: serial("id").primaryKey(),
+  tenantId: integer("tenant_id")
+    .references(() => farmopsTenantsTable.id, { onDelete: "set null" }),
   customerId: integer("customer_id").references(() => customersTable.id),
   customerName: text("customer_name").notNull(),
   customerEmail: text("customer_email").notNull(),
