@@ -82,7 +82,7 @@ router.post("/auth/register", authLimiter, async (req, res): Promise<void> => {
 
   const verifyLink = `${process.env.STORE_BASE_URL}/auth/verify-email?token=${verificationToken}`;
   await sendEmail({
-    to: customer.email,
+    to: customer.email!,
     subject: "Verify your email — Jack Pine Farm",
     text: `Hi ${customer.name},\n\nPlease verify your email address by clicking the link below:\n\n${verifyLink}\n\nThanks,\nJack Pine Farm`,
     html: `<p>Hi ${customer.name},</p><p>Please <a href="${verifyLink}">click here to verify your email</a>.</p><p>Thanks,<br>Jack Pine Farm</p>`,

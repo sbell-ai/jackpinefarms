@@ -36,7 +36,7 @@ export default function AdminLogin() {
           <div className="w-16 h-16 rounded-2xl bg-primary text-white flex items-center justify-center mb-6 shadow-lg border-4 border-white">
             <Store className="w-8 h-8" />
           </div>
-          <h1 className="text-3xl font-serif font-bold text-foreground">JP FarmOps Admin</h1>
+          <h1 className="text-3xl font-serif font-bold text-foreground">Jack Pine Farm Admin</h1>
           <p className="text-muted-foreground mt-2">Manage Jack Pine Farm catalog</p>
         </div>
 
