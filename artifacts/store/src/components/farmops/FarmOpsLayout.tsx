@@ -3,6 +3,7 @@ import { Link, useLocation } from "wouter";
 import { Menu, X, Sprout, LogOut, LayoutDashboard, DollarSign, MessageSquare, ShoppingBasket, Bird, Egg, Settings, Users } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useFarmopsMe, useFarmopsLogout } from "@/hooks/useFarmopsAuth";
+import FerndeskWidget from "./FernDeskWidget";
 
 export function FarmOpsLayout({ children }: { children: ReactNode }) {
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -18,6 +19,7 @@ export function FarmOpsLayout({ children }: { children: ReactNode }) {
 
   return (
     <div className="min-h-screen flex flex-col bg-white text-slate-900">
+      <FerndeskWidget />
       {/* Nav */}
       <header className="sticky top-0 z-50 bg-white/95 backdrop-blur border-b border-slate-200">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
