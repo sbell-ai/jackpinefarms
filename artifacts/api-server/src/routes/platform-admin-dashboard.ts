@@ -517,6 +517,90 @@ router.post("/tenants/:id/extend-trial", requirePlatformAdminRole("owner"), asyn
   res.json(updated);
 });
 
+// ── POST /superadmin/tenants/:id/users/:userId/set-temp-password ─────────────
+
+function farmopsBaseUrl(): string {
+  return (
+    process.env.FARMOPS_BASE_URL ??
+    `https://${process.env.REPLIT_DEV_DOMAIN}/farmops`
+  );
+}
+
+router.post(
+  "/tenants/:id/users/:userId/set-temp-password",
+  requirePlatformAdminRole("owner"),
+  async (req, res): Promise<void> => {
+    const tenantParam = idParam.safeParse({ id: req.params.id });
+    if (!tenantParam.success) { res.status(400).json({ error: "Invalid tenant ID" }); return; }
+
+    const userIdNum = parseInt(req.params.userId, 10);
+    if (isNaN(userIdNum) || userIdNum <= 0) { res.status(400).json({ error: "Invalid user ID" }); return; }
+
+    const [user] = await db
+      .select({
+        id:    farmopsUsersTable.id,
+        email: farmopsUsersTable.email,
+        name:  farmopsUsersTable.name,
+        role:  farmopsUsersTable.role,
+      })
+      .from(farmopsUsersTable)
+      .where(and(
+        eq(farmopsUsersTable.id, userIdNum),
+        eq(farmopsUsersTable.tenantId, tenantParam.data.id),
+      ))
+      .limit(1);
+
+    if (!user) { res.status(404).json({ error: "User not found" }); return; }
+
+    if (user.role === "owner") {
+      res.status(400).json({ error: "Cannot set temporary password for an owner account" });
+      return;
+    }
+
+    const resetToken = crypto.randomBytes(32).toString("hex");
+    const resetTokenExpiresAt = new Date(Date.now() + 48 * 60 * 60 * 1000);
+
+    await db
+      .update(farmopsUsersTable)
+      .set({ resetToken, resetTokenExpiresAt })
+      .where(eq(farmopsUsersTable.id, user.id));
+
+    const resetUrl = `${farmopsBaseUrl()}/reset-password?token=${resetToken}`;
+
+    sendEmail({
+      to:      user.email,
+      subject: "Your JP FarmOps temporary password",
+      text: [
+        `Hi ${user.name},`,
+        ``,
+        `A platform administrator has set a temporary password for your JP FarmOps account.`,
+        ``,
+        `Click the link below to set a new password:`,
+        resetUrl,
+        ``,
+        `This link expires in 48 hours. You will be prompted to set a new password when you click it.`,
+        ``,
+        `If you did not expect this, please contact support.`,
+        ``,
+        `The FarmOps Team`,
+      ].join("\n"),
+      html: [
+        `<p>Hi ${user.name},</p>`,
+        `<p>A platform administrator has set a temporary password for your JP FarmOps account.</p>`,
+        `<p><a href="${resetUrl}">Click here to set a new password</a></p>`,
+        `<p>This link expires in 48 hours. You will be prompted to set a new password when you click it.</p>`,
+        `<p>If you did not expect this, please contact support.</p>`,
+        `<p>The FarmOps Team</p>`,
+      ].join("\n"),
+    }).catch((err: unknown) => req.log.warn({ err, userId: user.id }, "Temp password email failed"));
+
+    req.log.info({ adminId: req.session.platformAdminId, tenantId: tenantParam.data.id, userId: user.id }, "Temp password set for FarmOps user");
+    void logAuditEvent(req.session.platformAdminId!, "tenant.set_temp_password", "farmops_user", user.id, { tenantId: tenantParam.data.id, email: user.email });
+
+    res.json({ message: "Temporary password email sent" });
+  },
+);
+
 // ── GET /superadmin/billing ───────────────────────────────────────────────────
 
 router.get("/billing", requirePlatformAdmin, async (_req, res): Promise<void> => {

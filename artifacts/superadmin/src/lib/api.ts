@@ -203,6 +203,11 @@ export const api = {
       method: "DELETE",
     }),
 
+  setTempPassword: (tenantId: number, userId: number) =>
+    apiFetch<{ message: string }>(`/tenants/${tenantId}/users/${userId}/set-temp-password`, {
+      method: "POST",
+    }),
+
   auditLogs: (params: Record<string, string>) => {
     const qs = new URLSearchParams(params).toString();
     return apiFetch<AuditLogsResponse>(`/audit-logs${qs ? `?${qs}` : ""}`);

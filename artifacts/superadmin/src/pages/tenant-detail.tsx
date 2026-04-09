@@ -11,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
-import { AlertCircle, ArrowLeft, Plus, Users } from "lucide-react";
+import { AlertCircle, ArrowLeft, KeyRound, Plus, Users } from "lucide-react";
 import { format } from "date-fns";
 
 function StatusBadge({ status }: { status: string }) {
@@ -68,6 +68,7 @@ export default function TenantDetail() {
   const [showAddAddon, setShowAddAddon] = useState(false);
   const [addonType, setAddonType] = useState<string>("");
   const [addonQty, setAddonQty] = useState(1);
+  const [tempPasswordUser, setTempPasswordUser] = useState<{ id: number; name: string; email: string } | null>(null);
 
   const { data, isLoading, isError } = useQuery({
     queryKey: ["tenant", tenantId],
@@ -130,6 +131,15 @@ export default function TenantDetail() {
     onSuccess: () => {
       toast({ title: "Add-on removed" });
       queryClient.invalidateQueries({ queryKey: ["tenant", tenantId] });
+    },
+    onError: (e: Error) => toast({ title: "Error", description: e.message, variant: "destructive" }),
+  });
+
+  const setTempPassword = useMutation({
+    mutationFn: (userId: number) => api.setTempPassword(tenantId, userId),
+    onSuccess: () => {
+      toast({ title: `Temporary password email sent to ${tempPasswordUser?.email ?? "user"}` });
+      setTempPasswordUser(null);
     },
     onError: (e: Error) => toast({ title: "Error", description: e.message, variant: "destructive" }),
   });
@@ -235,6 +245,7 @@ export default function TenantDetail() {
                         <th className="text-left px-4 py-2.5 text-xs font-medium text-muted-foreground uppercase">Role</th>
                         <th className="text-left px-4 py-2.5 text-xs font-medium text-muted-foreground uppercase hidden sm:table-cell">Verified</th>
                         <th className="text-left px-4 py-2.5 text-xs font-medium text-muted-foreground uppercase hidden md:table-cell">Last Login</th>
+                        <th className="px-4 py-2.5" />
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-border">
@@ -252,6 +263,19 @@ export default function TenantDetail() {
                           </td>
                           <td className="px-4 py-3 hidden md:table-cell text-xs text-muted-foreground">
                             {u.lastLoginAt ? format(new Date(u.lastLoginAt), "MMM d, yyyy") : "Never"}
+                          </td>
+                          <td className="px-4 py-3">
+                            {isOwner && u.role !== "owner" && (
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                className="h-7 text-xs text-muted-foreground hover:text-foreground whitespace-nowrap"
+                                onClick={() => setTempPasswordUser({ id: u.id, name: u.name, email: u.email })}
+                              >
+                                <KeyRound className="h-3.5 w-3.5 mr-1" />
+                                Temp Password
+                              </Button>
+                            )}
                           </td>
                         </tr>
                       ))}
@@ -474,6 +498,30 @@ export default function TenantDetail() {
               disabled={extendTrial.isPending || !newTrialDate}
             >
               {extendTrial.isPending ? "Saving..." : "Save"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!tempPasswordUser} onOpenChange={(open) => { if (!open) setTempPasswordUser(null); }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Set Temporary Password</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground py-2">
+            Send a temporary password reset link to{" "}
+            <strong>{tempPasswordUser?.name}</strong> ({tempPasswordUser?.email})?
+            They will receive an email with a link that expires in 48 hours.
+          </p>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setTempPasswordUser(null)} disabled={setTempPassword.isPending}>
+              Cancel
+            </Button>
+            <Button
+              onClick={() => tempPasswordUser && setTempPassword.mutate(tempPasswordUser.id)}
+              disabled={setTempPassword.isPending}
+            >
+              {setTempPassword.isPending ? "Sending…" : "Send Reset Link"}
             </Button>
           </DialogFooter>
         </DialogContent>
