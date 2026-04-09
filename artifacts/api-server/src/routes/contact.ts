@@ -63,7 +63,7 @@ router.post("/contact", contactLimiter, async (req: Request, res: Response): Pro
   logger.info({ name, email: email.replace(/(?<=.{2}).(?=.*@)/g, "*"), subject }, "contact_received");
 
   const contactTo = process.env.CONTACT_TO_EMAIL;
-  const contactFrom = process.env.CONTACT_FROM_EMAIL || process.env.SMTP_USER;
+  const contactFrom = process.env.EMAIL_FROM || process.env.SMTP_USER;
 
   let emailResult: { sent: boolean; provider?: string; error?: string } = { sent: false };
 
