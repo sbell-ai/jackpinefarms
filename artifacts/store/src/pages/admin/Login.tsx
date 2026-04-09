@@ -7,7 +7,7 @@ import { PasswordInput } from "@/components/ui/PasswordInput";
 
 export default function AdminLogin() {
   const [, setLocation] = useLocation();
-  const [email, setEmail] = useState("admin@jackpinefarms.farm");
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const queryClient = useQueryClient();
   const loginMutation = useAdminLogin();
