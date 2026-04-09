@@ -61,6 +61,7 @@ router.post("/admin/login", adminLoginLimiter, async (req, res): Promise<void> =
     .where(eq(platformAdminsTable.id, admin.id));
 
   req.log.info({ adminId: admin.id, email: admin.email }, "Platform admin logged in");
+  res.setHeader("Cache-Control", "no-store");
   res.json({ message: "Logged in", adminId: admin.id, name: admin.name });
 });
 
@@ -74,6 +75,7 @@ router.post("/admin/logout", async (req, res): Promise<void> => {
 // ── GET /admin/me ─────────────────────────────────────────────────────────────
 
 router.get("/admin/me", (req, res): void => {
+  res.setHeader("Cache-Control", "no-store");
   res.json({ authenticated: Boolean(req.session.platformAdminId) });
 });
 
