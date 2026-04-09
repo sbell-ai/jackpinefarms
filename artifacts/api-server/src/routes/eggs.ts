@@ -15,6 +15,12 @@ import {
   insertEggTypeSchema,
   insertDailyEggCollectionSchema,
   insertEggInventoryAdjustmentSchema,
+  flocksTable,
+  flockEventsTable,
+  animalsTable,
+  insertFlockSchema,
+  insertFlockEventSchema,
+  insertAnimalSchema,
 } from "@workspace/db";
 import { requirePlatformAdmin } from "../middlewares/require-platform-admin.js";
 import {
@@ -286,6 +292,132 @@ router.get(
       .where(eq(orderItemsTable.orderId, orderId));
 
     res.json(allocations);
+  },
+);
+
+// ─── Admin Flocks ─────────────────────────────────────────────────────────────
+
+router.get(
+  "/admin/flocks",
+  requirePlatformAdmin,
+  async (req, res): Promise<void> => {
+    const flocks = await db
+      .select()
+      .from(flocksTable)
+      .orderBy(flocksTable.name);
+    res.json(flocks);
+  },
+);
+
+router.post(
+  "/admin/flocks",
+  requirePlatformAdmin,
+  async (req, res): Promise<void> => {
+    const parsed = insertFlockSchema.safeParse({ ...req.body, tenantId: null });
+    if (!parsed.success) {
+      res.status(400).json({ error: parsed.error.message });
+      return;
+    }
+    const [flock] = await db.insert(flocksTable).values(parsed.data).returning();
+    res.status(201).json(flock);
+  },
+);
+
+router.put(
+  "/admin/flocks/:id",
+  requirePlatformAdmin,
+  async (req, res): Promise<void> => {
+    const id = parseInt(String(req.params.id), 10);
+    if (isNaN(id)) { res.status(400).json({ error: "Invalid flock id" }); return; }
+    const parsed = insertFlockSchema.partial().safeParse(req.body);
+    if (!parsed.success) { res.status(400).json({ error: parsed.error.message }); return; }
+    const [updated] = await db
+      .update(flocksTable)
+      .set(parsed.data)
+      .where(eq(flocksTable.id, id))
+      .returning();
+    if (!updated) { res.status(404).json({ error: "Flock not found" }); return; }
+    res.json(updated);
+  },
+);
+
+// ─── Admin Flock Events ───────────────────────────────────────────────────────
+
+router.get(
+  "/admin/flocks/:id/events",
+  requirePlatformAdmin,
+  async (req, res): Promise<void> => {
+    const flockId = parseInt(String(req.params.id), 10);
+    if (isNaN(flockId)) { res.status(400).json({ error: "Invalid flock id" }); return; }
+    const [flock] = await db
+      .select({ id: flocksTable.id })
+      .from(flocksTable)
+      .where(eq(flocksTable.id, flockId));
+    if (!flock) { res.status(404).json({ error: "Flock not found" }); return; }
+    const events = await db
+      .select()
+      .from(flockEventsTable)
+      .where(eq(flockEventsTable.flockId, flockId))
+      .orderBy(asc(flockEventsTable.eventDate));
+    res.json(events);
+  },
+);
+
+router.post(
+  "/admin/flocks/:id/events",
+  requirePlatformAdmin,
+  async (req, res): Promise<void> => {
+    const flockId = parseInt(String(req.params.id), 10);
+    if (isNaN(flockId)) { res.status(400).json({ error: "Invalid flock id" }); return; }
+    const [flock] = await db
+      .select({ id: flocksTable.id })
+      .from(flocksTable)
+      .where(eq(flocksTable.id, flockId));
+    if (!flock) { res.status(404).json({ error: "Flock not found" }); return; }
+    const parsed = insertFlockEventSchema.safeParse({ ...req.body, flockId });
+    if (!parsed.success) { res.status(400).json({ error: parsed.error.message }); return; }
+    const [event] = await db.insert(flockEventsTable).values(parsed.data).returning();
+    res.status(201).json(event);
+  },
+);
+
+// ─── Admin Animals ────────────────────────────────────────────────────────────
+
+router.get(
+  "/admin/animals",
+  requirePlatformAdmin,
+  async (req, res): Promise<void> => {
+    const flockIdParam = req.query.flockId
+      ? parseInt(String(req.query.flockId), 10)
+      : undefined;
+    const conditions = [];
+    if (flockIdParam !== undefined)
+      conditions.push(eq(animalsTable.flockId, flockIdParam));
+    const rows = await db
+      .select()
+      .from(animalsTable)
+      .where(conditions.length ? and(...(conditions as [ReturnType<typeof eq>, ...ReturnType<typeof eq>[]])) : undefined)
+      .orderBy(asc(animalsTable.createdAt));
+    res.json(rows);
+  },
+);
+
+router.post(
+  "/admin/animals",
+  requirePlatformAdmin,
+  async (req, res): Promise<void> => {
+    if (req.body.flockId != null) {
+      const flockId = parseInt(String(req.body.flockId), 10);
+      const [flock] = await db
+        .select({ id: flocksTable.id })
+        .from(flocksTable)
+        .where(eq(flocksTable.id, flockId));
+      if (!flock) { res.status(400).json({ error: "Flock not found" }); return; }
+    }
+    const parsed = insertAnimalSchema.safeParse({ ...req.body, tenantId: null });
+    if (!parsed.success) { res.status(400).json({ error: parsed.error.message }); return; }
+    const [animal] = await db.insert(animalsTable).values(parsed.data).returning();
+    res.status(201).json(animal);
   },
 );
 
