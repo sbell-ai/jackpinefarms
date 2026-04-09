@@ -533,7 +533,7 @@ router.post(
     const tenantParam = idParam.safeParse({ id: req.params.id });
     if (!tenantParam.success) { res.status(400).json({ error: "Invalid tenant ID" }); return; }
 
-    const userIdNum = parseInt(req.params.userId, 10);
+    const userIdNum = parseInt(req.params.userId as string, 10);
     if (isNaN(userIdNum) || userIdNum <= 0) { res.status(400).json({ error: "Invalid user ID" }); return; }
 
     const [user] = await db
