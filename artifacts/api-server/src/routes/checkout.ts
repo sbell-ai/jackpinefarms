@@ -496,15 +496,31 @@ router.post("/checkout/cash", async (req, res): Promise<void> => {
 </div>
 </body></html>`;
 
-  await sendEmail({
-    to: customerEmail,
-    subject: `Order ${orderNum} confirmed — Jack Pine Farm`,
-    text: textBody,
-    html: htmlBody,
-  });
+  // ── [TEMP DEBUG] Email provider diagnostics ──────────────────────────────
+  const _dbgProvider = process.env.SENDGRID_API_KEY
+    ? "sendgrid"
+    : process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS
+    ? "smtp"
+    : "stub";
+  const _dbgFrom = process.env.EMAIL_FROM ?? "(not set — falling back to: Jack Pine Farm <noreply@jackpinefarm.ca>)";
+  console.log(`[Cash order DEBUG] order=${orderNum} provider=${_dbgProvider} EMAIL_FROM=${_dbgFrom} SMTP_HOST=${process.env.SMTP_HOST ?? "(not set)"} SMTP_USER=${process.env.SMTP_USER ?? "(not set)"} SMTP_PASS=${process.env.SMTP_PASS ? "(set)" : "(not set)"}`);
+  // ── [TEMP DEBUG END] ─────────────────────────────────────────────────────
+
+  try {
+    const result = await sendEmail({
+      to: customerEmail,
+      subject: `Order ${orderNum} confirmed — Jack Pine Farm`,
+      text: textBody,
+      html: htmlBody,
+    });
+    console.log(`[Cash order DEBUG] customer email result: sent=${result.sent} provider=${result.provider}${result.error ? ` error=${result.error}` : ""}`);
+  } catch (err: unknown) {
+    console.error(`[Cash order DEBUG] customer email threw:`, err);
+  }
 
   // ── Owner notification (fire-and-forget) ─────────────────────────────────
   const notifyEmail = process.env.ORDER_NOTIFICATION_EMAIL ?? process.env.CONTACT_TO_EMAIL;
+  console.log(`[Cash order DEBUG] notifyEmail=${notifyEmail ?? "(not set — skipping owner notification)"}`);
   if (notifyEmail) {
     sendEmail({
       to: notifyEmail,
@@ -528,7 +544,9 @@ router.post("/checkout/cash", async (req, res): Promise<void> => {
         `<strong>Total:</strong> ${totalFormatted}</p>`,
         `<ul>${orderData.lineItems.map((li) => `<li>${li.productName} × ${li.quantity} — $${(li.lineTotalInCents / 100).toFixed(2)}</li>`).join("")}</ul>`,
       ].join("\n"),
-    }).catch((err: unknown) => console.warn("[Cash order] Owner notification email failed:", err));
+    })
+      .then((r) => console.log(`[Cash order DEBUG] owner email result: sent=${r.sent} provider=${r.provider}${r.error ? ` error=${r.error}` : ""}`))
+      .catch((err: unknown) => console.warn("[Cash order] Owner notification email failed:", err));
   }
 
   res.status(201).json({ ...order, items });
