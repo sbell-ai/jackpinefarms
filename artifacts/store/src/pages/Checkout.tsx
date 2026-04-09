@@ -39,7 +39,7 @@ export default function Checkout() {
     query: { queryKey: getGetCartQueryKey() }
   }) as { data: Cart | undefined; isLoading: boolean };
   
-  const { data: session } = useAuthMe({
+  const { data: session, isLoading: isSessionLoading, isError: isSessionError } = useAuthMe({
     query: { queryKey: getAuthMeQueryKey(), retry: false }
   });
 
@@ -115,6 +115,12 @@ export default function Checkout() {
   });
 
   useEffect(() => {
+    if (!isSessionLoading && (isSessionError || !session?.id)) {
+      setLocation("/auth/login?redirect=/checkout");
+    }
+  }, [isSessionLoading, isSessionError, session, setLocation]);
+
+  useEffect(() => {
     if (session?.id && session.email) {
       reset({
         name: session.name || "",
@@ -159,7 +165,7 @@ export default function Checkout() {
     }
   };
 
-  if (isCartLoading || !cart) {
+  if (isSessionLoading || !session?.id || isCartLoading || !cart) {
     return <div className="flex-1 flex justify-center items-center"><Loader2 className="w-10 h-10 animate-spin text-primary" /></div>;
   }
 
