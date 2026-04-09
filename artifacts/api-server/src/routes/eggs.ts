@@ -1,6 +1,7 @@
 import "../types/session.d.ts";
 import { Router, type IRouter } from "express";
-import { eq, and, asc, sql, inArray } from "drizzle-orm";
+import { eq, and, asc, gte, lte, isNull, sum, sql, inArray } from "drizzle-orm";
+import { z } from "zod";
 import { db } from "@workspace/db";
 import {
   eggTypesTable,
@@ -9,12 +10,23 @@ import {
   ordersTable,
   orderItemsTable,
   productsTable,
+  dailyEggCollectionTable,
+  eggInventoryAdjustmentsTable,
+  insertEggTypeSchema,
+  insertDailyEggCollectionSchema,
+  insertEggInventoryAdjustmentSchema,
 } from "@workspace/db";
 import { requirePlatformAdmin } from "../middlewares/require-platform-admin.js";
 import {
   AdminAllocateEggsParams,
   AdminGetEggAllocationsParams,
 } from "@workspace/api-zod";
+
+const dateRangeQuery = z.object({
+  eggTypeId: z.coerce.number().optional(),
+  fromDate: z.string().optional(),
+  toDate: z.string().optional(),
+});
 
 const router: IRouter = Router();
 
@@ -274,6 +286,347 @@ router.get(
       .where(eq(orderItemsTable.orderId, orderId));
 
     res.json(allocations);
+  },
+);
+
+// ─── Admin Egg Types ──────────────────────────────────────────────────────────
+
+router.get(
+  "/admin/egg-types",
+  requirePlatformAdmin,
+  async (req, res): Promise<void> => {
+    const rows = await db
+      .select()
+      .from(eggTypesTable)
+      .orderBy(eggTypesTable.name);
+    res.json(rows);
+  },
+);
+
+router.post(
+  "/admin/egg-types",
+  requirePlatformAdmin,
+  async (req, res): Promise<void> => {
+    // tenantId is nullable — platform admin egg types belong to Jack Pine Farm
+    // directly, not a FarmOps tenant.
+    const parsed = insertEggTypeSchema.safeParse({ ...req.body, tenantId: null });
+    if (!parsed.success) {
+      res.status(400).json({ error: parsed.error.message });
+      return;
+    }
+    const [eggType] = await db
+      .insert(eggTypesTable)
+      .values(parsed.data)
+      .returning();
+    res.status(201).json(eggType);
+  },
+);
+
+// ─── Admin Egg Collection ─────────────────────────────────────────────────────
+
+router.get(
+  "/admin/egg-collection",
+  requirePlatformAdmin,
+  async (req, res): Promise<void> => {
+    const parsed = dateRangeQuery.safeParse(req.query);
+    if (!parsed.success) {
+      res.status(400).json({ error: parsed.error.message });
+      return;
+    }
+    const { eggTypeId, fromDate, toDate } = parsed.data;
+
+    const conditions = [];
+    if (eggTypeId !== undefined)
+      conditions.push(eq(dailyEggCollectionTable.eggTypeId, eggTypeId));
+    if (fromDate !== undefined)
+      conditions.push(gte(dailyEggCollectionTable.collectionDate, fromDate));
+    if (toDate !== undefined)
+      conditions.push(lte(dailyEggCollectionTable.collectionDate, toDate));
+
+    const records = await db
+      .select()
+      .from(dailyEggCollectionTable)
+      .where(conditions.length ? and(...(conditions as [ReturnType<typeof eq>, ...ReturnType<typeof eq>[]])) : undefined)
+      .orderBy(asc(dailyEggCollectionTable.collectionDate));
+    res.json(records);
+  },
+);
+
+router.post(
+  "/admin/egg-collection",
+  requirePlatformAdmin,
+  async (req, res): Promise<void> => {
+    const parsed = insertDailyEggCollectionSchema.safeParse(req.body);
+    if (!parsed.success) {
+      res.status(400).json({ error: parsed.error.message });
+      return;
+    }
+
+    try {
+      const result = await db.transaction(async (tx) => {
+        const [collection] = await tx
+          .insert(dailyEggCollectionTable)
+          .values(parsed.data)
+          .returning();
+
+        // tenantId is nullable — no FarmOps tenant for platform-admin lots
+        const [lot] = await tx
+          .insert(eggInventoryLotsTable)
+          .values({
+            tenantId: null,
+            eggTypeId: collection.eggTypeId,
+            sourceCollectionId: collection.id,
+            lotDate: collection.collectionDate,
+            initialQtyEach: collection.countEach,
+            remainingQtyEach: collection.countEach,
+            status: "open" as const,
+          })
+          .returning();
+
+        return { collection, lot };
+      });
+
+      res.status(201).json(result);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      if (msg.includes("unique") || msg.includes("duplicate")) {
+        res.status(409).json({
+          error: "A collection for this egg type and date already exists.",
+        });
+        return;
+      }
+      throw err;
+    }
+  },
+);
+
+// ─── Admin Egg Adjustments ────────────────────────────────────────────────────
+
+router.get(
+  "/admin/egg-adjustments",
+  requirePlatformAdmin,
+  async (req, res): Promise<void> => {
+    const parsed = dateRangeQuery.safeParse(req.query);
+    if (!parsed.success) {
+      res.status(400).json({ error: parsed.error.message });
+      return;
+    }
+    const { eggTypeId, fromDate, toDate } = parsed.data;
+
+    const conditions = [];
+    if (eggTypeId !== undefined)
+      conditions.push(eq(eggInventoryAdjustmentsTable.eggTypeId, eggTypeId));
+    if (fromDate !== undefined)
+      conditions.push(
+        gte(
+          sql`${eggInventoryAdjustmentsTable.createdAt}::date`,
+          sql`${fromDate}::date`,
+        ),
+      );
+    if (toDate !== undefined)
+      conditions.push(
+        lte(
+          sql`${eggInventoryAdjustmentsTable.createdAt}::date`,
+          sql`${toDate}::date`,
+        ),
+      );
+
+    const rows = await db
+      .select()
+      .from(eggInventoryAdjustmentsTable)
+      .where(conditions.length ? and(...(conditions as [ReturnType<typeof eq>, ...ReturnType<typeof eq>[]])) : undefined)
+      .orderBy(asc(eggInventoryAdjustmentsTable.createdAt));
+    res.json(rows);
+  },
+);
+
+router.post(
+  "/admin/egg-adjustments",
+  requirePlatformAdmin,
+  async (req, res): Promise<void> => {
+    const parsed = insertEggInventoryAdjustmentSchema.safeParse(req.body);
+    if (!parsed.success) {
+      res.status(400).json({ error: parsed.error.message });
+      return;
+    }
+    const { eggTypeId, lotId, qtyEach, reason } = parsed.data;
+
+    try {
+      const result = await db.transaction(async (tx) => {
+        if (lotId != null) {
+          const [lot] = await tx
+            .select()
+            .from(eggInventoryLotsTable)
+            .where(eq(eggInventoryLotsTable.id, lotId));
+
+          if (!lot) {
+            throw Object.assign(new Error("Lot not found"), { status: 404 });
+          }
+
+          const newRemaining = lot.remainingQtyEach + qtyEach;
+          if (newRemaining < 0) {
+            throw Object.assign(
+              new Error(
+                `Adjustment would make remaining qty negative (current: ${lot.remainingQtyEach}, delta: ${qtyEach})`,
+              ),
+              { status: 400 },
+            );
+          }
+
+          await tx
+            .update(eggInventoryLotsTable)
+            .set({
+              remainingQtyEach: newRemaining,
+              status: newRemaining === 0 ? "depleted" : "open",
+            })
+            .where(eq(eggInventoryLotsTable.id, lotId));
+        }
+
+        const [adjustment] = await tx
+          .insert(eggInventoryAdjustmentsTable)
+          .values({ eggTypeId, lotId: lotId ?? null, qtyEach, reason })
+          .returning();
+
+        return adjustment;
+      });
+
+      res.status(201).json(result);
+    } catch (err: unknown) {
+      const httpErr = err as { status?: number; message?: string };
+      if (httpErr.status) {
+        res.status(httpErr.status).json({ error: httpErr.message });
+        return;
+      }
+      throw err;
+    }
+  },
+);
+
+router.patch(
+  "/admin/egg-adjustments/:id",
+  requirePlatformAdmin,
+  async (req, res): Promise<void> => {
+    const id = parseInt(String(req.params.id), 10);
+    if (isNaN(id)) {
+      res.status(400).json({ error: "Invalid adjustment id" });
+      return;
+    }
+
+    const bodySchema = z.object({
+      qtyEach: z.number().int(),
+      reason: z.string().min(1),
+    });
+    const parsed = bodySchema.safeParse(req.body);
+    if (!parsed.success) {
+      res.status(400).json({ error: parsed.error.message });
+      return;
+    }
+
+    const { qtyEach: newQty, reason } = parsed.data;
+
+    try {
+      const result = await db.transaction(async (tx) => {
+        const [existing] = await tx
+          .select()
+          .from(eggInventoryAdjustmentsTable)
+          .where(eq(eggInventoryAdjustmentsTable.id, id));
+
+        if (!existing) {
+          throw Object.assign(new Error("Adjustment not found"), { status: 404 });
+        }
+
+        if (existing.lotId != null) {
+          const delta = newQty - existing.qtyEach;
+          const [lot] = await tx
+            .select()
+            .from(eggInventoryLotsTable)
+            .where(eq(eggInventoryLotsTable.id, existing.lotId))
+            .for("update");
+
+          if (!lot) {
+            throw Object.assign(new Error("Associated lot not found"), { status: 404 });
+          }
+
+          const newRemaining = lot.remainingQtyEach + delta;
+          if (newRemaining < 0) {
+            throw Object.assign(
+              new Error(
+                `Edit would make lot remaining qty negative (current: ${lot.remainingQtyEach}, delta: ${delta})`,
+              ),
+              { status: 400 },
+            );
+          }
+
+          await tx
+            .update(eggInventoryLotsTable)
+            .set({
+              remainingQtyEach: newRemaining,
+              status: newRemaining === 0 ? "depleted" : "open",
+            })
+            .where(eq(eggInventoryLotsTable.id, existing.lotId));
+        }
+
+        const [updated] = await tx
+          .update(eggInventoryAdjustmentsTable)
+          .set({ qtyEach: newQty, reason })
+          .where(eq(eggInventoryAdjustmentsTable.id, id))
+          .returning();
+
+        return updated;
+      });
+
+      res.json(result);
+    } catch (err: unknown) {
+      const httpErr = err as { status?: number; message?: string };
+      if (httpErr.status) {
+        res.status(httpErr.status).json({ error: httpErr.message });
+        return;
+      }
+      throw err;
+    }
+  },
+);
+
+// ─── Admin Egg Inventory On Hand ──────────────────────────────────────────────
+
+router.get(
+  "/admin/egg-inventory/on-hand",
+  requirePlatformAdmin,
+  async (req, res): Promise<void> => {
+    const [eggTypes, lotTotals, adjTotals] = await Promise.all([
+      db.select().from(eggTypesTable).orderBy(eggTypesTable.name),
+      db
+        .select({
+          eggTypeId: eggInventoryLotsTable.eggTypeId,
+          total: sum(eggInventoryLotsTable.remainingQtyEach),
+        })
+        .from(eggInventoryLotsTable)
+        .where(sql`${eggInventoryLotsTable.status} != 'depleted'`)
+        .groupBy(eggInventoryLotsTable.eggTypeId),
+      db
+        .select({
+          eggTypeId: eggInventoryAdjustmentsTable.eggTypeId,
+          total: sum(eggInventoryAdjustmentsTable.qtyEach),
+        })
+        .from(eggInventoryAdjustmentsTable)
+        .where(isNull(eggInventoryAdjustmentsTable.lotId))
+        .groupBy(eggInventoryAdjustmentsTable.eggTypeId),
+    ]);
+
+    const lotMap = new Map(
+      lotTotals.map((l) => [l.eggTypeId, Number(l.total ?? 0)]),
+    );
+    const adjMap = new Map(
+      adjTotals.map((a) => [a.eggTypeId, Number(a.total ?? 0)]),
+    );
+
+    res.json(
+      eggTypes.map((et) => ({
+        eggTypeId: et.id,
+        eggTypeName: et.name,
+        onHandEach: (lotMap.get(et.id) ?? 0) + (adjMap.get(et.id) ?? 0),
+      })),
+    );
   },
 );
 
