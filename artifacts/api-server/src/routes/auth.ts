@@ -11,6 +11,7 @@ import {
 } from "@workspace/api-zod";
 import rateLimit from "express-rate-limit";
 import crypto from "node:crypto";
+import { sendEmail } from "../lib/email.js";
 
 const router: IRouter = Router();
 
@@ -79,7 +80,13 @@ router.post("/auth/register", authLimiter, async (req, res): Promise<void> => {
     req.session.save((err) => (err ? reject(err) : resolve()))
   );
 
-  req.log.info({ customerId: customer.id }, "[EMAIL STUB] Verification email would be sent");
+  const verifyLink = `${process.env.STORE_BASE_URL}/auth/verify-email?token=${verificationToken}`;
+  await sendEmail({
+    to: customer.email,
+    subject: "Verify your email — Jack Pine Farm",
+    text: `Hi ${customer.name},\n\nPlease verify your email address by clicking the link below:\n\n${verifyLink}\n\nThanks,\nJack Pine Farm`,
+    html: `<p>Hi ${customer.name},</p><p>Please <a href="${verifyLink}">click here to verify your email</a>.</p><p>Thanks,<br>Jack Pine Farm</p>`,
+  });
 
   res.status(201).json(toCustomerSession(customer));
 });
