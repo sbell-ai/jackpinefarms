@@ -623,7 +623,7 @@ export const authRegisterBodyPasswordMin = 8;
 export const AuthRegisterBody = zod.object({
   email: zod.string().email(),
   password: zod.string().min(authRegisterBodyPasswordMin),
-  name: zod.string(),
+  name: zod.string().min(1),
   phone: zod.string().nullish(),
 });
 

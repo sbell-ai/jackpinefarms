@@ -15,6 +15,7 @@ import {
 } from "@workspace/db";
 import { CreateStripeCheckoutBody, CreateCashOrderBody } from "@workspace/api-zod";
 import type Stripe from "stripe";
+import { sendEmail } from "../lib/email.js";
 
 const router: IRouter = Router();
 
@@ -404,14 +405,131 @@ router.post("/checkout/cash", async (req, res): Promise<void> => {
     .where(eq(orderItemsTable.orderId, order.id));
 
   const baseUrl = process.env.STORE_BASE_URL ?? `https://${process.env.REPLIT_DEV_DOMAIN}/store`;
-  const emailParams = encodeURIComponent(customerEmail);
-  const accountClaimLine = claimToken
-    ? `\n  Claim this order into your account: ${baseUrl}/auth/claim-order?token=${claimToken}`
-    : `\n  Order detail: ${baseUrl}/account/orders/${order.id}`;
-  const unsubscribeUrl = `${baseUrl}/unsubscribe?email=${emailParams}`;
-  console.log(
-    `[EMAIL STUB] Order confirmation for ${customerEmail}:\n  Order #${String(order.id).padStart(6, "0")}\n  Total: $${(orderData.totalInCents / 100).toFixed(2)}\n  Payment: Cash at Pickup${accountClaimLine}\n  Unsubscribe: ${unsubscribeUrl}`
-  );
+  const orderNum = `#${String(order.id).padStart(6, "0")}`;
+  const totalFormatted = `$${(totalAfterDiscount / 100).toFixed(2)}`;
+  const claimUrl = claimToken
+    ? `${baseUrl}/auth/claim-order?token=${claimToken}`
+    : `${baseUrl}/account/orders/${order.id}`;
+  const unsubscribeUrl = `${baseUrl}/unsubscribe?email=${encodeURIComponent(customerEmail)}`;
+
+  const itemLines = orderData.lineItems.map((li) => {
+    const price = `$${(li.unitPriceInCents / 100).toFixed(2)}`;
+    const lineTotal = `$${(li.lineTotalInCents / 100).toFixed(2)}`;
+    const label = li.unitLabel ? ` / ${li.unitLabel}` : "";
+    return `  ${li.productName} × ${li.quantity} @ ${price}${label} = ${lineTotal}`;
+  });
+
+  const accountLine = claimToken
+    ? `To track your order, claim it into an account:\n${claimUrl}`
+    : `View your order online:\n${claimUrl}`;
+
+  const textBody = [
+    `Hi ${customerName},`,
+    ``,
+    `Thank you for your order from Jack Pine Farm! We'll collect payment at pickup.`,
+    ``,
+    `Order ${orderNum}`,
+    `─────────────────────────`,
+    ...itemLines,
+    `─────────────────────────`,
+    `Total: ${totalFormatted}`,
+    ``,
+    `We'll be in touch to confirm your pickup details.`,
+    ``,
+    accountLine,
+    ``,
+    `Questions? Reply to this email.`,
+    ``,
+    `— Jack Pine Farm`,
+    ``,
+    `To unsubscribe: ${unsubscribeUrl}`,
+  ].join("\n");
+
+  const htmlBody = `<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"><style>
+  body { font-family: Georgia, serif; color: #2d2d2d; background: #faf9f7; margin: 0; padding: 0; }
+  .wrap { max-width: 560px; margin: 40px auto; background: #ffffff; border: 1px solid #e5e0d8; border-radius: 8px; overflow: hidden; }
+  .header { background: #2c4a2e; color: #ffffff; padding: 28px 32px; }
+  .header h1 { margin: 0; font-size: 22px; font-weight: normal; letter-spacing: 0.5px; }
+  .header p { margin: 4px 0 0; font-size: 14px; opacity: 0.75; }
+  .body { padding: 32px; }
+  .order-num { font-size: 13px; color: #6b6558; margin-bottom: 20px; }
+  table { width: 100%; border-collapse: collapse; margin: 16px 0; }
+  th { text-align: left; font-size: 12px; color: #6b6558; text-transform: uppercase; letter-spacing: 0.5px; padding: 6px 0; border-bottom: 1px solid #e5e0d8; }
+  td { padding: 10px 0; font-size: 14px; border-bottom: 1px solid #f0ece5; vertical-align: top; }
+  td.right { text-align: right; }
+  .total-row td { font-weight: bold; font-size: 15px; border-bottom: none; }
+  .cta { margin: 28px 0 0; }
+  .cta a { display: inline-block; background: #2c4a2e; color: #ffffff; text-decoration: none; padding: 12px 24px; border-radius: 6px; font-size: 14px; }
+  .footer { padding: 20px 32px; font-size: 12px; color: #9e9890; border-top: 1px solid #f0ece5; }
+  .footer a { color: #9e9890; }
+</style></head>
+<body>
+<div class="wrap">
+  <div class="header">
+    <h1>Jack Pine Farm</h1>
+    <p>Order received — Cash at Pickup</p>
+  </div>
+  <div class="body">
+    <p>Hi ${customerName},</p>
+    <p>Thank you for your order! We&rsquo;ll collect payment when you pick up.</p>
+    <p class="order-num">Order ${orderNum} &mdash; Total: ${totalFormatted}</p>
+    <table>
+      <thead><tr><th>Item</th><th class="right">Qty</th><th class="right">Total</th></tr></thead>
+      <tbody>
+        ${orderData.lineItems.map((li) => `<tr>
+          <td>${li.productName}${li.unitLabel ? ` <span style="color:#9e9890;font-size:12px;">/ ${li.unitLabel}</span>` : ""}</td>
+          <td class="right">${li.quantity}</td>
+          <td class="right">$${(li.lineTotalInCents / 100).toFixed(2)}</td>
+        </tr>`).join("")}
+        <tr class="total-row"><td colspan="2">Total</td><td class="right">${totalFormatted}</td></tr>
+      </tbody>
+    </table>
+    <div class="cta">
+      <a href="${claimUrl}">${claimToken ? "Track your order" : "View order"}</a>
+    </div>
+  </div>
+  <div class="footer">
+    Questions? Just reply to this email. &nbsp;&middot;&nbsp; <a href="${unsubscribeUrl}">Unsubscribe</a>
+  </div>
+</div>
+</body></html>`;
+
+  await sendEmail({
+    to: customerEmail,
+    subject: `Order ${orderNum} confirmed — Jack Pine Farm`,
+    text: textBody,
+    html: htmlBody,
+  });
+
+  // ── Owner notification (fire-and-forget) ─────────────────────────────────
+  const notifyEmail = process.env.ORDER_NOTIFICATION_EMAIL ?? process.env.CONTACT_TO_EMAIL;
+  if (notifyEmail) {
+    sendEmail({
+      to: notifyEmail,
+      subject: `New order received — ${orderNum} from ${customerName}`,
+      text: [
+        `New order received on Jack Pine Farm store.`,
+        ``,
+        `Order: ${orderNum}`,
+        `Customer: ${customerName} (${customerEmail})`,
+        `Payment: Cash at Pickup`,
+        `Total: ${totalFormatted}`,
+        ``,
+        `Items:`,
+        ...orderData.lineItems.map((li) => `  ${li.productName} × ${li.quantity} — $${(li.lineTotalInCents / 100).toFixed(2)}`),
+      ].join("\n"),
+      html: [
+        `<p><strong>New order received</strong> on Jack Pine Farm store.</p>`,
+        `<p><strong>Order:</strong> ${orderNum}<br>`,
+        `<strong>Customer:</strong> ${customerName} (${customerEmail})<br>`,
+        `<strong>Payment:</strong> Cash at Pickup<br>`,
+        `<strong>Total:</strong> ${totalFormatted}</p>`,
+        `<ul>${orderData.lineItems.map((li) => `<li>${li.productName} × ${li.quantity} — $${(li.lineTotalInCents / 100).toFixed(2)}</li>`).join("")}</ul>`,
+      ].join("\n"),
+    }).catch((err: unknown) => console.warn("[Cash order] Owner notification email failed:", err));
+  }
 
   res.status(201).json({ ...order, items });
 });

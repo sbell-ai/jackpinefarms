@@ -238,6 +238,34 @@ router.post("/webhooks/stripe", async (req, res): Promise<void> => {
         html: htmlBody,
       });
       console.log(`Order ${order.id} created from Stripe session ${stripeSessionId} | email: ${emailResult.provider}${emailResult.sent ? "" : " (stub)"}`);
+
+      // ── Owner notification (fire-and-forget) ───────────────────────────
+      const notifyEmail = process.env.ORDER_NOTIFICATION_EMAIL ?? process.env.CONTACT_TO_EMAIL;
+      if (notifyEmail) {
+        sendEmail({
+          to: notifyEmail,
+          subject: `New order received — ${orderNum} from ${pending.customerName}`,
+          text: [
+            `New order received on Jack Pine Farm store.`,
+            ``,
+            `Order: ${orderNum}`,
+            `Customer: ${pending.customerName} (${pending.customerEmail})`,
+            `Payment: Stripe (deposit paid)`,
+            `Total: ${totalFormatted}`,
+            ``,
+            `Items:`,
+            ...lineItems.map((li) => `  ${li.productName} × ${li.quantity} — $${(li.lineTotalInCents / 100).toFixed(2)}`),
+          ].join("\n"),
+          html: [
+            `<p><strong>New order received</strong> on Jack Pine Farm store.</p>`,
+            `<p><strong>Order:</strong> ${orderNum}<br>`,
+            `<strong>Customer:</strong> ${pending.customerName} (${pending.customerEmail})<br>`,
+            `<strong>Payment:</strong> Stripe (deposit paid)<br>`,
+            `<strong>Total:</strong> ${totalFormatted}</p>`,
+            `<ul>${lineItems.map((li) => `<li>${li.productName} × ${li.quantity} — $${(li.lineTotalInCents / 100).toFixed(2)}</li>`).join("")}</ul>`,
+          ].join("\n"),
+        }).catch((err: unknown) => console.warn("[Webhook] Owner notification email failed:", err));
+      }
     } else {
       console.warn(`No pending checkout found for Stripe session ${stripeSessionId}`);
     }
