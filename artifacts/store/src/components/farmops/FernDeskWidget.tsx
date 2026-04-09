@@ -1,5 +1,11 @@
 import { useEffect } from "react";
 
+declare global {
+  interface Window {
+    Ferndesk?: (cmd: string, opts?: { widgetId: string }) => void;
+  }
+}
+
 export default function FerndeskWidget() {
   useEffect(() => {
     if (!document.getElementById("ferndesk-sdk")) {
@@ -9,12 +15,12 @@ export default function FerndeskWidget() {
       script.async = true;
       document.body.appendChild(script);
       script.onload = () => {
-        (window as any).Ferndesk?.("init", {
+        window.Ferndesk?.("init", {
           widgetId: "widget_01KNRS8BRMHNEWWZX76ME7X27N"
         });
       };
     } else {
-      (window as any).Ferndesk?.("init", {
+      window.Ferndesk?.("init", {
         widgetId: "widget_01KNRS8BRMHNEWWZX76ME7X27N"
       });
     }
