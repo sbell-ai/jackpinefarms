@@ -4,6 +4,8 @@ import { eq, desc, count, inArray, ilike, or } from "drizzle-orm";
 import { db, customersTable, ordersTable, orderEventsTable } from "@workspace/db";
 import { requirePlatformAdmin } from "../middlewares/require-platform-admin.js";
 import * as z from "zod";
+import crypto from "node:crypto";
+import { sendEmail } from "../lib/email.js";
 
 const router: IRouter = Router();
 
@@ -235,6 +237,44 @@ router.patch("/admin/customers/:id", requirePlatformAdmin, async (req, res): Pro
     .where(eq(ordersTable.customerId, id));
 
   res.json({ ...updated, orderCount: Number(orderCount?.value ?? 0) });
+});
+
+router.post("/admin/customers/:id/send-setup-email", requirePlatformAdmin, async (req, res): Promise<void> => {
+  const id = Number(req.params.id);
+  if (isNaN(id)) { res.status(400).json({ error: "Invalid id" }); return; }
+
+  const [customer] = await db
+    .select({ id: customersTable.id, email: customersTable.email, name: customersTable.name, passwordHash: customersTable.passwordHash })
+    .from(customersTable)
+    .where(eq(customersTable.id, id))
+    .limit(1);
+
+  if (!customer) { res.status(404).json({ error: "Customer not found" }); return; }
+  if (!customer.email) { res.status(400).json({ error: "Customer has no email address" }); return; }
+
+  const token = crypto.randomBytes(32).toString("hex");
+  const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
+
+  await db.update(customersTable)
+    .set({ resetToken: token, resetTokenExpiresAt: expiresAt })
+    .where(eq(customersTable.id, id));
+
+  const storeBaseUrl = process.env.STORE_BASE_URL ?? "";
+  const setupUrl = `${storeBaseUrl}/auth/reset-password?token=${token}`;
+  const isFirstSetup = !customer.passwordHash;
+
+  await sendEmail({
+    to: customer.email,
+    subject: isFirstSetup ? "Set up your Jack Pine Farm account" : "Reset your Jack Pine Farm password",
+    text: isFirstSetup
+      ? `Hi ${customer.name},\n\nAn account has been created for you at Jack Pine Farm. Click the link below to set your password and activate your account (valid for 24 hours):\n\n${setupUrl}\n\n— Jack Pine Farm`
+      : `Hi ${customer.name},\n\nClick the link below to reset your password (valid for 24 hours):\n\n${setupUrl}\n\n— Jack Pine Farm`,
+    html: isFirstSetup
+      ? `<p>Hi ${customer.name},</p><p>An account has been created for you at Jack Pine Farm. Click the link below to set your password and activate your account (valid for 24 hours):</p><p><a href="${setupUrl}">${setupUrl}</a></p><p>— Jack Pine Farm</p>`
+      : `<p>Hi ${customer.name},</p><p>Click the link below to reset your password (valid for 24 hours):</p><p><a href="${setupUrl}">${setupUrl}</a></p><p>— Jack Pine Farm</p>`,
+  });
+
+  res.json({ message: "Setup email sent" });
 });
 
 router.delete("/admin/customers/:id", requirePlatformAdmin, async (req, res): Promise<void> => {

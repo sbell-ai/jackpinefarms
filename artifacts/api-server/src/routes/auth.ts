@@ -254,7 +254,14 @@ router.post("/auth/forgot-password", resetLimiter, async (req, res): Promise<voi
       .set({ resetToken: token, resetTokenExpiresAt: expiresAt })
       .where(eq(customersTable.id, customer.id));
 
-    req.log.info({ customerId: customer.id }, "[EMAIL STUB] Password reset email would be sent");
+    const storeBaseUrl = process.env.STORE_BASE_URL ?? "";
+    const resetUrl = `${storeBaseUrl}/auth/reset-password?token=${token}`;
+    await sendEmail({
+      to: customer.email!,
+      subject: "Reset your Jack Pine Farm password",
+      text: `Hi ${customer.name},\n\nClick the link below to reset your password (valid for 1 hour):\n\n${resetUrl}\n\nIf you didn't request this, you can ignore this email.\n\n— Jack Pine Farm`,
+      html: `<p>Hi ${customer.name},</p><p>Click the link below to reset your password (valid for 1 hour):</p><p><a href="${resetUrl}">${resetUrl}</a></p><p>If you didn't request this, you can ignore this email.</p><p>— Jack Pine Farm</p>`,
+    });
   }
 
   res.json({ message: "If an account with that email exists, a reset link has been sent." });

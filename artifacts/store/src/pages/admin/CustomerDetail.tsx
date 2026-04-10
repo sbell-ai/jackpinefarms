@@ -98,6 +98,7 @@ export default function AdminCustomerDetail() {
   const [editPhone, setEditPhone] = useState("");
   const [editPhoneError, setEditPhoneError] = useState("");
   const [editNotes, setEditNotes] = useState("");
+  const [sendingSetup, setSendingSetup] = useState(false);
 
   const { data: customer, isLoading, isError } = useAdminGetCustomer(customerId, {
     query: { queryKey: getAdminGetCustomerQueryKey(customerId) },
@@ -113,6 +114,23 @@ export default function AdminCustomerDetail() {
       onError: (e: unknown) => toast({ title: "Error", description: getApiErrMsg(e), variant: "destructive" }),
     },
   });
+
+  async function handleSendSetupEmail() {
+    if (!customer?.email) {
+      toast({ title: "No email", description: "This customer has no email address on file.", variant: "destructive" });
+      return;
+    }
+    setSendingSetup(true);
+    try {
+      const res = await fetch(`/api/admin/customers/${customerId}/send-setup-email`, { method: "POST" });
+      if (!res.ok) { const d = await res.json(); throw new Error(d.error ?? "Failed to send email"); }
+      toast({ title: "Setup email sent", description: `An account setup link was sent to ${customer.email}.` });
+    } catch (e: unknown) {
+      toast({ title: "Error", description: (e as Error).message, variant: "destructive" });
+    } finally {
+      setSendingSetup(false);
+    }
+  }
 
   const deleteCustomer = useAdminDeleteCustomer({
     mutation: {
@@ -157,6 +175,14 @@ export default function AdminCustomerDetail() {
         </Link>
         <h1 className="text-2xl font-bold text-foreground">{customer.name ?? customer.email}</h1>
         <div className="ml-auto flex items-center gap-2">
+          <Button
+            size="sm"
+            variant="outline"
+            disabled={sendingSetup || !customer.email}
+            onClick={handleSendSetupEmail}
+          >
+            {sendingSetup ? "Sending…" : "Send Setup Email"}
+          </Button>
           <Button
             size="sm"
             variant="outline"
