@@ -48,6 +48,7 @@ export default function Profile() {
 
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
+  const [phoneError, setPhoneError] = useState("");
 
   useEffect(() => {
     if (session?.id) {
@@ -64,9 +65,13 @@ export default function Profile() {
 
   const handleUpdateProfile = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (phone.length < 10) {
+      setPhoneError("Phone number must be at least 10 digits");
+      return;
+    }
     try {
       await updateProfileMutation.mutateAsync({
-        data: { name, phone: phone || null }
+        data: { name, phone }
       });
     } catch (err) {}
   };
@@ -122,17 +127,19 @@ export default function Profile() {
               </div>
               <div className="space-y-1.5">
                 <label className="text-sm font-bold text-foreground">Phone</label>
-                <input 
-                  type="tel" 
+                <input
+                  type="tel"
                   value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
+                  onChange={(e) => { setPhone(e.target.value); setPhoneError(""); }}
                   className="w-full px-4 py-2.5 rounded-xl bg-background border border-border focus:ring-2 focus:border-primary transition-all"
+                  required
                 />
+                {phoneError && <p className="text-sm text-destructive mt-1">{phoneError}</p>}
               </div>
               
               <button 
                 type="submit"
-                disabled={updateProfileMutation.isPending || (name === session.name && phone === (session.phone || ""))}
+                disabled={updateProfileMutation.isPending || phone.length < 10 || (name === session.name && phone === (session.phone || ""))}
                 className="w-full mt-4 py-3 rounded-xl bg-primary text-white font-bold hover:bg-primary/90 transition-all disabled:opacity-50"
               >
                 {updateProfileMutation.isPending ? <Loader2 className="w-5 h-5 animate-spin mx-auto" /> : "Save Changes"}

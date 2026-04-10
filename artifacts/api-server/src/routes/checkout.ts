@@ -16,6 +16,7 @@ import {
 import { CreateStripeCheckoutBody, CreateCashOrderBody } from "@workspace/api-zod";
 import type Stripe from "stripe";
 import { sendEmail } from "../lib/email.js";
+import { sendSms } from "../lib/sms.js";
 
 const router: IRouter = Router();
 
@@ -516,6 +517,16 @@ router.post("/checkout/cash", async (req, res): Promise<void> => {
     console.log(`[Cash order DEBUG] customer email result: sent=${result.sent} provider=${result.provider}${result.error ? ` error=${result.error}` : ""}`);
   } catch (err: unknown) {
     console.error(`[Cash order DEBUG] customer email threw:`, err);
+  }
+
+  // ── Customer SMS confirmation (fire-and-forget) ──────────────────────────
+  if (customerPhone) {
+    sendSms({
+      to: customerPhone,
+      body: `Your order ${orderNum} is confirmed — Cash at Pickup. Thank you! – Jack Pine Farm`,
+    }).catch((err: unknown) =>
+      console.warn("[Cash order] Customer SMS failed:", err)
+    );
   }
 
   // ── Owner notification (fire-and-forget) ─────────────────────────────────

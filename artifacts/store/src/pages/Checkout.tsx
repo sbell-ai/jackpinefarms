@@ -1,13 +1,14 @@
 import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
-import { 
-  useGetCart, getGetCartQueryKey, 
+import {
+  useGetCart, getGetCartQueryKey,
   useAuthMe, getAuthMeQueryKey,
   useCreateStripeCheckout,
   useCreateCashOrder,
   useListPublicPickupEvents,
   useApplyCartCoupon,
   useRemoveCartCoupon,
+  useAuthUpdateProfile,
 } from "@workspace/api-client-react";
 import { useSiteImage } from "@/lib/useSiteImage";
 import type { Cart, ApplyCartCouponResult } from "@workspace/api-client-react";
@@ -109,6 +110,7 @@ export default function Checkout() {
 
   const stripeMutation = useCreateStripeCheckout();
   const cashMutation = useCreateCashOrder();
+  const updateProfileMutation = useAuthUpdateProfile();
 
   const { register, handleSubmit, formState: { errors }, reset } = useForm<CheckoutForm>({
     resolver: zodResolver(checkoutSchema)
@@ -153,6 +155,10 @@ export default function Checkout() {
         window.location.href = res.checkoutUrl;
       } else {
         const res = await cashMutation.mutateAsync({ data: payload });
+        if (!session?.phone && data.phone) {
+          updateProfileMutation.mutate({ data: { phone: data.phone } });
+          queryClient.invalidateQueries({ queryKey: getAuthMeQueryKey() });
+        }
         queryClient.invalidateQueries({ queryKey: getGetCartQueryKey() });
         setLocation(`/order-confirmation?id=${res.id}`);
       }
@@ -228,7 +234,7 @@ export default function Checkout() {
                   <div className="space-y-2 md:col-span-2">
                     <label className="text-sm font-bold text-foreground">Phone Number</label>
                     <input type="tel" {...register("phone")} placeholder="(555) 123-4567" className="w-full px-4 py-3 rounded-xl bg-background border border-border focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all" />
-                    <p className="text-xs text-muted-foreground">Required to coordinate local pickup</p>
+                    <p className="text-xs text-muted-foreground">Your phone number is used to send order confirmation and pickup notifications via SMS.</p>
                     {errors.phone && <p className="text-destructive text-xs font-medium">{errors.phone.message}</p>}
                   </div>
 

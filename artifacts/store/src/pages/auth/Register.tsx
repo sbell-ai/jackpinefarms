@@ -16,6 +16,7 @@ export default function Register() {
   const [password, setPassword] = useState("");
   const [passwordError, setPasswordError] = useState("");
   const [phone, setPhone] = useState("");
+  const [phoneError, setPhoneError] = useState("");
   
   const redirectTo = new URLSearchParams(window.location.search).get("redirect") ?? "/account";
 
@@ -41,6 +42,10 @@ export default function Register() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email || !password || !name) return;
+    if (phone.length < 10) {
+      setPhoneError("Phone number must be at least 10 digits");
+      return;
+    }
     const result = validatePassword(password);
     if (!result.valid) {
       setPasswordError(result.message);
@@ -48,7 +53,7 @@ export default function Register() {
     }
     try {
       await registerMutation.mutateAsync({
-        data: { name, email, password, phone: phone || null }
+        data: { name, email, password, phone }
       });
     } catch (err) {
       // Error is caught by mutation state
@@ -103,19 +108,22 @@ export default function Register() {
             </div>
 
             <div className="space-y-2">
-              <label className="text-sm font-bold text-foreground">Phone (Optional)</label>
+              <label className="text-sm font-bold text-foreground">Phone Number</label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-muted-foreground">
                   <Phone className="w-5 h-5" />
                 </div>
-                <input 
-                  type="tel" 
+                <input
+                  type="tel"
                   value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
+                  onChange={(e) => { setPhone(e.target.value); setPhoneError(""); }}
                   className="w-full pl-12 pr-4 py-3 rounded-xl bg-background border border-border focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
                   placeholder="(555) 123-4567"
+                  required
                 />
               </div>
+              <p className="text-xs text-muted-foreground">Your phone number is used to send order confirmation and pickup notifications via SMS.</p>
+              {phoneError && <p className="text-sm text-destructive mt-1">{phoneError}</p>}
             </div>
 
             <div className="space-y-2">
@@ -151,7 +159,7 @@ export default function Register() {
 
             <button 
               type="submit"
-              disabled={registerMutation.isPending || !email || !password || !name || !isPasswordValid}
+              disabled={registerMutation.isPending || !email || !password || !name || !isPasswordValid || phone.length < 10}
               className="w-full flex justify-center items-center gap-2 py-3.5 rounded-xl bg-primary text-white font-bold hover:bg-primary/90 transition-all shadow-md hover:shadow-lg disabled:opacity-50 mt-2"
             >
               {registerMutation.isPending ? <Loader2 className="w-5 h-5 animate-spin" /> : "Create Account"}

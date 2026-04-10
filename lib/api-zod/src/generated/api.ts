@@ -624,7 +624,7 @@ export const AuthRegisterBody = zod.object({
   email: zod.string().email(),
   password: zod.string().min(authRegisterBodyPasswordMin),
   name: zod.string().min(1),
-  phone: zod.string().nullish(),
+  phone: zod.string().min(10, "Phone number is required"),
 });
 
 /**
@@ -664,7 +664,7 @@ export const AuthMeResponse = zod.object({
  */
 export const AuthUpdateProfileBody = zod.object({
   name: zod.string().optional(),
-  phone: zod.string().nullish(),
+  phone: zod.string().min(10, "Phone number is required"),
 });
 
 export const AuthUpdateProfileResponse = zod.object({

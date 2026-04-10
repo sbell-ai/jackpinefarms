@@ -27,7 +27,8 @@
       "Bash(node_modules/.bin/vitest run:*)",
       "Bash(printf 'n\\\\n')",
       "Bash(find:*)",
-      "Bash(npx tsc:*)"
+      "Bash(npx tsc:*)",
+      "Bash(printenv)"
     ]
   }
 }

@@ -3,6 +3,7 @@ import { eq, lt, sql } from "drizzle-orm";
 import { db, ordersTable, stripePendingCheckoutsTable, customerCartsTable, couponsTable, farmopsTenantsTable } from "@workspace/db";
 import { createOrderFromData, generateClaimToken } from "./checkout.js";
 import { sendEmail } from "../lib/email.js";
+import { sendSms } from "../lib/sms.js";
 import { getStripe } from "../lib/farmops-stripe.js";
 
 const router: IRouter = Router();
@@ -238,6 +239,15 @@ router.post("/webhooks/stripe", async (req, res): Promise<void> => {
         html: htmlBody,
       });
       console.log(`Order ${order.id} created from Stripe session ${stripeSessionId} | email: ${emailResult.provider}${emailResult.sent ? "" : " (stub)"}`);
+
+      if (order.customerPhone) {
+        sendSms({
+          to: order.customerPhone,
+          body: `Your order #${order.id} is confirmed — Cash at Pickup. Thank you! – Jack Pine Farm`,
+        }).catch((err: unknown) =>
+          console.warn("[Stripe order] Customer SMS failed:", err)
+        );
+      }
 
       // ── Owner notification (fire-and-forget) ───────────────────────────
       const notifyEmail = process.env.ORDER_NOTIFICATION_EMAIL ?? process.env.CONTACT_TO_EMAIL;
