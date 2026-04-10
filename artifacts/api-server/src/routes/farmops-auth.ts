@@ -57,6 +57,7 @@ const RegisterBody = z.object({
   ownerName: z.string().min(2).max(100),
   email:     z.string().email(),
   password:  z.string().min(8, "Password must be at least 8 characters"),
+  phone:     z.string().min(10, "Phone number is required"),
 });
 
 const LoginBody = z.object({
@@ -97,7 +98,7 @@ router.post("/farmops/auth/register", registerLimiter, async (req, res): Promise
     return;
   }
 
-  const { farmName, slug, ownerName, email, password } = parsed.data;
+  const { farmName, slug, ownerName, email, password, phone } = parsed.data;
 
   // Check slug uniqueness
   const [existingTenant] = await db
@@ -147,6 +148,7 @@ router.post("/farmops/auth/register", registerLimiter, async (req, res): Promise
       email: email.toLowerCase(),
       passwordHash,
       name: ownerName,
+      phone,
       role: "owner",
       verificationToken,
     })
@@ -200,6 +202,7 @@ router.post("/farmops/auth/register", registerLimiter, async (req, res): Promise
       id: user.id,
       email: user.email,
       name: user.name,
+      phone: user.phone ?? null,
       role: user.role,
       emailVerified: user.emailVerified,
     },
@@ -340,6 +343,7 @@ router.get("/farmops/auth/me", async (req, res): Promise<void> => {
       id: user.id,
       email: user.email,
       name: user.name,
+      phone: user.phone ?? null,
       role: user.role,
       emailVerified: user.emailVerified,
     },

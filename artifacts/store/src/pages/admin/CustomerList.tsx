@@ -40,6 +40,7 @@ function NewCustomerModal({ onClose }: { onClose: () => void }) {
     const errs: Record<string, string> = {};
     if (!form.name.trim()) errs.name = "Name is required";
     if (form.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) errs.email = "Invalid email";
+    if (!form.phone.trim() || form.phone.trim().length < 10) errs.phone = "Phone is required (min 10 digits)";
     return errs;
   }
 
@@ -52,7 +53,7 @@ function NewCustomerModal({ onClose }: { onClose: () => void }) {
       data: {
         name: form.name.trim(),
         email: form.email.trim() || undefined,
-        phone: form.phone.trim() || undefined,
+        phone: form.phone.trim(),
         notes: form.notes.trim() || undefined,
       },
     });

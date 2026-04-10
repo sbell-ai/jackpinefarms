@@ -96,6 +96,7 @@ export default function AdminCustomerDetail() {
   const [editName, setEditName] = useState("");
   const [editEmail, setEditEmail] = useState("");
   const [editPhone, setEditPhone] = useState("");
+  const [editPhoneError, setEditPhoneError] = useState("");
   const [editNotes, setEditNotes] = useState("");
 
   const { data: customer, isLoading, isError } = useAdminGetCustomer(customerId, {
@@ -212,8 +213,9 @@ export default function AdminCustomerDetail() {
                 <Input type="email" value={editEmail} onChange={(e) => setEditEmail(e.target.value)} className="text-sm h-8" />
               </div>
               <div>
-                <label className="block text-xs text-muted-foreground mb-1">Phone</label>
-                <Input value={editPhone} onChange={(e) => setEditPhone(e.target.value)} className="text-sm h-8" />
+                <label className="block text-xs text-muted-foreground mb-1">Phone <span className="text-red-500">*</span></label>
+                <Input value={editPhone} onChange={(e) => { setEditPhone(e.target.value); setEditPhoneError(""); }} className="text-sm h-8" required />
+                {editPhoneError && <p className="text-xs text-red-500 mt-1">{editPhoneError}</p>}
               </div>
               <div>
                 <label className="block text-xs text-muted-foreground mb-1">Notes</label>
@@ -223,15 +225,21 @@ export default function AdminCustomerDetail() {
                 <Button
                   size="sm"
                   disabled={updateCustomer.isPending}
-                  onClick={() => updateCustomer.mutate({
-                    id: customerId,
-                    data: {
-                      name: editName || undefined,
-                      email: editEmail || null,
-                      phone: editPhone || null,
-                      notes: editNotes || null,
-                    },
-                  })}
+                  onClick={() => {
+                    if (editPhone.trim().length < 10) {
+                      setEditPhoneError("Phone is required (min 10 digits)");
+                      return;
+                    }
+                    updateCustomer.mutate({
+                      id: customerId,
+                      data: {
+                        name: editName || undefined,
+                        email: editEmail || null,
+                        phone: editPhone,
+                        notes: editNotes || null,
+                      },
+                    });
+                  }}
                 >
                   {updateCustomer.isPending ? "Saving…" : "Save"}
                 </Button>

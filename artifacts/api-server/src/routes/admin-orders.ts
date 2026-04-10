@@ -7,6 +7,7 @@ import { AdminListOrdersQueryParams, AdminGetOrderParams } from "@workspace/api-
 import { getOrderWithItems } from "./orders.js";
 import { buildOrderItems } from "./checkout.js";
 import { createStripeInvoice } from "../lib/stripe-invoice.js";
+import { sendSms } from "../lib/sms.js";
 import * as z from "zod";
 
 const router: IRouter = Router();
@@ -31,7 +32,7 @@ const CreateAdminOrderBody = z.object({
   customerId: z.number().int().positive().optional(),
   customerName: z.string().min(1, "Customer name is required"),
   customerEmail: z.string().email().optional(),
-  customerPhone: z.string().optional(),
+  customerPhone: z.string().min(10, "Phone number is required"),
   notes: z.string().optional(),
 });
 
@@ -314,6 +315,21 @@ router.patch("/admin/orders/:id/status", requirePlatformAdmin, async (req, res):
     : `Status changed from ${existing.status} to ${parsed.data.status}`;
 
   await db.insert(orderEventsTable).values({ orderId: id, eventType: "status_change", body: noteBody });
+
+  // ── Customer SMS notification (fire-and-forget) ───────────────────────────
+  const storeBaseUrl = process.env.STORE_BASE_URL ?? "";
+  const orderUrl = `${storeBaseUrl}/account/orders/${id}`;
+  const SMS_MESSAGES: Partial<Record<string, string>> = {
+    pickup_assigned: `Your order #${id} has been assigned to a pickup event. View details: ${orderUrl} – Jack Pine Farm`,
+    invoice_sent:    `Your invoice for order #${id} is ready. View details: ${orderUrl} – Jack Pine Farm`,
+    fulfilled:       `Your order #${id} has been fulfilled. Thank you! View details: ${orderUrl} – Jack Pine Farm`,
+    cancelled:       `Your order #${id} has been cancelled. Please contact us if you have questions. – Jack Pine Farm`,
+  };
+  const smsBody = SMS_MESSAGES[parsed.data.status];
+  if (smsBody && existing.customerPhone) {
+    sendSms({ to: existing.customerPhone, body: smsBody })
+      .catch((err: unknown) => console.warn("[admin-orders] Customer SMS failed:", err));
+  }
 
   const order = await getOrderWithItems(id);
   res.json(order);

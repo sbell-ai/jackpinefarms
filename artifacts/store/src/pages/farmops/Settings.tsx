@@ -60,6 +60,8 @@ export default function FarmOpsSettings() {
 
   // ── Profile state ──
   const [profileName, setProfileName] = useState("");
+  const [profilePhone, setProfilePhone] = useState("");
+  const [profilePhoneError, setProfilePhoneError] = useState("");
   const [profileSaving, setProfileSaving] = useState(false);
 
   // ── Password state ──
@@ -75,6 +77,7 @@ export default function FarmOpsSettings() {
     if (session) {
       setFarmName(session.tenant?.name ?? "");
       setProfileName(session.user?.name ?? "");
+      setProfilePhone(session.user?.phone ?? "");
     }
   }, [session]);
 
@@ -108,13 +111,17 @@ export default function FarmOpsSettings() {
   // ── Save profile name ──
   const saveProfile = async () => {
     if (!profileName.trim()) return;
+    if (profilePhone.trim().length < 10) {
+      setProfilePhoneError("Phone number must be at least 10 digits");
+      return;
+    }
     setProfileSaving(true);
     try {
       const res = await fetch("/api/farmops/settings/profile", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify({ name: profileName.trim() }),
+        body: JSON.stringify({ name: profileName.trim(), phone: profilePhone.trim() }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Failed to save");
@@ -264,6 +271,20 @@ export default function FarmOpsSettings() {
             />
           </div>
           <div className="space-y-1">
+            <label className="text-xs font-medium text-slate-500">Phone number</label>
+            <input
+              type="tel"
+              value={profilePhone}
+              onChange={(e) => { setProfilePhone(e.target.value); setProfilePhoneError(""); }}
+              placeholder="(555) 123-4567"
+              className={inputCls}
+            />
+            <p className="text-xs text-slate-400">
+              Your phone number is used to send order confirmation and pickup notifications via SMS.
+            </p>
+            {profilePhoneError && <p className="text-xs text-red-500 mt-1">{profilePhoneError}</p>}
+          </div>
+          <div className="space-y-1">
             <label className="text-xs font-medium text-slate-500">Email</label>
             <input
               value={session?.user?.email ?? ""}
@@ -274,7 +295,7 @@ export default function FarmOpsSettings() {
           </div>
           <button
             onClick={saveProfile}
-            disabled={!profileName.trim() || profileSaving}
+            disabled={!profileName.trim() || profilePhone.trim().length < 10 || profileSaving}
             className={btnPrimary}
           >
             {profileSaving ? "Saving…" : "Save Profile"}

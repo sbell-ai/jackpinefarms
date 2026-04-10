@@ -24,6 +24,8 @@ export default function FarmOpsRegister() {
   const [slugEdited, setSlugEdited] = useState(false);
   const [ownerName, setOwnerName] = useState("");
   const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
+  const [phoneError, setPhoneError] = useState("");
   const [password, setPassword] = useState("");
   const [passwordError, setPasswordError] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -51,13 +53,17 @@ export default function FarmOpsRegister() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+    if (phone.length < 10) {
+      setPhoneError("Phone number must be at least 10 digits");
+      return;
+    }
     const strength = validatePassword(password);
     if (!strength.valid) {
       setPasswordError(strength.message);
       return;
     }
     try {
-      await register.mutateAsync({ farmName, slug, ownerName, email, password });
+      await register.mutateAsync({ farmName, slug, ownerName, email, password, phone });
       setLocation("/farmops/verify-email");
     } catch (err: any) {
       setError(err?.error ?? err?.message ?? "Registration failed. Please try again.");
@@ -145,6 +151,22 @@ export default function FarmOpsRegister() {
             </div>
 
             <div>
+              <label className={label}>Phone number</label>
+              <input
+                type="tel"
+                className={field}
+                placeholder="(555) 123-4567"
+                value={phone}
+                onChange={(e) => { setPhone(e.target.value); setPhoneError(""); }}
+                required
+              />
+              <p className="text-xs text-slate-400 mt-1">
+                Your phone number is used to send order confirmation and pickup notifications via SMS.
+              </p>
+              {phoneError && <p className="text-xs text-red-600 mt-1">{phoneError}</p>}
+            </div>
+
+            <div>
               <label className={label}>Password</label>
               <PasswordInput
                 variant="farmops"
@@ -171,7 +193,7 @@ export default function FarmOpsRegister() {
 
             <button
               type="submit"
-              disabled={register.isPending || !password || !isPasswordValid}
+              disabled={register.isPending || !password || !isPasswordValid || phone.length < 10}
               className="w-full flex items-center justify-center gap-2 py-3.5 rounded-xl bg-emerald-700 text-white font-semibold hover:bg-emerald-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
             >
               {register.isPending ? (

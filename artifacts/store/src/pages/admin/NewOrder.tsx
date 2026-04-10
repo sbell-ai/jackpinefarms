@@ -177,12 +177,17 @@ export default function AdminNewOrder() {
   const handleCustomerNext = useCallback((e: React.FormEvent) => {
     e.preventDefault();
     if (selectedCustomer) {
+      if (!selectedCustomer.phone || selectedCustomer.phone.length < 10) {
+        setCustomerErrors({ phone: "This customer has no phone number on file. Please update their profile before creating an order." });
+        return;
+      }
+      setCustomerErrors({});
       createOrder.mutate({
         data: {
           customerId: selectedCustomer.id,
           customerName: selectedCustomer.name,
           customerEmail: selectedCustomer.email ?? undefined,
-          customerPhone: selectedCustomer.phone ?? undefined,
+          customerPhone: selectedCustomer.phone,
         },
       });
       return;
@@ -192,13 +197,16 @@ export default function AdminNewOrder() {
     if (newCustomer.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(newCustomer.email)) {
       errs.email = "Invalid email address";
     }
+    if (!newCustomer.phone.trim() || newCustomer.phone.trim().length < 10) {
+      errs.phone = "Phone number is required (min 10 digits)";
+    }
     if (Object.keys(errs).length > 0) { setCustomerErrors(errs); return; }
     setCustomerErrors({});
     createCustomer.mutate({
       data: {
         name: newCustomer.name.trim(),
         email: newCustomer.email.trim() || undefined,
-        phone: newCustomer.phone.trim() || undefined,
+        phone: newCustomer.phone.trim(),
         notes: newCustomer.notes.trim() || undefined,
       },
     });
@@ -275,6 +283,7 @@ export default function AdminNewOrder() {
 
             {/* Selected customer card */}
             {selectedCustomer && (
+              <div className="space-y-2">
               <div className="flex items-center justify-between rounded-md bg-green-50 border border-green-200 px-4 py-3">
                 <div>
                   <div className="text-sm font-medium text-foreground">{selectedCustomer.name}</div>
@@ -288,6 +297,8 @@ export default function AdminNewOrder() {
                 >
                   Change
                 </button>
+              </div>
+              {customerErrors.phone && <p className="text-xs text-red-500">{customerErrors.phone}</p>}
               </div>
             )}
 
@@ -364,14 +375,16 @@ export default function AdminNewOrder() {
                   <p className="text-xs text-muted-foreground mt-1">Required to send a Stripe payment link.</p>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-foreground mb-1">Phone <span className="text-xs text-muted-foreground">(optional)</span></label>
+                  <label className="block text-sm font-medium text-foreground mb-1">Phone <span className="text-red-500">*</span></label>
                   <input
                     type="tel"
                     value={newCustomer.phone}
                     onChange={(e) => setNewCustomer((c) => ({ ...c, phone: e.target.value }))}
                     className="w-full px-3 py-2 border border-border rounded-md bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary"
                     placeholder="555-555-5555"
+                    required
                   />
+                  {customerErrors.phone && <p className="text-xs text-red-500 mt-1">{customerErrors.phone}</p>}
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-foreground mb-1">Order Notes <span className="text-xs text-muted-foreground">(optional)</span></label>

@@ -26,6 +26,7 @@ export const farmopsUsersTable = pgTable(
     email:                text("email").notNull(),
     passwordHash:         text("password_hash"),
     name:                 text("name").notNull(),
+    phone:                text("phone"),
     role:                 farmopsUserRoleEnum("role").notNull().default("member"),
     emailVerified:        boolean("email_verified").notNull().default(false),
     verificationToken:    text("verification_token"),

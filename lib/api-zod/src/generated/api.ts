@@ -285,7 +285,7 @@ export const AdminCreateOrderBody = zod.object({
   customerId: zod.number().optional(),
   customerName: zod.string(),
   customerEmail: zod.string().email().optional(),
-  customerPhone: zod.string().optional(),
+  customerPhone: zod.string().min(10, "Phone number is required"),
   notes: zod.string().optional(),
 });
 
@@ -551,7 +551,7 @@ export const AdminUpdateOrderParams = zod.object({
 export const AdminUpdateOrderBody = zod.object({
   customerName: zod.string().optional(),
   customerEmail: zod.string().email().optional(),
-  customerPhone: zod.string().optional(),
+  customerPhone: zod.string().min(10, "Phone number is required").optional(),
   notes: zod.string().nullish(),
   pickupEventId: zod.number().nullish(),
 });

@@ -107,6 +107,7 @@ export default function AdminOrderDetail() {
   const [editName, setEditName] = useState("");
   const [editEmail, setEditEmail] = useState("");
   const [editPhone, setEditPhone] = useState("");
+  const [editPhoneError, setEditPhoneError] = useState("");
   const [editNotes, setEditNotes] = useState("");
   const [editPickupEventId, setEditPickupEventId] = useState<number | null | undefined>(undefined);
 
@@ -369,7 +370,13 @@ export default function AdminOrderDetail() {
               </div>
               <div>
                 <label className="block text-xs text-muted-foreground mb-1">Phone</label>
-                <Input value={editPhone} onChange={(e) => setEditPhone(e.target.value)} className="text-sm h-8" />
+                <Input
+                  value={editPhone}
+                  onChange={(e) => { setEditPhone(e.target.value); setEditPhoneError(""); }}
+                  className="text-sm h-8"
+                  required
+                />
+                {editPhoneError && <p className="text-xs text-red-500 mt-1">{editPhoneError}</p>}
               </div>
               <div>
                 <label className="block text-xs text-muted-foreground mb-1">Notes</label>
@@ -398,16 +405,22 @@ export default function AdminOrderDetail() {
                 <Button
                   size="sm"
                   disabled={updateOrder.isPending}
-                  onClick={() => updateOrder.mutate({
-                    id: orderId,
-                    data: {
-                      customerName: editName || undefined,
-                      customerEmail: editEmail || undefined,
-                      customerPhone: editPhone || undefined,
-                      notes: editNotes || null,
-                      pickupEventId: editPickupEventId,
-                    },
-                  })}
+                  onClick={() => {
+                    if (editPhone.trim().length < 10) {
+                      setEditPhoneError("Phone number must be at least 10 digits");
+                      return;
+                    }
+                    updateOrder.mutate({
+                      id: orderId,
+                      data: {
+                        customerName: editName || undefined,
+                        customerEmail: editEmail || undefined,
+                        customerPhone: editPhone,
+                        notes: editNotes || null,
+                        pickupEventId: editPickupEventId,
+                      },
+                    });
+                  }}
                 >
                   {updateOrder.isPending ? "Saving…" : "Save"}
                 </Button>

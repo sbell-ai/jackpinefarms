@@ -16,6 +16,7 @@ interface FarmopsUser {
   id: number;
   email: string;
   name: string;
+  phone: string | null;
   role: string;
   emailVerified: boolean;
 }
@@ -50,6 +51,7 @@ export function useFarmopsRegister() {
       ownerName: string;
       email: string;
       password: string;
+      phone: string;
     }) =>
       apiFetch("/api/farmops/auth/register", {
         method: "POST",

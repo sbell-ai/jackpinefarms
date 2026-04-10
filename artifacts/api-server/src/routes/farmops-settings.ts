@@ -43,6 +43,7 @@ router.patch(
 
 const profileBody = z.object({
   name: z.string().min(1, "Name is required").max(100),
+  phone: z.string().min(10, "Phone number is required"),
 });
 
 router.patch(
@@ -58,9 +59,9 @@ router.patch(
     const userId = req.farmopsUser!.id;
     const [updated] = await db
       .update(farmopsUsersTable)
-      .set({ name: parsed.data.name })
+      .set({ name: parsed.data.name, phone: parsed.data.phone })
       .where(eq(farmopsUsersTable.id, userId))
-      .returning({ id: farmopsUsersTable.id, name: farmopsUsersTable.name });
+      .returning({ id: farmopsUsersTable.id, name: farmopsUsersTable.name, phone: farmopsUsersTable.phone });
 
     res.json(updated);
   },
