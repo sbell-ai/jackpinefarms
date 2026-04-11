@@ -9,6 +9,7 @@ import {
 } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
+import { farmopsTenantsTable } from "./farmops-tenants";
 
 export const pickupEventStatusEnum = pgEnum("pickup_event_status", [
   "scheduled",
@@ -18,6 +19,7 @@ export const pickupEventStatusEnum = pgEnum("pickup_event_status", [
 
 export const pickupEventsTable = pgTable("pickup_events", {
   id: serial("id").primaryKey(),
+  tenantId: integer("tenant_id").references(() => farmopsTenantsTable.id, { onDelete: "set null" }),
   name: text("name").notNull(),
   scheduledAt: timestamp("scheduled_at", { withTimezone: true }).notNull(),
   locationNotes: text("location_notes"),

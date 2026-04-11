@@ -15,6 +15,7 @@ import {
   ListProductsQueryParams,
 } from "@workspace/api-zod";
 import { requirePlatformAdmin } from "../middlewares/require-platform-admin.js";
+import { resolveStoreTenant } from "../middlewares/resolve-store-tenant.js";
 import { generateUnsubscribeToken } from "./notify-me.js";
 import { sendEmail } from "../lib/email.js";
 import sanitizeHtml from "sanitize-html";
@@ -87,14 +88,20 @@ async function triggerNotifyMeEmails(productId: number, productName: string): Pr
   console.log(`[NOTIFY-ME] Processed ${subscribers.length} restock notification(s) for "${productName}" (${sentCount} delivered, provider: ${sentCount > 0 ? "live" : "stub"})`);
 }
 
-router.get("/products", async (req, res): Promise<void> => {
+router.get("/products", resolveStoreTenant, async (req, res): Promise<void> => {
+  const tenantId = req.storeTenant!.id;
   const queryParsed = ListProductsQueryParams.safeParse(req.query);
   const includeDisabled = queryParsed.success && queryParsed.data.includeDisabled === true;
 
   const products = await db
     .select()
     .from(productsTable)
-    .where(includeDisabled ? undefined : ne(productsTable.availability, "disabled"))
+    .where(
+      and(
+        eq(productsTable.tenantId, tenantId),
+        includeDisabled ? undefined : ne(productsTable.availability, "disabled")
+      )
+    )
     .orderBy(asc(productsTable.displayOrder), asc(productsTable.id));
 
   const productIds = products.map((p) => p.id);
@@ -155,7 +162,8 @@ router.post("/products", requirePlatformAdmin, async (req, res): Promise<void> =
   res.status(201).json(GetProductResponse.parse({ ...product, images: [] }));
 });
 
-router.get("/products/:id", async (req, res): Promise<void> => {
+router.get("/products/:id", resolveStoreTenant, async (req, res): Promise<void> => {
+  const tenantId = req.storeTenant!.id;
   const rawId = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
   const params = GetProductParams.safeParse({ id: parseInt(rawId, 10) });
   if (!params.success) {
@@ -166,7 +174,7 @@ router.get("/products/:id", async (req, res): Promise<void> => {
   const [product] = await db
     .select()
     .from(productsTable)
-    .where(eq(productsTable.id, params.data.id));
+    .where(and(eq(productsTable.id, params.data.id), eq(productsTable.tenantId, tenantId)));
 
   if (!product) {
     res.status(404).json({ error: "Product not found" });

@@ -1,6 +1,6 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { Settings, User, Lock, Building2 } from "lucide-react";
+import { Settings, User, Lock, Building2, ImageIcon } from "lucide-react";
 import { useLocation } from "wouter";
 import { useToast } from "@/hooks/use-toast";
 import { useFarmopsMe } from "@/hooks/useFarmopsAuth";
@@ -58,6 +58,10 @@ export default function FarmOpsSettings() {
   const [farmName, setFarmName] = useState("");
   const [farmNameSaving, setFarmNameSaving] = useState(false);
 
+  // ── Branding state ──
+  const [logoUploading, setLogoUploading] = useState(false);
+  const logoInputRef = useRef<HTMLInputElement>(null);
+
   // ── Profile state ──
   const [profileName, setProfileName] = useState("");
   const [profilePhone, setProfilePhone] = useState("");
@@ -80,6 +84,71 @@ export default function FarmOpsSettings() {
       setProfilePhone(session.user?.phone ?? "");
     }
   }, [session]);
+
+  const logoObjectKey = session?.tenant?.logoObjectKey ?? null;
+  const logoUrl = logoObjectKey ? `/api/storage${logoObjectKey}` : null;
+
+  // ── Upload logo ──
+  const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setLogoUploading(true);
+    try {
+      // Step 1: Get presigned upload URL
+      const urlRes = await fetch("/api/farmops/storage/request-upload-url", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ contentType: file.type, size: file.size }),
+      });
+      if (!urlRes.ok) throw new Error("Failed to get upload URL");
+      const { uploadURL, objectPath } = await urlRes.json();
+
+      // Step 2: Upload directly to GCS
+      const uploadRes = await fetch(uploadURL, {
+        method: "PUT",
+        headers: { "Content-Type": file.type },
+        body: file,
+      });
+      if (!uploadRes.ok) throw new Error("Upload failed");
+
+      // Step 3: Save objectPath on the tenant
+      const saveRes = await fetch("/api/farmops/settings/tenant", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ logoObjectKey: objectPath }),
+      });
+      if (!saveRes.ok) {
+        const data = await saveRes.json();
+        throw new Error(data.error ?? "Failed to save logo");
+      }
+      toast({ title: "Logo updated" });
+      qc.invalidateQueries({ queryKey: ["farmops-me"] });
+    } catch (e: unknown) {
+      toast({ title: "Error", description: e instanceof Error ? e.message : "Upload failed", variant: "destructive" });
+    } finally {
+      setLogoUploading(false);
+      if (logoInputRef.current) logoInputRef.current.value = "";
+    }
+  };
+
+  // ── Remove logo ──
+  const removeLogo = async () => {
+    try {
+      const res = await fetch("/api/farmops/settings/tenant", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ logoObjectKey: null }),
+      });
+      if (!res.ok) throw new Error("Failed to remove logo");
+      toast({ title: "Logo removed" });
+      qc.invalidateQueries({ queryKey: ["farmops-me"] });
+    } catch (e: unknown) {
+      toast({ title: "Error", description: e instanceof Error ? e.message : "Failed", variant: "destructive" });
+    }
+  };
 
   // ── Save farm name ──
   const saveFarmName = async () => {
@@ -246,6 +315,65 @@ export default function FarmOpsSettings() {
             <p className="text-xs text-slate-400">
               Signed in as <span className="font-medium capitalize">{session?.user?.role}</span> —
               contact your account owner to update farm settings.
+            </p>
+          )}
+        </div>
+      </SectionCard>
+
+      {/* ── Storefront Branding ────────────────────────────────────────────── */}
+      <SectionCard
+        icon={<ImageIcon className="w-5 h-5" />}
+        title="Storefront Branding"
+        subtitle={
+          isOwner
+            ? "Upload your farm's logo for your public storefront."
+            : "Only the account owner can edit branding."
+        }
+      >
+        <div className="space-y-4">
+          {logoUrl && (
+            <div className="flex items-center gap-3">
+              <img
+                src={logoUrl}
+                alt="Current logo"
+                className="h-16 w-16 object-contain rounded-lg border border-slate-200 p-2 bg-white"
+              />
+              <span className="text-sm text-slate-500">Current logo</span>
+            </div>
+          )}
+          {!logoUrl && (
+            <p className="text-sm text-slate-400">No logo uploaded yet.</p>
+          )}
+          {isOwner && (
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => logoInputRef.current?.click()}
+                disabled={logoUploading}
+                className={btnPrimary}
+              >
+                {logoUploading ? "Uploading…" : logoUrl ? "Replace Logo" : "Upload Logo"}
+              </button>
+              <input
+                ref={logoInputRef}
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                className="hidden"
+                onChange={handleLogoUpload}
+              />
+              {logoUrl && (
+                <button
+                  onClick={removeLogo}
+                  className="text-sm text-red-500 hover:text-red-700 transition-colors"
+                >
+                  Remove
+                </button>
+              )}
+            </div>
+          )}
+          {!isOwner && (
+            <p className="text-xs text-slate-400">
+              Signed in as <span className="font-medium capitalize">{session?.user?.role}</span> —
+              contact your account owner to update branding.
             </p>
           )}
         </div>

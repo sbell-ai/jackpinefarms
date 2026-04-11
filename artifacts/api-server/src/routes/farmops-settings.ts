@@ -13,7 +13,8 @@ const router: IRouter = Router();
 // Update tenant-level settings. Owner only.
 
 const tenantBody = z.object({
-  name: z.string().min(1, "Farm name is required").max(100),
+  name: z.string().min(1, "Farm name is required").max(100).optional(),
+  logoObjectKey: z.string().nullable().optional(),
 });
 
 router.patch(
@@ -28,11 +29,24 @@ router.patch(
     }
 
     const tenantId = req.farmopsTenant!.id;
+    const updates: Record<string, unknown> = {};
+    if (parsed.data.name !== undefined) updates.name = parsed.data.name;
+    if (parsed.data.logoObjectKey !== undefined) updates.logoObjectKey = parsed.data.logoObjectKey;
+
+    if (Object.keys(updates).length === 0) {
+      res.status(400).json({ error: "No fields to update" });
+      return;
+    }
+
     const [updated] = await db
       .update(farmopsTenantsTable)
-      .set({ name: parsed.data.name })
+      .set(updates)
       .where(eq(farmopsTenantsTable.id, tenantId))
-      .returning({ id: farmopsTenantsTable.id, name: farmopsTenantsTable.name });
+      .returning({
+        id: farmopsTenantsTable.id,
+        name: farmopsTenantsTable.name,
+        logoObjectKey: farmopsTenantsTable.logoObjectKey,
+      });
 
     res.json(updated);
   },

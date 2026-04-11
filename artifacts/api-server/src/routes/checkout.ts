@@ -17,10 +17,11 @@ import { CreateStripeCheckoutBody, CreateCashOrderBody } from "@workspace/api-zo
 import type Stripe from "stripe";
 import { sendEmail } from "../lib/email.js";
 import { sendSms } from "../lib/sms.js";
+import { resolveStoreTenant } from "../middlewares/resolve-store-tenant.js";
 
 const router: IRouter = Router();
 
-async function validatePickupEvent(pickupEventId: number): Promise<{ error: string } | null> {
+async function validatePickupEvent(pickupEventId: number, tenantId: number): Promise<{ error: string } | null> {
   const now = new Date();
   const [event] = await db
     .select()
@@ -28,6 +29,7 @@ async function validatePickupEvent(pickupEventId: number): Promise<{ error: stri
     .where(
       and(
         eq(pickupEventsTable.id, pickupEventId),
+        eq(pickupEventsTable.tenantId, tenantId),
         eq(pickupEventsTable.isPublic, true),
         eq(pickupEventsTable.status, "scheduled"),
         gt(pickupEventsTable.scheduledAt, now)
@@ -195,7 +197,8 @@ export async function createOrderFromData(data: {
   return order;
 }
 
-router.post("/checkout/stripe", async (req, res): Promise<void> => {
+router.post("/checkout/stripe", resolveStoreTenant, async (req, res): Promise<void> => {
+  const tenantId = req.storeTenant!.id;
   const parsed = CreateStripeCheckoutBody.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: parsed.error.message });
@@ -218,7 +221,7 @@ router.post("/checkout/stripe", async (req, res): Promise<void> => {
 
   const { name: customerName, email: customerEmail, phone: customerPhone, notes, pickupEventId } = parsed.data;
 
-  const pickupError = await validatePickupEvent(pickupEventId);
+  const pickupError = await validatePickupEvent(pickupEventId, tenantId);
   if (pickupError) {
     res.status(400).json(pickupError);
     return;
@@ -294,11 +297,9 @@ router.post("/checkout/stripe", async (req, res): Promise<void> => {
 
   const checkoutSession = await stripe.checkout.sessions.create(sessionParams);
 
-  const stripeTenantId: number | null = session.farmopsTenantId ?? null;
-
   await db.insert(stripePendingCheckoutsTable).values({
     stripeSessionId: checkoutSession.id,
-    tenantId: stripeTenantId,
+    tenantId,
     customerId: session.customerId ?? null,
     customerName,
     customerEmail,
@@ -313,7 +314,9 @@ router.post("/checkout/stripe", async (req, res): Promise<void> => {
   res.json({ checkoutUrl: checkoutSession.url, sessionId: checkoutSession.id });
 });
 
-router.post("/checkout/cash", async (req, res): Promise<void> => {
+router.post("/checkout/cash", resolveStoreTenant, async (req, res): Promise<void> => {
+  const tenantId = req.storeTenant!.id;
+  const farmName = req.storeTenant!.name;
   const parsed = CreateCashOrderBody.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: parsed.error.message });
@@ -344,7 +347,7 @@ router.post("/checkout/cash", async (req, res): Promise<void> => {
 
   const { name: customerName, email: customerEmail, phone: customerPhone, notes, pickupEventId } = parsed.data;
 
-  const pickupErrorCash = await validatePickupEvent(pickupEventId);
+  const pickupErrorCash = await validatePickupEvent(pickupEventId, tenantId);
   if (pickupErrorCash) {
     res.status(400).json(pickupErrorCash);
     return;
@@ -368,10 +371,8 @@ router.post("/checkout/cash", async (req, res): Promise<void> => {
   const claimToken = isGuest ? generateClaimToken() : null;
   const claimTokenExpiresAt = claimToken ? new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) : null; // 30 days
 
-  const cashTenantId: number | null = session.farmopsTenantId ?? null;
-
   const order = await createOrderFromData({
-    tenantId: cashTenantId,
+    tenantId,
     customerId: session.customerId ?? null,
     customerName,
     customerEmail,
@@ -427,7 +428,7 @@ router.post("/checkout/cash", async (req, res): Promise<void> => {
   const textBody = [
     `Hi ${customerName},`,
     ``,
-    `Thank you for your order from Jack Pine Farm! We'll collect payment at pickup.`,
+    `Thank you for your order from ${farmName}! We'll collect payment at pickup.`,
     ``,
     `Order ${orderNum}`,
     `─────────────────────────`,
@@ -441,7 +442,7 @@ router.post("/checkout/cash", async (req, res): Promise<void> => {
     ``,
     `Questions? Reply to this email.`,
     ``,
-    `— Jack Pine Farm`,
+    `— ${farmName}`,
     ``,
     `To unsubscribe: ${unsubscribeUrl}`,
   ].join("\n");
@@ -469,7 +470,7 @@ router.post("/checkout/cash", async (req, res): Promise<void> => {
 <body>
 <div class="wrap">
   <div class="header">
-    <h1>Jack Pine Farm</h1>
+    <h1>${farmName}</h1>
     <p>Order received — Cash at Pickup</p>
   </div>
   <div class="body">
@@ -510,7 +511,7 @@ router.post("/checkout/cash", async (req, res): Promise<void> => {
   try {
     const result = await sendEmail({
       to: customerEmail,
-      subject: `Order ${orderNum} confirmed — Jack Pine Farm`,
+      subject: `Order ${orderNum} confirmed — ${farmName}`,
       text: textBody,
       html: htmlBody,
     });
@@ -523,7 +524,7 @@ router.post("/checkout/cash", async (req, res): Promise<void> => {
   if (customerPhone) {
     sendSms({
       to: customerPhone,
-      body: `Your order ${orderNum} is confirmed — Cash at Pickup. Thank you! – Jack Pine Farm`,
+      body: `Your order ${orderNum} is confirmed — Cash at Pickup. Thank you! – ${farmName}`,
     }).catch((err: unknown) =>
       console.warn("[Cash order] Customer SMS failed:", err)
     );
@@ -537,7 +538,7 @@ router.post("/checkout/cash", async (req, res): Promise<void> => {
       to: notifyEmail,
       subject: `New order received — ${orderNum} from ${customerName}`,
       text: [
-        `New order received on Jack Pine Farm store.`,
+        `New order received on ${farmName} store.`,
         ``,
         `Order: ${orderNum}`,
         `Customer: ${customerName} (${customerEmail})`,
@@ -548,7 +549,7 @@ router.post("/checkout/cash", async (req, res): Promise<void> => {
         ...orderData.lineItems.map((li) => `  ${li.productName} × ${li.quantity} — $${(li.lineTotalInCents / 100).toFixed(2)}`),
       ].join("\n"),
       html: [
-        `<p><strong>New order received</strong> on Jack Pine Farm store.</p>`,
+        `<p><strong>New order received</strong> on ${farmName} store.</p>`,
         `<p><strong>Order:</strong> ${orderNum}<br>`,
         `<strong>Customer:</strong> ${customerName} (${customerEmail})<br>`,
         `<strong>Payment:</strong> Cash at Pickup<br>`,

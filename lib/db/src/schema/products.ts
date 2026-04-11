@@ -9,6 +9,7 @@ import {
 } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
+import { farmopsTenantsTable } from "./farmops-tenants";
 
 export const productTypeEnum = pgEnum("product_type", [
   "eggs_chicken",
@@ -28,6 +29,7 @@ export const pricingTypeEnum = pgEnum("pricing_type", ["unit", "deposit"]);
 
 export const productsTable = pgTable("products", {
   id: serial("id").primaryKey(),
+  tenantId: integer("tenant_id").references(() => farmopsTenantsTable.id, { onDelete: "set null" }),
   name: text("name").notNull(),
   description: text("description").notNull(),
   productType: productTypeEnum("product_type").notNull(),

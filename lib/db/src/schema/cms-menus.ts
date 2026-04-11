@@ -1,8 +1,10 @@
 import { pgTable, serial, integer, text, boolean, timestamp } from "drizzle-orm/pg-core";
+import { farmopsTenantsTable } from "./farmops-tenants";
 
 export const cmsMenusTable = pgTable("cms_menus", {
   id: serial("id").primaryKey(),
-  name: text("name").notNull().unique(),
+  tenantId: integer("tenant_id").references(() => farmopsTenantsTable.id, { onDelete: "cascade" }),
+  name: text("name").notNull(),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true })
     .notNull()

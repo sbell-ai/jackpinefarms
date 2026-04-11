@@ -3,6 +3,7 @@ import { Router, type IRouter } from "express";
 import { eq, count, inArray, isNull, and, not, gt, gte } from "drizzle-orm";
 import { db, pickupEventsTable, ordersTable, orderEventsTable, orderItemsTable, preorderBatchesTable } from "@workspace/db";
 import { requirePlatformAdmin } from "../middlewares/require-platform-admin.js";
+import { resolveStoreTenant } from "../middlewares/resolve-store-tenant.js";
 import { createStripeInvoice } from "../lib/stripe-invoice.js";
 import * as z from "zod";
 
@@ -60,13 +61,15 @@ async function getEventWithCount(eventId: number) {
   return { ...event, assignedOrderCount: Number(assignedOrderCount) };
 }
 
-router.get("/pickup-events", async (req, res): Promise<void> => {
+router.get("/pickup-events", resolveStoreTenant, async (req, res): Promise<void> => {
+  const tenantId = req.storeTenant!.id;
   const now = new Date();
   const events = await db
     .select()
     .from(pickupEventsTable)
     .where(
       and(
+        eq(pickupEventsTable.tenantId, tenantId),
         eq(pickupEventsTable.isPublic, true),
         not(eq(pickupEventsTable.status, "cancelled")),
         gte(pickupEventsTable.scheduledAt, now)

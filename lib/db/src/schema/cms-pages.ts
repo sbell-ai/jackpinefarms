@@ -5,10 +5,12 @@ import {
   text,
   timestamp,
 } from "drizzle-orm/pg-core";
+import { farmopsTenantsTable } from "./farmops-tenants";
 
 export const cmsPagesTable = pgTable("cms_pages", {
   id: serial("id").primaryKey(),
-  slug: text("slug").notNull().unique(),
+  tenantId: integer("tenant_id").references(() => farmopsTenantsTable.id, { onDelete: "cascade" }),
+  slug: text("slug").notNull(),
   title: text("title").notNull(),
   contentHtml: text("content_html").notNull().default(""),
   status: text("status").notNull().default("draft").$type<"draft" | "published">(),

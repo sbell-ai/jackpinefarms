@@ -1,7 +1,8 @@
 import { Router, type IRouter } from "express";
-import { eq, asc } from "drizzle-orm";
+import { eq, asc, and, isNull } from "drizzle-orm";
 import { db, cmsMenusTable, cmsMenuItemsTable } from "@workspace/db";
 import { requirePlatformAdmin } from "../middlewares/require-platform-admin.js";
+import { resolveStoreTenant } from "../middlewares/resolve-store-tenant.js";
 import { z } from "zod";
 
 const router: IRouter = Router();
@@ -103,14 +104,29 @@ router.put("/admin/cms/menus/:name/items", requirePlatformAdmin, async (req, res
 
 // ── Public route ──────────────────────────────────────────────────────────────
 
-// GET /cms/menus/:name — public, visible items only
-router.get("/cms/menus/:name", async (req, res) => {
-  const [menu] = await db
-    .select()
-    .from(cmsMenusTable)
-    .where(eq(cmsMenusTable.name, req.params["name"] as string));
+// GET /cms/menus/:name — public, visible items only, tenant-scoped with platform fallback
+router.get("/cms/menus/:name", resolveStoreTenant, async (req, res) => {
+  const name = req.params["name"] as string;
+  const tenantId = req.storeTenant?.id ?? null;
+
+  // Try tenant-specific menu first, then fall back to platform menu (tenant_id IS NULL)
+  let menu: typeof cmsMenusTable.$inferSelect | undefined;
+  if (tenantId != null) {
+    [menu] = await db
+      .select()
+      .from(cmsMenusTable)
+      .where(and(eq(cmsMenusTable.name, name), eq(cmsMenusTable.tenantId, tenantId)));
+  }
   if (!menu) {
-    res.status(404).json({ error: "Menu not found" });
+    [menu] = await db
+      .select()
+      .from(cmsMenusTable)
+      .where(and(eq(cmsMenusTable.name, name), isNull(cmsMenusTable.tenantId)));
+  }
+
+  // No menu found → return empty rather than 404 (new tenants have no menus yet)
+  if (!menu) {
+    res.json({ id: null, name, tenantId, items: [] });
     return;
   }
 
@@ -120,8 +136,7 @@ router.get("/cms/menus/:name", async (req, res) => {
     .where(eq(cmsMenuItemsTable.menuId, menu.id))
     .orderBy(asc(cmsMenuItemsTable.sortOrder));
 
-  const visible = items.filter((i) => !i.isHidden);
-  res.json({ ...menu, items: visible });
+  res.json({ ...menu, items: items.filter((i) => !i.isHidden) });
 });
 
 export default router;

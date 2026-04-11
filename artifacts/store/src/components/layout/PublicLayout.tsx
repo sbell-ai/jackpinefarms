@@ -20,14 +20,19 @@ function NavLink({ href, label, className }: { href: string; label: string; clas
 import { Menu, X, ShoppingCart, Leaf, User } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
-import { useGetCart, getGetCartQueryKey, useAuthMe, getAuthMeQueryKey, useGetPublicCmsMenu, getGetPublicCmsMenuQueryKey } from "@workspace/api-client-react";
-import { useSiteImage } from "@/lib/useSiteImage";
+import { useQuery } from "@tanstack/react-query";
+import { useGetCart, getGetCartQueryKey, useAuthMe, getAuthMeQueryKey } from "@workspace/api-client-react";
+import { useStoreTenant, useStoreHeaders } from "@/lib/StoreTenantContext";
+import { useTenantSiteImage } from "@/lib/useTenantSiteImage";
 
 export function PublicLayout({ children }: { children: ReactNode }) {
   const [isScrolled, setIsScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const logoUrl = useSiteImage("image.logo", `${import.meta.env.BASE_URL}images/logo.png`);
+  const logoUrl = useTenantSiteImage("image.logo", `${import.meta.env.BASE_URL}images/logo.png`);
   const [location] = useLocation();
+  const { tenant, slug } = useStoreTenant();
+  const storeHeaders = useStoreHeaders();
+  const farmName = tenant?.name ?? "Jack Pine Farm";
 
   const { data: cart } = useGetCart({
     query: { queryKey: getGetCartQueryKey() }
@@ -58,8 +63,14 @@ export function PublicLayout({ children }: { children: ReactNode }) {
     { href: "/contact", label: "Contact" },
   ];
 
-  const { data: headerMenu } = useGetPublicCmsMenu("header", {
-    query: { queryKey: getGetPublicCmsMenuQueryKey("header"), retry: false },
+  const { data: headerMenu } = useQuery<{ items: { url: string; label: string }[] } | null>({
+    queryKey: ["cms-menu-header", slug ?? ""],
+    queryFn: async () => {
+      const res = await fetch("/api/cms/menus/header", { headers: storeHeaders });
+      if (!res.ok) return null;
+      return res.json();
+    },
+    retry: false,
   });
 
   const navLinks =
@@ -85,12 +96,12 @@ export function PublicLayout({ children }: { children: ReactNode }) {
               <div className="w-10 h-10 flex items-center justify-center group-hover:scale-105 transition-transform">
                 <img 
                   src={logoUrl} 
-                  alt="Jack Pine Farm Logo" 
+                  alt={`${farmName} Logo`}
                   className="w-full h-full object-contain"
                 />
               </div>
               <span className="font-sans text-xl text-primary tracking-tight hidden sm:block">
-                Jack Pine Farm
+                {farmName}
               </span>
             </Link>
 
@@ -215,12 +226,12 @@ export function PublicLayout({ children }: { children: ReactNode }) {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-12 mb-12">
             <div>
               <div className="flex items-center gap-3 mb-6">
-                <img 
-                  src={logoUrl} 
-                  alt="Jack Pine Farm Logo" 
+                <img
+                  src={logoUrl}
+                  alt={`${farmName} Logo`}
                   className="w-10 h-10 object-contain brightness-0 invert"
                 />
-                <span className="font-serif text-2xl font-bold">Jack Pine Farm</span>
+                <span className="font-serif text-2xl font-bold">{farmName}</span>
               </div>
               <p className="text-primary-foreground/80 max-w-sm leading-relaxed">
                 Pastured poultry and farm-fresh eggs from our farm to your table. Raised right, with care.
@@ -252,7 +263,7 @@ export function PublicLayout({ children }: { children: ReactNode }) {
           </div>
           
           <div className="pt-8 border-t border-primary-foreground/10 text-center md:text-left text-sm text-primary-foreground/60 flex flex-col md:flex-row justify-between items-center gap-4">
-            <p>© {new Date().getFullYear()} Jack Pine Farm. All rights reserved.</p>
+            <p>© {new Date().getFullYear()} {farmName}. All rights reserved.</p>
             <div className="flex items-center gap-4">
               <Link href="/policies/sales-returns" className="hover:text-white transition-colors">Sales &amp; Returns Policy</Link>
               <span className="text-primary-foreground/30">·</span>

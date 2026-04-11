@@ -22,6 +22,7 @@ declare global {
       farmopsTenant?: FarmopsTenant;
       farmopsUser?: FarmopsUser;
       platformAdmin?: PlatformAdminRecord;
+      storeTenant?: FarmopsTenant;
     }
   }
 }

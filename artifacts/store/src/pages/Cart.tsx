@@ -10,10 +10,12 @@ import type { Cart, ApplyCartCouponResult } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { formatMoney } from "@/lib/utils";
 import { Loader2, Trash2, ArrowRight, ShoppingBag, Plus, Minus, Tag, Check, X, ChevronDown } from "lucide-react";
+import { useStoreHeaders } from "@/lib/StoreTenantContext";
 
 export default function Cart() {
   const [, setLocation] = useLocation();
   const queryClient = useQueryClient();
+  const storeHeaders = useStoreHeaders();
   
   const { data: cart, isLoading } = useGetCart({
     query: { queryKey: getGetCartQueryKey() }
@@ -31,6 +33,7 @@ export default function Cart() {
   const [couponError, setCouponError] = useState<string | null>(null);
 
   const applyMutation = useApplyCartCoupon({
+    request: { headers: storeHeaders },
     mutation: {
       onSuccess: (data: ApplyCartCouponResult) => {
         if (!data.valid) {

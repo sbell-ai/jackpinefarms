@@ -28,7 +28,12 @@
       "Bash(printf 'n\\\\n')",
       "Bash(find:*)",
       "Bash(npx tsc:*)",
-      "Bash(printenv)"
+      "Bash(printenv)",
+      "Bash(tsc --build)",
+      "Bash(tsc --noEmit)",
+      "Bash(npx tsx -e ':*)",
+      "Bash(npx drizzle-kit:*)",
+      "Bash(cat drizzle/*.sql)"
     ]
   }
 }

@@ -5,7 +5,7 @@ import crypto from "node:crypto";
 import { eq, or } from "drizzle-orm";
 import rateLimit from "express-rate-limit";
 import { z } from "zod";
-import { db, farmopsTenantsTable, farmopsUsersTable, farmopsInvitationsTable } from "@workspace/db";
+import { db, farmopsTenantsTable, farmopsUsersTable, farmopsInvitationsTable, cmsMenusTable, cmsMenuItemsTable } from "@workspace/db";
 import { and, gt, isNull } from "drizzle-orm";
 import { sendEmail } from "../lib/email.js";
 
@@ -153,6 +153,23 @@ router.post("/farmops/auth/register", registerLimiter, async (req, res): Promise
       verificationToken,
     })
     .returning();
+
+  // Create default header menu with starter nav items
+  const [headerMenu] = await db
+    .insert(cmsMenusTable)
+    .values({ name: "header", tenantId: tenant.id })
+    .returning();
+  await db.insert(cmsMenuItemsTable).values([
+    { menuId: headerMenu.id, label: "Home",    url: "/",        sortOrder: 0 },
+    { menuId: headerMenu.id, label: "Shop",    url: "/shop",    sortOrder: 1 },
+    { menuId: headerMenu.id, label: "Contact", url: "/contact", sortOrder: 2 },
+  ]);
+
+  // Enable storefront so /store/:slug is immediately accessible
+  await db
+    .update(farmopsTenantsTable)
+    .set({ storefrontEnabled: true })
+    .where(eq(farmopsTenantsTable.id, tenant.id));
 
   req.session.farmopsUserId = user.id;
   req.session.farmopsTenantId = tenant.id;
@@ -338,6 +355,7 @@ router.get("/farmops/auth/me", async (req, res): Promise<void> => {
       plan: tenant.plan,
       trialEndsAt: tenant.trialEndsAt,
       currentPeriodEndsAt: tenant.currentPeriodEndsAt,
+      logoObjectKey: tenant.logoObjectKey ?? null,
     },
     user: {
       id: user.id,

@@ -1,9 +1,10 @@
 import "../types/session.d.ts";
 import { Router, type IRouter } from "express";
-import { inArray, eq } from "drizzle-orm";
+import { inArray, eq, and } from "drizzle-orm";
 import { db, productsTable, customerCartsTable, couponsTable } from "@workspace/db";
 import { AddCartItemBody, RemoveCartItemParams } from "@workspace/api-zod";
 import rateLimit from "express-rate-limit";
+import { resolveStoreTenant } from "../middlewares/resolve-store-tenant.js";
 
 const couponLimiter = rateLimit({
   windowMs: 60 * 1000,
@@ -261,7 +262,8 @@ router.post("/cart/clear", async (req, res): Promise<void> => {
   res.json({ items: [], subtotalInCents: 0, itemCount: 0 });
 });
 
-router.post("/cart/coupon", couponLimiter, async (req, res): Promise<void> => {
+router.post("/cart/coupon", couponLimiter, resolveStoreTenant, async (req, res): Promise<void> => {
+  const tenantId = req.storeTenant!.id;
   const code = typeof req.body?.code === "string" ? req.body.code.trim().toUpperCase() : null;
   if (!code) {
     res.status(400).json({ valid: false, error: "Coupon code is required" });
@@ -276,7 +278,7 @@ router.post("/cart/coupon", couponLimiter, async (req, res): Promise<void> => {
   const [coupon] = await db
     .select()
     .from(couponsTable)
-    .where(eq(couponsTable.code, code))
+    .where(and(eq(couponsTable.code, code), eq(couponsTable.tenantId, tenantId)))
     .limit(1);
 
   if (!coupon) {

@@ -1,11 +1,12 @@
 import { useState, useEffect } from "react";
 import { useRoute, useLocation, Link } from "wouter";
-import { 
-  useGetProduct, getGetProductQueryKey,
+import {
+  useGetProduct,
   useSubscribeNotifyMe,
   useAddCartItem,
   getGetCartQueryKey
 } from "@workspace/api-client-react";
+import { useStoreHeaders, useStoreTenant } from "@/lib/StoreTenantContext";
 import { useQueryClient } from "@tanstack/react-query";
 import { formatMoney } from "@/lib/utils";
 import { Loader2, ArrowLeft, CheckCircle2, AlertCircle, ShoppingBag, Plus, Minus, ChevronLeft, ChevronRight } from "lucide-react";
@@ -21,8 +22,11 @@ export default function ProductDetail() {
   const queryClient = useQueryClient();
   const productFallback = useSiteImage("image.product_fallback", "https://images.unsplash.com/photo-1516684732162-798a0062be99?w=800&q=80");
   
+  const storeHeaders = useStoreHeaders();
+  const { slug } = useStoreTenant();
   const { data: product, isLoading, isError } = useGetProduct(id, {
-    query: { queryKey: getGetProductQueryKey(id) }
+    request: { headers: storeHeaders },
+    query: { queryKey: ["storefront-product", slug ?? "default", id] },
   });
   
   const [notifyEmail, setNotifyEmail] = useState("");

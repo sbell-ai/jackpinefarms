@@ -29,8 +29,14 @@ import farmopsSmsRouter from "./farmops-sms.js";
 import farmopsOrdersRouter from "./farmops-orders.js";
 import farmopsSettingsRouter from "./farmops-settings.js";
 import farmopsTeamRouter from "./farmops-team.js";
+import farmopsProductsRouter from "./farmops-products.js";
+import farmopsPickupEventsRouter from "./farmops-pickup-events.js";
+import farmopsCouponsRouter from "./farmops-coupons.js";
+import farmopsCmsPagesRouter from "./farmops-cms-pages.js";
+import farmopsCmsMenusRouter from "./farmops-cms-menus.js";
 import platformAdminTenantsRouter from "./platform-admin-tenants.js";
 import platformAdminDashboardRouter from "./platform-admin-dashboard.js";
+import storefrontRouter from "./storefront.js";
 
 const router: IRouter = Router();
 
@@ -64,7 +70,13 @@ router.use(farmopsSmsRouter);
 router.use(farmopsOrdersRouter);
 router.use(farmopsSettingsRouter);
 router.use(farmopsTeamRouter);
+router.use(farmopsProductsRouter);
+router.use(farmopsPickupEventsRouter);
+router.use(farmopsCouponsRouter);
+router.use(farmopsCmsPagesRouter);
+router.use(farmopsCmsMenusRouter);
 router.use(platformAdminTenantsRouter);
 router.use("/superadmin", platformAdminDashboardRouter);
+router.use(storefrontRouter);
 
 export default router;

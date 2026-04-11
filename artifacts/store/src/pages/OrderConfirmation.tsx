@@ -4,6 +4,7 @@ import { CheckCircle2, Package, MapPin, Calendar, Loader2 } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { getGetCartQueryKey } from "@workspace/api-client-react";
+import { useStoreTenant } from "@/lib/StoreTenantContext";
 
 interface OrderSummary {
   id: number;
@@ -17,6 +18,8 @@ export default function OrderConfirmation() {
   const stripeSessionId = searchParams.get("stripe_session_id");
 
   const queryClient = useQueryClient();
+  const { tenant } = useStoreTenant();
+  const farmName = tenant?.name ?? "Jack Pine Farm";
   const [order, setOrder] = useState<OrderSummary | null>(null);
   const [lookupDone, setLookupDone] = useState(false);
 
@@ -90,7 +93,7 @@ export default function OrderConfirmation() {
         
         <h1 className="text-4xl font-serif font-bold text-foreground mb-4">Order Confirmed!</h1>
         <p className="text-lg text-muted-foreground mb-8">
-          Thank you for supporting Jack Pine Farm. Your order has been successfully placed.
+          Thank you for supporting {farmName}. Your order has been successfully placed.
         </p>
 
         {isLoading ? (
@@ -114,7 +117,7 @@ export default function OrderConfirmation() {
           <div className="p-5 rounded-2xl bg-background border border-border">
             <MapPin className="w-6 h-6 text-primary mb-3" />
             <h3 className="font-bold text-sm uppercase tracking-wider mb-1">Pickup Location</h3>
-            <p className="text-muted-foreground">Jack Pine Farm<br/>(Address in email)</p>
+            <p className="text-muted-foreground">{farmName}<br/>(Address in email)</p>
           </div>
 
           <div className="p-5 rounded-2xl bg-background border border-border">

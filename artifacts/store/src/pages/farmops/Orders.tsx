@@ -11,6 +11,7 @@ import {
   PhoneCall,
 } from "lucide-react";
 import { useFarmopsMe } from "@/hooks/useFarmopsAuth";
+import FarmOpsOrderDetail from "./OrderDetail";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -519,9 +520,10 @@ export default function FarmOpsOrders() {
   return (
     <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
       {selectedOrderId !== null ? (
-        <OrderDetailView
+        <FarmOpsOrderDetail
           orderId={selectedOrderId}
           onBack={() => setSelectedOrderId(null)}
+          session={session}
         />
       ) : (
         <OrdersListView onSelect={setSelectedOrderId} />

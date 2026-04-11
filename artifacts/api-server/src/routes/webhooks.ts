@@ -111,6 +111,17 @@ router.post("/webhooks/stripe", async (req, res): Promise<void> => {
           .where(eq(customerCartsTable.customerId, pending.customerId));
       }
 
+      // Resolve farm name for email branding
+      let farmName = "Jack Pine Farm";
+      if (pending.tenantId) {
+        const [tenant] = await db
+          .select({ name: farmopsTenantsTable.name })
+          .from(farmopsTenantsTable)
+          .where(eq(farmopsTenantsTable.id, pending.tenantId))
+          .limit(1);
+        if (tenant) farmName = tenant.name;
+      }
+
       // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
       const amountDiscount: number = checkoutSession.total_details?.amount_discount ?? 0;
       if (amountDiscount > 0) {
@@ -162,7 +173,7 @@ router.post("/webhooks/stripe", async (req, res): Promise<void> => {
       const textBody = [
         `Hi ${pending.customerName},`,
         ``,
-        `Thank you for your order from Jack Pine Farm! Your deposit has been received.`,
+        `Thank you for your order from ${farmName}! Your deposit has been received.`,
         ``,
         `Order ${orderNum}`,
         `─────────────────────────`,
@@ -176,7 +187,7 @@ router.post("/webhooks/stripe", async (req, res): Promise<void> => {
         ``,
         `Questions? Reply to this email.`,
         ``,
-        `— Jack Pine Farm`,
+        `— ${farmName}`,
         ``,
         `To unsubscribe: ${unsubscribeUrl}`,
       ].join("\n");
@@ -204,7 +215,7 @@ router.post("/webhooks/stripe", async (req, res): Promise<void> => {
 <body>
 <div class="wrap">
   <div class="header">
-    <h1>Jack Pine Farm</h1>
+    <h1>${farmName}</h1>
     <p>Order confirmation</p>
   </div>
   <div class="body">
@@ -234,7 +245,7 @@ router.post("/webhooks/stripe", async (req, res): Promise<void> => {
 
       const emailResult = await sendEmail({
         to: pending.customerEmail,
-        subject: `Order ${orderNum} confirmed — Jack Pine Farm`,
+        subject: `Order ${orderNum} confirmed — ${farmName}`,
         text: textBody,
         html: htmlBody,
       });
@@ -243,7 +254,7 @@ router.post("/webhooks/stripe", async (req, res): Promise<void> => {
       if (order.customerPhone) {
         sendSms({
           to: order.customerPhone,
-          body: `Your order #${order.id} is confirmed — Cash at Pickup. Thank you! – Jack Pine Farm`,
+          body: `Your order #${order.id} is confirmed — Cash at Pickup. Thank you! – ${farmName}`,
         }).catch((err: unknown) =>
           console.warn("[Stripe order] Customer SMS failed:", err)
         );
@@ -256,7 +267,7 @@ router.post("/webhooks/stripe", async (req, res): Promise<void> => {
           to: notifyEmail,
           subject: `New order received — ${orderNum} from ${pending.customerName}`,
           text: [
-            `New order received on Jack Pine Farm store.`,
+            `New order received on ${farmName} store.`,
             ``,
             `Order: ${orderNum}`,
             `Customer: ${pending.customerName} (${pending.customerEmail})`,
@@ -267,7 +278,7 @@ router.post("/webhooks/stripe", async (req, res): Promise<void> => {
             ...lineItems.map((li) => `  ${li.productName} × ${li.quantity} — $${(li.lineTotalInCents / 100).toFixed(2)}`),
           ].join("\n"),
           html: [
-            `<p><strong>New order received</strong> on Jack Pine Farm store.</p>`,
+            `<p><strong>New order received</strong> on ${farmName} store.</p>`,
             `<p><strong>Order:</strong> ${orderNum}<br>`,
             `<strong>Customer:</strong> ${pending.customerName} (${pending.customerEmail})<br>`,
             `<strong>Payment:</strong> Stripe (deposit paid)<br>`,

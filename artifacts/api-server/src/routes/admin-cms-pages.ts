@@ -1,7 +1,8 @@
 import { Router, type IRouter } from "express";
-import { eq, desc } from "drizzle-orm";
+import { eq, desc, and, isNull } from "drizzle-orm";
 import { db, cmsPagesTable, cmsPageSeoTable } from "@workspace/db";
 import { requirePlatformAdmin } from "../middlewares/require-platform-admin.js";
+import { resolveStoreTenant } from "../middlewares/resolve-store-tenant.js";
 import { z } from "zod";
 import sanitizeHtml from "sanitize-html";
 
@@ -71,7 +72,7 @@ router.post("/admin/cms/pages", requirePlatformAdmin, async (req, res): Promise<
   const existing = await db
     .select({ id: cmsPagesTable.id })
     .from(cmsPagesTable)
-    .where(eq(cmsPagesTable.slug, slug))
+    .where(and(eq(cmsPagesTable.slug, slug), isNull(cmsPagesTable.tenantId)))
     .limit(1);
 
   if (existing.length > 0) {
@@ -133,7 +134,7 @@ router.patch("/admin/cms/pages/:id", requirePlatformAdmin, async (req, res): Pro
     const existing = await db
       .select({ id: cmsPagesTable.id })
       .from(cmsPagesTable)
-      .where(eq(cmsPagesTable.slug, updates.slug))
+      .where(and(eq(cmsPagesTable.slug, updates.slug), isNull(cmsPagesTable.tenantId)))
       .limit(1);
     if (existing.length > 0 && existing[0]!.id !== id) {
       res.status(409).json({ error: `Slug "${updates.slug}" is already in use` });
@@ -266,15 +267,27 @@ router.patch("/admin/cms/pages/:id/seo", requirePlatformAdmin, async (req, res):
   res.json(seo);
 });
 
-// Public: GET /cms/pages/:slug  (published only)
-router.get("/cms/pages/:slug", async (req, res): Promise<void> => {
+// Public: GET /cms/pages/:slug  (published only, tenant-scoped with platform fallback)
+router.get("/cms/pages/:slug", resolveStoreTenant, async (req, res): Promise<void> => {
   const slug = req.params["slug"] as string;
+  const tenantId = req.storeTenant?.id ?? null;
 
-  const [page] = await db
-    .select()
-    .from(cmsPagesTable)
-    .where(eq(cmsPagesTable.slug, slug))
-    .limit(1);
+  // Try tenant-specific page first, then fall back to platform page (tenant_id IS NULL)
+  let page: typeof cmsPagesTable.$inferSelect | undefined;
+  if (tenantId != null) {
+    [page] = await db
+      .select()
+      .from(cmsPagesTable)
+      .where(and(eq(cmsPagesTable.slug, slug), eq(cmsPagesTable.tenantId, tenantId)))
+      .limit(1);
+  }
+  if (!page) {
+    [page] = await db
+      .select()
+      .from(cmsPagesTable)
+      .where(and(eq(cmsPagesTable.slug, slug), isNull(cmsPagesTable.tenantId)))
+      .limit(1);
+  }
 
   if (!page || page.status !== "published") {
     res.status(404).json({ error: "Page not found" });

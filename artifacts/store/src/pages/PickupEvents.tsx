@@ -2,9 +2,15 @@ import { Link } from "wouter";
 import { useListPublicPickupEvents } from "@workspace/api-client-react";
 import { formatPickupDate } from "@/lib/utils";
 import { Calendar, MapPin, Users, ShoppingCart, Loader2 } from "lucide-react";
+import { useStoreHeaders, useStoreTenant } from "@/lib/StoreTenantContext";
 
 export default function PickupEventsPage() {
-  const { data: events = [], isLoading } = useListPublicPickupEvents();
+  const storeHeaders = useStoreHeaders();
+  const { slug } = useStoreTenant();
+  const { data: events = [], isLoading } = useListPublicPickupEvents({
+    request: { headers: storeHeaders },
+    query: { queryKey: ["storefront-pickup-events", slug ?? "default"] },
+  });
 
   return (
     <div className="flex-1 bg-muted/20">

@@ -6,6 +6,7 @@ import {
   timestamp,
   pgEnum,
   unique,
+  boolean,
 } from "drizzle-orm/pg-core";
 import { platformAdminsTable } from "./platform-admins";
 
@@ -46,6 +47,8 @@ export const farmopsTenantsTable = pgTable("farmops_tenants", {
   // One-time onboarding add-on
   onboardingPurchasedAt:     timestamp("onboarding_purchased_at", { withTimezone: true }),
   stripeOnboardingPaymentId: text("stripe_onboarding_payment_id"),
+  storefrontEnabled:         boolean("storefront_enabled").notNull().default(false),
+  logoObjectKey:             text("logo_object_key"),
   createdByAdminId:          integer("created_by_admin_id")
                                .references(() => platformAdminsTable.id, { onDelete: "set null" }),
   createdAt:                 timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),

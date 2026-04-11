@@ -1,11 +1,17 @@
 import { Link } from "wouter";
-import { useListProducts } from "@workspace/api-client-react";
+import { useListProducts, getListProductsQueryKey } from "@workspace/api-client-react";
 import { formatMoney, stripHtml } from "@/lib/utils";
 import { Loader2, ArrowRight } from "lucide-react";
 import { useSiteImage } from "@/lib/useSiteImage";
+import { useStoreHeaders, useStoreTenant } from "@/lib/StoreTenantContext";
 
 export default function Shop() {
-  const { data: products, isLoading } = useListProducts();
+  const storeHeaders = useStoreHeaders();
+  const { slug } = useStoreTenant();
+  const { data: products, isLoading } = useListProducts(undefined, {
+    request: { headers: storeHeaders },
+    query: { queryKey: ["storefront-products", slug ?? "default"] },
+  });
   const productFallback = useSiteImage("image.product_fallback", "https://images.unsplash.com/photo-1587486913049-53fc88980cfc?w=600&q=80");
 
   if (isLoading) {

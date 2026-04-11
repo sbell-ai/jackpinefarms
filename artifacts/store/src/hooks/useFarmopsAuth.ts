@@ -10,6 +10,7 @@ interface FarmopsTenant {
   plan: string;
   trialEndsAt: string | null;
   currentPeriodEndsAt: string | null;
+  logoObjectKey: string | null;
 }
 
 interface FarmopsUser {

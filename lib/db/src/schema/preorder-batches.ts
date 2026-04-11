@@ -9,6 +9,7 @@ import {
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 import { productsTable } from "./products";
+import { farmopsTenantsTable } from "./farmops-tenants";
 
 export const batchStatusEnum = pgEnum("batch_status", [
   "open",
@@ -18,6 +19,7 @@ export const batchStatusEnum = pgEnum("batch_status", [
 
 export const preorderBatchesTable = pgTable("preorder_batches", {
   id: serial("id").primaryKey(),
+  tenantId: integer("tenant_id").references(() => farmopsTenantsTable.id, { onDelete: "set null" }),
   productId: integer("product_id")
     .notNull()
     .references(() => productsTable.id),

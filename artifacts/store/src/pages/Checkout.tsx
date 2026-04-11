@@ -12,6 +12,7 @@ import {
 } from "@workspace/api-client-react";
 import { useSiteImage } from "@/lib/useSiteImage";
 import type { Cart, ApplyCartCouponResult } from "@workspace/api-client-react";
+import { useStoreHeaders, useStoreTenant } from "@/lib/StoreTenantContext";
 import { useQueryClient } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -34,17 +35,22 @@ export default function Checkout() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const storeHeaders = useStoreHeaders();
+  const { slug } = useStoreTenant();
   const checkoutHero = useSiteImage("image.checkout_hero", `${import.meta.env.BASE_URL}images/checkout-hero.png`);
-  
+
   const { data: cart, isLoading: isCartLoading } = useGetCart({
     query: { queryKey: getGetCartQueryKey() }
   }) as { data: Cart | undefined; isLoading: boolean };
-  
+
   const { data: session, isLoading: isSessionLoading, isError: isSessionError } = useAuthMe({
     query: { queryKey: getAuthMeQueryKey(), retry: false }
   });
 
-  const { data: pickupEvents = [] } = useListPublicPickupEvents();
+  const { data: pickupEvents = [] } = useListPublicPickupEvents({
+    request: { headers: storeHeaders },
+    query: { queryKey: ["storefront-pickup-events", slug ?? "default"] },
+  });
 
   const [paymentMethod, setPaymentMethod] = useState<'stripe' | 'cash'>('cash');
   const [gibletsUpdating, setGibletsUpdating] = useState<number | null>(null);
@@ -54,6 +60,7 @@ export default function Checkout() {
   const [couponError, setCouponError] = useState<string | null>(null);
 
   const applyMutation = useApplyCartCoupon({
+    request: { headers: storeHeaders },
     mutation: {
       onSuccess: (data: ApplyCartCouponResult) => {
         if (!data.valid) {
@@ -108,8 +115,8 @@ export default function Checkout() {
     }
   };
 
-  const stripeMutation = useCreateStripeCheckout();
-  const cashMutation = useCreateCashOrder();
+  const stripeMutation = useCreateStripeCheckout({ request: { headers: storeHeaders } });
+  const cashMutation = useCreateCashOrder({ request: { headers: storeHeaders } });
   const updateProfileMutation = useAuthUpdateProfile();
 
   const { register, handleSubmit, formState: { errors }, reset } = useForm<CheckoutForm>({

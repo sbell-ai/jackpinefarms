@@ -2,6 +2,7 @@ import { Router, type IRouter, type Request, type Response } from "express";
 import { db, siteSettingsTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
 import { requirePlatformAdmin } from "../middlewares/require-platform-admin.js";
+import { resolveStoreTenant } from "../middlewares/resolve-store-tenant.js";
 
 const router: IRouter = Router();
 
@@ -16,11 +17,15 @@ const ALLOWED_KEYS = new Set([
   "image.product_fallback",
 ]);
 
-router.get("/site-settings", async (_req: Request, res: Response) => {
+router.get("/site-settings", resolveStoreTenant, async (req: Request, res: Response) => {
   const rows = await db.select().from(siteSettingsTable);
   const result: Record<string, string> = {};
   for (const row of rows) {
     result[row.key] = row.value;
+  }
+  // Override image.logo with tenant-specific logo if uploaded
+  if (req.storeTenant?.logoObjectKey) {
+    result["image.logo"] = `/api/storage${req.storeTenant.logoObjectKey}`;
   }
   res.json(result);
 });

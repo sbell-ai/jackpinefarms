@@ -1,6 +1,6 @@
 import { ReactNode, useState } from "react";
 import { Link, useLocation } from "wouter";
-import { Menu, X, Sprout, LogOut, LayoutDashboard, DollarSign, MessageSquare, ShoppingBasket, Bird, Egg, Settings, Users } from "lucide-react";
+import { Menu, X, Sprout, LogOut, LayoutDashboard, DollarSign, MessageSquare, ShoppingBasket, Bird, Egg, Settings, Users, Package, Calendar, Tag, FileText, Navigation } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useFarmopsMe, useFarmopsLogout } from "@/hooks/useFarmopsAuth";
 import FerndeskWidget from "./FernDeskWidget";
@@ -67,6 +67,66 @@ export function FarmOpsLayout({ children }: { children: ReactNode }) {
                 >
                   <ShoppingBasket className="w-4 h-4" />
                   Orders
+                </Link>
+                <Link
+                  href="/farmops/products"
+                  className={cn(
+                    "flex items-center gap-1.5 text-sm font-medium transition-colors",
+                    location.startsWith("/farmops/products")
+                      ? "text-emerald-700"
+                      : "text-slate-600 hover:text-emerald-700"
+                  )}
+                >
+                  <Package className="w-4 h-4" />
+                  Products
+                </Link>
+                <Link
+                  href="/farmops/pickup-events"
+                  className={cn(
+                    "flex items-center gap-1.5 text-sm font-medium transition-colors",
+                    location.startsWith("/farmops/pickup-events")
+                      ? "text-emerald-700"
+                      : "text-slate-600 hover:text-emerald-700"
+                  )}
+                >
+                  <Calendar className="w-4 h-4" />
+                  Pickup Events
+                </Link>
+                <Link
+                  href="/farmops/coupons"
+                  className={cn(
+                    "flex items-center gap-1.5 text-sm font-medium transition-colors",
+                    location.startsWith("/farmops/coupons")
+                      ? "text-emerald-700"
+                      : "text-slate-600 hover:text-emerald-700"
+                  )}
+                >
+                  <Tag className="w-4 h-4" />
+                  Coupons
+                </Link>
+                <Link
+                  href="/farmops/cms-pages"
+                  className={cn(
+                    "flex items-center gap-1.5 text-sm font-medium transition-colors",
+                    location.startsWith("/farmops/cms-pages")
+                      ? "text-emerald-700"
+                      : "text-slate-600 hover:text-emerald-700"
+                  )}
+                >
+                  <FileText className="w-4 h-4" />
+                  Pages
+                </Link>
+                <Link
+                  href="/farmops/cms-menus"
+                  className={cn(
+                    "flex items-center gap-1.5 text-sm font-medium transition-colors",
+                    location.startsWith("/farmops/cms-menus")
+                      ? "text-emerald-700"
+                      : "text-slate-600 hover:text-emerald-700"
+                  )}
+                >
+                  <Navigation className="w-4 h-4" />
+                  Navigation
                 </Link>
                 <Link
                   href="/farmops/flocks"
@@ -176,6 +236,21 @@ export function FarmOpsLayout({ children }: { children: ReactNode }) {
                 </Link>
                 <Link href="/farmops/orders" className="text-sm font-medium" onClick={() => setMobileOpen(false)}>
                   Orders
+                </Link>
+                <Link href="/farmops/products" className="text-sm font-medium" onClick={() => setMobileOpen(false)}>
+                  Products
+                </Link>
+                <Link href="/farmops/pickup-events" className="text-sm font-medium" onClick={() => setMobileOpen(false)}>
+                  Pickup Events
+                </Link>
+                <Link href="/farmops/coupons" className="text-sm font-medium" onClick={() => setMobileOpen(false)}>
+                  Coupons
+                </Link>
+                <Link href="/farmops/cms-pages" className="text-sm font-medium" onClick={() => setMobileOpen(false)}>
+                  Pages
+                </Link>
+                <Link href="/farmops/cms-menus" className="text-sm font-medium" onClick={() => setMobileOpen(false)}>
+                  Navigation
                 </Link>
                 <Link href="/farmops/flocks" className="text-sm font-medium" onClick={() => setMobileOpen(false)}>
                   Flocks

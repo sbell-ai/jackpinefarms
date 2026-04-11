@@ -41,6 +41,11 @@ import FarmOpsDashboard from "./pages/farmops/Dashboard";
 import FarmOpsBilling from "./pages/farmops/Billing";
 import FarmOpsExpenses from "./pages/farmops/Expenses";
 import FarmOpsOrders from "./pages/farmops/Orders";
+import FarmOpsProducts from "./pages/farmops/Products";
+import FarmOpsPickupEvents from "./pages/farmops/PickupEvents";
+import FarmOpsCoupons from "./pages/farmops/Coupons";
+import FarmOpsCmsPages from "./pages/farmops/CmsPages";
+import FarmOpsCmsMenus from "./pages/farmops/CmsMenus";
 import FarmOpsSMS from "./pages/farmops/SMS";
 import FarmOpsFlocks from "./pages/farmops/Flocks";
 import FarmOpsEggs from "./pages/farmops/Eggs";
@@ -51,6 +56,7 @@ import FarmOpsVerifyEmail from "./pages/farmops/VerifyEmail";
 import FarmOpsForgotPassword from "./pages/farmops/ForgotPassword";
 import FarmOpsResetPassword from "./pages/farmops/ResetPassword";
 import { FarmOpsLayout } from "./components/farmops/FarmOpsLayout";
+import { StoreTenantProvider } from "./lib/StoreTenantContext";
 
 // Admin Pages
 import AdminLogin from "./pages/admin/Login";
@@ -112,6 +118,21 @@ function Router() {
       </Route>
       <Route path="/farmops/orders">
         <FarmOpsLayout><FarmOpsOrders /></FarmOpsLayout>
+      </Route>
+      <Route path="/farmops/products">
+        <FarmOpsLayout><FarmOpsProducts /></FarmOpsLayout>
+      </Route>
+      <Route path="/farmops/pickup-events">
+        <FarmOpsLayout><FarmOpsPickupEvents /></FarmOpsLayout>
+      </Route>
+      <Route path="/farmops/coupons">
+        <FarmOpsLayout><FarmOpsCoupons /></FarmOpsLayout>
+      </Route>
+      <Route path="/farmops/cms-pages">
+        <FarmOpsLayout><FarmOpsCmsPages /></FarmOpsLayout>
+      </Route>
+      <Route path="/farmops/cms-menus">
+        <FarmOpsLayout><FarmOpsCmsMenus /></FarmOpsLayout>
       </Route>
       <Route path="/farmops/sms">
         <FarmOpsLayout><FarmOpsSMS /></FarmOpsLayout>
@@ -216,6 +237,63 @@ function Router() {
       </Route>
       <Route path="/admin">
         <AdminLayout><AdminDashboard /></AdminLayout>
+      </Route>
+
+      {/* Per-tenant storefront routes — /store/:slug/* maps to the same pages
+          wrapped in StoreTenantProvider so all API calls send X-Store-Slug */}
+
+      {/* Exact /store/:slug with no sub-path — renders home */}
+      <Route path="/store/:slug">
+        {(params: Record<string, string | undefined>) => {
+          const slug = params.slug ?? "";
+          return (
+            <StoreTenantProvider slug={slug}>
+              <WouterRouter base={`/store/${slug}`}>
+                <Switch>
+                  <Route path="/"><PublicLayout><Home /></PublicLayout></Route>
+                </Switch>
+              </WouterRouter>
+            </StoreTenantProvider>
+          );
+        }}
+      </Route>
+
+      <Route path="/store/:slug/:rest*">
+        {(params: Record<string, string | undefined>) => {
+          const slug = params.slug ?? "";
+          return (
+            <StoreTenantProvider slug={slug}>
+              <WouterRouter base={`/store/${slug}`}>
+                <Switch>
+                  <Route path="/"><PublicLayout><Home /></PublicLayout></Route>
+                  <Route path="/shop"><PublicLayout><Shop /></PublicLayout></Route>
+                  <Route path="/shop/:id"><PublicLayout><ProductDetail /></PublicLayout></Route>
+                  <Route path="/cart"><PublicLayout><Cart /></PublicLayout></Route>
+                  <Route path="/checkout"><PublicLayout><Checkout /></PublicLayout></Route>
+                  <Route path="/order-confirmation"><PublicLayout><OrderConfirmation /></PublicLayout></Route>
+                  <Route path="/pickup-events"><PublicLayout><PickupEvents /></PublicLayout></Route>
+                  <Route path="/account/orders/:id"><PublicLayout><AccountOrderDetail /></PublicLayout></Route>
+                  <Route path="/account"><PublicLayout><AccountProfile /></PublicLayout></Route>
+                  <Route path="/auth/login"><PublicLayout><CustomerLogin /></PublicLayout></Route>
+                  <Route path="/auth/register"><PublicLayout><CustomerRegister /></PublicLayout></Route>
+                  <Route path="/auth/forgot-password"><PublicLayout><ForgotPassword /></PublicLayout></Route>
+                  <Route path="/auth/reset-password"><PublicLayout><ResetPassword /></PublicLayout></Route>
+                  <Route path="/auth/verify-email"><VerifyEmail /></Route>
+                  <Route path="/auth/claim-order"><ClaimOrder /></Route>
+                  <Route path="/contact"><PublicLayout><Contact /></PublicLayout></Route>
+                  <Route path="/p/:slug">
+                    {(params) => (
+                      <PublicLayout><CmsPage slug={params.slug ?? ""} /></PublicLayout>
+                    )}
+                  </Route>
+                  <Route path="/policies/sales-returns">
+                    <PublicLayout><SalesReturnsPolicy /></PublicLayout>
+                  </Route>
+                </Switch>
+              </WouterRouter>
+            </StoreTenantProvider>
+          );
+        }}
       </Route>
 
       {/* Public Storefront Routes */}

@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { eq, desc } from "drizzle-orm";
+import { eq, desc, and, isNull } from "drizzle-orm";
 import { db, couponsTable } from "@workspace/db";
 import { requirePlatformAdmin } from "../middlewares/require-platform-admin.js";
 import { logger } from "../lib/logger.js";
@@ -87,7 +87,7 @@ router.post("/admin/coupons", requirePlatformAdmin, async (req, res): Promise<vo
   const existing = await db
     .select({ id: couponsTable.id })
     .from(couponsTable)
-    .where(eq(couponsTable.code, code))
+    .where(and(eq(couponsTable.code, code), isNull(couponsTable.tenantId)))
     .limit(1);
 
   if (existing.length > 0) {
