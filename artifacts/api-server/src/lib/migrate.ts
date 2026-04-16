@@ -621,6 +621,16 @@ export async function runMigrations(): Promise<void> {
           REFERENCES platform_admins(id) ON DELETE SET NULL
     `);
 
+    // ── farmops_tenants: storefront_enabled + logo_object_key ───────────────
+    await db.execute(sql`
+      ALTER TABLE farmops_tenants
+        ADD COLUMN IF NOT EXISTS storefront_enabled BOOLEAN NOT NULL DEFAULT FALSE
+    `);
+    await db.execute(sql`
+      ALTER TABLE farmops_tenants
+        ADD COLUMN IF NOT EXISTS logo_object_key TEXT
+    `);
+
     // ── Platform admin audit log (Task #33) ──────────────────────────────────
     await db.execute(sql`
       CREATE TABLE IF NOT EXISTS platform_admin_audit_logs (
