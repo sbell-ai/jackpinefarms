@@ -60,6 +60,7 @@ export function PublicLayout({ children }: { children: ReactNode }) {
     { href: "/how-we-raise-them", label: "How We Raise Them" },
     { href: "/about", label: "Our Story" },
     { href: "/faq", label: "FAQ" },
+    { href: "/popup-market", label: "Pop-Up Market" },
     { href: "/contact", label: "Contact" },
   ];
 

@@ -20,3 +20,4 @@ export * from "./farmops-invitations";
 export * from "./platform-admins";
 export * from "./platform-admin-audit-logs";
 export * from "./farmops-sms";
+export * from "./popupMarketRequests";

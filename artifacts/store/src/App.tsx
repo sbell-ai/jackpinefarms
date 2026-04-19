@@ -8,6 +8,7 @@ import { AdminLayout } from "./components/layout/AdminLayout";
 
 // Public Pages
 import Home from "./pages/Home";
+import PopupMarket from "./pages/PopupMarket";
 import Shop from "./pages/Shop";
 import ProductDetail from "./pages/ProductDetail";
 import HowWeRaiseThem from "./pages/HowWeRaiseThem";
@@ -80,6 +81,7 @@ import AdminNewOrder from "./pages/admin/NewOrder";
 import CmsPageList from "./pages/admin/CmsPageList";
 import CmsPageForm from "./pages/admin/CmsPageForm";
 import CmsMenus from "./pages/admin/CmsMenus";
+import AdminPopupMarketMessages from "./pages/admin/PopupMarketMessages";
 
 
 const queryClient = new QueryClient({
@@ -235,6 +237,9 @@ function Router() {
       <Route path="/admin/menus">
         <AdminLayout><CmsMenus /></AdminLayout>
       </Route>
+      <Route path="/admin/messages">
+        <AdminLayout><AdminPopupMarketMessages /></AdminLayout>
+      </Route>
       <Route path="/admin">
         <AdminLayout><AdminDashboard /></AdminLayout>
       </Route>
@@ -358,6 +363,9 @@ function Router() {
       </Route>
       <Route path="/contact">
         <PublicLayout><Contact /></PublicLayout>
+      </Route>
+      <Route path="/popup-market">
+        <PublicLayout><PopupMarket /></PublicLayout>
       </Route>
       <Route path="/p/:slug">
         {(params) => (
