@@ -16,10 +16,10 @@ import {
 import { cn } from "@/lib/utils";
 
 const PRODUCT_OPTIONS = [
-  "Fresh Eggs",
+  "Fresh, Pastured Eggs",
   "Seasonal Produce",
   "Herbs & Plants",
-  "Honey & Preserves",
+  "Local Honey",
   "Pasture-Raised Meat",
   "Maple Syrup",
   "Wild Michigan Spruce Trees",
@@ -255,26 +255,6 @@ export default function PopupMarket() {
               </div>
             ))}
           </div>
-        </div>
-      </section>
-
-      {/* Service Area Map */}
-      <section className="py-20 px-4 sm:px-6 lg:px-8 bg-background">
-        <div className="max-w-3xl mx-auto text-center">
-          <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground mb-3">
-            Where we travel
-          </p>
-          <h2 className="text-3xl md:text-4xl font-serif font-bold text-foreground mb-4">
-            Our service area
-          </h2>
-          <p className="text-muted-foreground text-lg leading-relaxed mb-10">
-            We travel throughout northwest and west-central Michigan — from Cheboygan to Grand Rapids and everywhere in between.
-          </p>
-          <img
-            src="/images/mobile-market-service-area.png"
-            alt="Map of Jack Pine Farms pop-up market service area in northwest and west-central Michigan"
-            className="mx-auto w-full max-w-[600px] rounded-2xl border border-border shadow-sm"
-          />
         </div>
       </section>
 
