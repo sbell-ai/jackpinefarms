@@ -421,6 +421,14 @@ export async function runMigrations(): Promise<void> {
       )
     `));
 
+    // ── CMS tables: add tenant_id column ─────────────────────────────────────
+    await db.execute(sql.raw(
+      `ALTER TABLE cms_pages ADD COLUMN IF NOT EXISTS tenant_id INTEGER REFERENCES farmops_tenants(id) ON DELETE CASCADE`
+    ));
+    await db.execute(sql.raw(
+      `ALTER TABLE cms_menus ADD COLUMN IF NOT EXISTS tenant_id INTEGER REFERENCES farmops_tenants(id) ON DELETE CASCADE`
+    ));
+
     await db.execute(sql.raw(
       `INSERT INTO cms_menus (name) VALUES ('header'), ('footer') ON CONFLICT (name) DO NOTHING`
     ));
