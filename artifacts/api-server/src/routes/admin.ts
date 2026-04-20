@@ -6,6 +6,7 @@ import { eq } from "drizzle-orm";
 import { z } from "zod";
 import { db, platformAdminsTable } from "@workspace/db";
 import { requirePlatformAdmin } from "../middlewares/require-platform-admin.js";
+import { sendSms } from "../lib/sms.js";
 
 const router: IRouter = Router();
 
@@ -77,6 +78,21 @@ router.post("/admin/logout", async (req, res): Promise<void> => {
 router.get("/admin/me", (req, res): void => {
   res.setHeader("Cache-Control", "no-store");
   res.json({ authenticated: Boolean(req.session.platformAdminId) });
+});
+
+// ── POST /admin/sms/test ──────────────────────────────────────────────────────
+// Sends a test SMS to ADMIN_PHONE. Returns the send result.
+
+router.post("/admin/sms/test", requirePlatformAdmin, async (req, res): Promise<void> => {
+  const adminPhone = process.env.ADMIN_PHONE;
+  if (!adminPhone) {
+    res.status(400).json({ error: "ADMIN_PHONE environment variable is not set" });
+    return;
+  }
+
+  const result = await sendSms({ to: adminPhone, body: "Test SMS from Jack Pine Farms admin." });
+  req.log.info({ result }, "Admin test SMS sent");
+  res.json(result);
 });
 
 // ── GET /admin/debug/request-info ─────────────────────────────────────────────
