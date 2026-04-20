@@ -530,6 +530,19 @@ router.post("/checkout/cash", resolveStoreTenant, async (req, res): Promise<void
     );
   }
 
+  // ── Admin SMS alert (fire-and-forget) ────────────────────────────────────
+  const adminPhone = process.env.ADMIN_PHONE;
+  if (adminPhone) {
+    sendSms({
+      to: adminPhone,
+      body: `New order ${orderNum} from ${customerName}.\n${orderData.lineItems.length} item(s) — ${totalFormatted}.\nView: jackpinefarms.farm/admin/orders`,
+    }).catch((err: unknown) =>
+      console.warn("[Cash order] Admin SMS failed:", err)
+    );
+  } else {
+    console.warn("[Cash order] ADMIN_PHONE not set — skipping admin SMS");
+  }
+
   // ── Owner notification (fire-and-forget) ─────────────────────────────────
   const notifyEmail = process.env.ORDER_NOTIFICATION_EMAIL ?? process.env.CONTACT_TO_EMAIL;
   console.log(`[Cash order DEBUG] notifyEmail=${notifyEmail ?? "(not set — skipping owner notification)"}`);

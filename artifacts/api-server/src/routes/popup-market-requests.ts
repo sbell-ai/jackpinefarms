@@ -3,6 +3,7 @@ import { eq, desc, count } from "drizzle-orm";
 import { db, popupMarketRequestsTable } from "@workspace/db";
 import { requirePlatformAdmin } from "../middlewares/require-platform-admin.js";
 import { logger } from "../lib/logger.js";
+import { sendSms } from "../lib/sms.js";
 import { z } from "zod";
 
 const router: IRouter = Router();
@@ -67,6 +68,21 @@ router.post("/popup-market-requests", async (req, res): Promise<void> => {
     .returning();
 
   logger.info({ id: row!.id, email }, "popup_market_request_created");
+
+  // ── Admin SMS alert (fire-and-forget) ──────────────────────────────────
+  const adminPhone = process.env.ADMIN_PHONE;
+  if (adminPhone) {
+    const orgPart = organization ? `, ${organization}` : "";
+    const datePart = preferredDate ? `. Date: ${preferredDate}` : "";
+    sendSms({
+      to: adminPhone,
+      body: `New pop-up market request from ${name}${orgPart}.\nLocation: ${eventLocation}${datePart}.\nView: jackpinefarms.farm/admin/messages`,
+    }).catch((err: unknown) =>
+      console.warn("[Popup market request] Admin SMS failed:", err)
+    );
+  } else {
+    console.warn("[Popup market request] ADMIN_PHONE not set — skipping admin SMS");
+  }
 
   res.status(201).json(row);
 });

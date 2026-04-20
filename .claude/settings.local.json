@@ -33,7 +33,8 @@
       "Bash(tsc --noEmit)",
       "Bash(npx tsx -e ':*)",
       "Bash(npx drizzle-kit:*)",
-      "Bash(cat drizzle/*.sql)"
+      "Bash(cat drizzle/*.sql)",
+      "Bash(env)"
     ]
   }
 }
