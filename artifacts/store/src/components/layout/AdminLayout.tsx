@@ -4,10 +4,55 @@ import { useAdminMe, useAdminLogout, getAdminMeQueryKey } from "@workspace/api-c
 import {
   Store, Package, LogOut, Loader2, Home, ShoppingBag, Layers,
   CalendarDays, Users, LayoutDashboard, Egg, Bird, Rabbit, Menu, X, Receipt, Tag, ImageIcon,
-  FileText, Navigation, Inbox,
+  FileText, Navigation, Inbox, ChevronRight,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
+
+type NavItem = { href: string; label: string; icon: React.ComponentType<{ className?: string }>; exact?: boolean };
+
+const alwaysVisibleItems: NavItem[] = [
+  { href: "/admin", label: "Dashboard", icon: LayoutDashboard, exact: true },
+  { href: "/admin/orders", label: "Orders", icon: ShoppingBag },
+  { href: "/admin/customers", label: "Customers", icon: Users },
+  { href: "/admin/messages", label: "Messages", icon: Inbox },
+];
+
+const navGroups: { label: string; items: NavItem[] }[] = [
+  {
+    label: "Store",
+    items: [
+      { href: "/admin/products", label: "Products", icon: Package },
+      { href: "/admin/batches", label: "Batches", icon: Layers },
+      { href: "/admin/pickup-events", label: "Pickup Events", icon: CalendarDays },
+      { href: "/admin/coupons", label: "Coupons", icon: Tag },
+    ],
+  },
+  {
+    label: "Farm Operations",
+    items: [
+      { href: "/admin/flocks", label: "Flocks", icon: Bird },
+      { href: "/admin/animals", label: "Animals", icon: Rabbit },
+      { href: "/admin/eggs", label: "Egg Inventory", icon: Egg },
+    ],
+  },
+  {
+    label: "Accounting",
+    items: [
+      { href: "/admin/expenses", label: "Expenses", icon: Receipt },
+    ],
+  },
+  {
+    label: "Site",
+    items: [
+      { href: "/admin/pages", label: "Pages", icon: FileText },
+      { href: "/admin/menus", label: "Menus", icon: Navigation },
+      { href: "/admin/site-images", label: "Site Images", icon: ImageIcon },
+    ],
+  },
+];
+
+const allNavItems: NavItem[] = [...alwaysVisibleItems, ...navGroups.flatMap(g => g.items)];
 
 export function AdminLayout({ children }: { children: ReactNode }) {
   const [location, setLocation] = useLocation();
@@ -19,7 +64,7 @@ export function AdminLayout({ children }: { children: ReactNode }) {
       retry: false,
     }
   });
-  
+
   const logout = useAdminLogout({
     mutation: {
       onSuccess: () => {
@@ -28,13 +73,29 @@ export function AdminLayout({ children }: { children: ReactNode }) {
     }
   });
 
+  const isActive = (item: NavItem) =>
+    item.exact
+      ? location === item.href
+      : location.startsWith(item.href) && item.href !== "/admin";
+
+  // Start collapsed; auto-expand the group whose child matches the current route
+  const [groupsOpen, setGroupsOpen] = useState<boolean[]>(() =>
+    navGroups.map(group => group.items.some(item => isActive(item)))
+  );
+
+  const toggleGroup = (index: number) => {
+    setGroupsOpen(prev => {
+      const next = [...prev];
+      next[index] = !next[index];
+      return next;
+    });
+  };
+
   const isSettling = isLoading || isFetching;
   const shouldRedirect = !isSettling && (isError || !session?.authenticated);
 
   useEffect(() => {
-    if (shouldRedirect) {
-      setLocation('/admin/login');
-    }
+    if (shouldRedirect) setLocation('/admin/login');
   }, [shouldRedirect, setLocation]);
 
   // Close nav drawer on route change
@@ -50,36 +111,14 @@ export function AdminLayout({ children }: { children: ReactNode }) {
     );
   }
 
-  const navItems = [
-    { href: "/admin", label: "Dashboard", icon: LayoutDashboard, exact: true },
-    { href: "/admin/products", label: "Products", icon: Package },
-    { href: "/admin/orders", label: "Orders", icon: ShoppingBag },
-    { href: "/admin/batches", label: "Batches", icon: Layers },
-    { href: "/admin/pickup-events", label: "Pickup Events", icon: CalendarDays },
-    { href: "/admin/customers", label: "Customers", icon: Users },
-    { href: "/admin/eggs", label: "Egg Inventory", icon: Egg },
-    { href: "/admin/flocks", label: "Flocks", icon: Bird },
-    { href: "/admin/animals", label: "Animals", icon: Rabbit },
-    { href: "/admin/expenses", label: "Expenses", icon: Receipt },
-    { href: "/admin/coupons", label: "Coupons", icon: Tag },
-    { href: "/admin/site-images", label: "Site Images", icon: ImageIcon },
-    { href: "/admin/pages", label: "Pages", icon: FileText },
-    { href: "/admin/menus", label: "Menus", icon: Navigation },
-    { href: "/admin/messages", label: "Messages", icon: Inbox },
-  ];
-
-  const isActive = (item: typeof navItems[0]) =>
-    item.exact
-      ? location === item.href
-      : location.startsWith(item.href) && item.href !== "/admin";
-
-  const currentPage = navItems.find(i => isActive(i))?.label ?? "JP FarmOps";
+  const currentPage = allNavItems.find(i => isActive(i))?.label ?? "JP FarmOps";
 
   function NavLinks({ onClick }: { onClick?: () => void }) {
     return (
       <>
         <nav className="flex-1 p-4 space-y-1">
-          {navItems.map((item) => {
+          {/* Always-visible items */}
+          {alwaysVisibleItems.map((item) => {
             const Icon = item.icon;
             const active = isActive(item);
             return (
@@ -99,6 +138,48 @@ export function AdminLayout({ children }: { children: ReactNode }) {
               </Link>
             );
           })}
+
+          {/* Collapsible groups */}
+          {navGroups.map((group, groupIndex) => (
+            <div key={group.label}>
+              <button
+                onClick={() => toggleGroup(groupIndex)}
+                className="w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-all"
+              >
+                <span>{group.label}</span>
+                <ChevronRight
+                  className={cn(
+                    "w-4 h-4 shrink-0 transition-transform duration-200",
+                    groupsOpen[groupIndex] && "rotate-90"
+                  )}
+                />
+              </button>
+              {groupsOpen[groupIndex] && (
+                <div className="mt-1 space-y-1">
+                  {group.items.map((item) => {
+                    const Icon = item.icon;
+                    const active = isActive(item);
+                    return (
+                      <Link
+                        key={item.href}
+                        href={item.href}
+                        onClick={onClick}
+                        className={cn(
+                          "flex items-center gap-3 pl-6 pr-3 py-2.5 rounded-lg text-sm font-medium transition-all",
+                          active
+                            ? "bg-primary/10 text-primary"
+                            : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                        )}
+                      >
+                        <Icon className="w-5 h-5 shrink-0" />
+                        {item.label}
+                      </Link>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          ))}
         </nav>
 
         <div className="p-4 border-t border-border space-y-2">
@@ -177,7 +258,7 @@ export function AdminLayout({ children }: { children: ReactNode }) {
           </div>
           <Link href="/" className="text-sm font-medium text-muted-foreground">Store</Link>
         </header>
-        
+
         <div className="flex-1 overflow-auto p-4 md:p-8">
           <div className="max-w-5xl mx-auto w-full">
             {children}
