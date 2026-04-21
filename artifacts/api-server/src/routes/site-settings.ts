@@ -15,6 +15,7 @@ const ALLOWED_KEYS = new Set([
   "image.how_we_pasture",
   "image.how_we_feed",
   "image.product_fallback",
+  "image.popup_market_map",
 ]);
 
 router.get("/site-settings", resolveStoreTenant, async (req: Request, res: Response) => {

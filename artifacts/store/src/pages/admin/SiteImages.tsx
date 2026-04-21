@@ -53,6 +53,12 @@ const IMAGE_SLOTS = [
     description: "Shown for products that have no photos uploaded yet.",
     fallback: "https://images.unsplash.com/photo-1598965402089-897ce52e8355?w=600&q=80",
   },
+  {
+    key: "image.popup_market_map",
+    label: "Pop-Up Market Map",
+    description: "Service area map displayed on the Pop-Up Market page under \"Where We Go\".",
+    fallback: `${BASE}images/mobile-market-service-area.png`,
+  },
 ];
 
 export default function SiteImages() {

@@ -14,6 +14,10 @@ import {
   LayoutGrid,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useSiteImage } from "@/lib/useSiteImage";
+
+const BASE = import.meta.env.BASE_URL;
+const STATIC_MAP_FALLBACK = `${BASE}images/mobile-market-service-area.png`;
 
 const PRODUCT_OPTIONS = [
   "Fresh, Pastured Eggs",
@@ -53,6 +57,7 @@ const schema = z.object({
 type FormValues = z.infer<typeof schema>;
 
 export default function PopupMarket() {
+  const mapImageUrl = useSiteImage("image.popup_market_map", STATIC_MAP_FALLBACK);
   const [submitted, setSubmitted] = useState(false);
   const [serverError, setServerError] = useState<string | null>(null);
   const [productsInterested, setProductsInterested] = useState<string[]>([]);
@@ -255,6 +260,31 @@ export default function PopupMarket() {
               </div>
             ))}
           </div>
+        </div>
+      </section>
+
+      {/* Where We Go */}
+      <section className="py-20 px-4 sm:px-6 lg:px-8 bg-background">
+        <div className="max-w-4xl mx-auto text-center">
+          <h2 className="text-3xl md:text-4xl font-serif font-bold text-foreground mb-4">
+            Where We Go
+          </h2>
+          <p className="text-muted-foreground text-lg mb-10">
+            We serve neighborhoods, workplaces, and events across Western Michigan.
+          </p>
+          <div className="rounded-2xl overflow-hidden border border-border shadow-sm inline-block w-full max-w-[900px]">
+            <img
+              src={mapImageUrl}
+              alt="Pop-up market service area map"
+              className="w-full h-auto block"
+              onError={(e) => {
+                (e.target as HTMLImageElement).src = STATIC_MAP_FALLBACK;
+              }}
+            />
+          </div>
+          <p className="mt-4 text-sm text-muted-foreground italic">
+            Our current delivery and pop-up service area — check back as we expand!
+          </p>
         </div>
       </section>
 
