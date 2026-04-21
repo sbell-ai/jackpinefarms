@@ -34,7 +34,14 @@
       "Bash(npx tsx -e ':*)",
       "Bash(npx drizzle-kit:*)",
       "Bash(cat drizzle/*.sql)",
-      "Bash(env)"
+      "Bash(env)",
+      "Bash(kill -0 11093)",
+      "Bash(echo \"exit: $?\")",
+      "Bash(curl -sv -c /tmp/c.txt -X POST http://localhost:8080/api/admin/login -H 'Content-Type: application/json' --data-raw '{\"email\":\"admin@jackpinefarms.farm\",\"password\":\"Michigan2026$\"}')",
+      "Read(//tmp/**)",
+      "Bash(PORT=3333 node --enable-source-maps /home/runner/workspace/artifacts/api-server/dist/index.mjs)",
+      "Bash(curl -s http://localhost:3333/api/health)",
+      "Bash(curl *)"
     ]
   }
 }
