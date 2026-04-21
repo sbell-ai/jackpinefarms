@@ -5,12 +5,10 @@ import path from "path";
 import runtimeErrorOverlay from "@replit/vite-plugin-runtime-error-modal";
 import { seoPlugin } from "./vite-seo-plugin";
 
-const rawPort = process.env.PORT;
-const port = rawPort ? Number(rawPort) : undefined;
-
-if (port !== undefined && (Number.isNaN(port) || port <= 0)) {
-  throw new Error(`Invalid PORT value: "${rawPort}"`);
-}
+// The store dev server must NOT use PORT=8080, which belongs to the API server.
+// Use a fixed dev port (5174) so the API server can own 8080 uncontested.
+const DEV_PORT = 5174;
+const port = DEV_PORT;
 
 const basePath = process.env.BASE_PATH ?? "/";
 
