@@ -12,7 +12,7 @@ version = "1.0.0"
 [[services]]
 name = "web"
 paths = [ "/" ]
-localPort = 8080
+localPort = 5174
 
 [services.development]
 run = "pnpm --filter @workspace/store run dev"
