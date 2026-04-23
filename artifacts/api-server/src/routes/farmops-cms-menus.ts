@@ -13,13 +13,15 @@ const PutMenuItemsBody = z.object({
       z.object({
         label: z.string().min(1).max(200),
         url: z.string().min(1).max(500),
-        parentId: z.number().nullable().default(null),
+        /** Zero-based index of the parent item in the submitted array, or null for top-level */
+        parentIndex: z.number().int().nullable().default(null),
       })
     )
     .max(20),
 });
 
 // ─── GET /farmops/cms/menus/:name ─────────────────────────────────────────────
+// Returns flat list of items with parentId so the UI can build its own view.
 
 router.get(
   "/farmops/cms/menus/:name",
@@ -45,14 +47,7 @@ router.get(
       .where(eq(cmsMenuItemsTable.menuId, menu.id))
       .orderBy(asc(cmsMenuItemsTable.sortOrder));
 
-    const topLevel = items.filter((i) => i.parentId === null);
-    const children = items.filter((i) => i.parentId !== null);
-    const nested = topLevel.map((parent) => ({
-      ...parent,
-      children: children.filter((c) => c.parentId === parent.id),
-    }));
-
-    res.json({ ...menu, items: nested });
+    res.json({ ...menu, items });
   }
 );
 
@@ -85,20 +80,38 @@ router.put(
         .returning();
     }
 
-    // Replace all items
+    // Delete all existing items
     await db.delete(cmsMenuItemsTable).where(eq(cmsMenuItemsTable.menuId, menu.id));
 
     const { items } = parsed.data;
     if (items.length > 0) {
-      await db.insert(cmsMenuItemsTable).values(
-        items.map((item, idx) => ({
-          menuId: menu.id,
-          label: item.label,
-          url: item.url,
-          parentId: item.parentId ?? null,
-          sortOrder: idx,
-        }))
-      );
+      // Phase 1: insert all items without parentId, capture new DB IDs in order
+      const inserted = await db
+        .insert(cmsMenuItemsTable)
+        .values(
+          items.map((item, idx) => ({
+            menuId: menu.id,
+            label: item.label,
+            url: item.url,
+            parentId: null,
+            sortOrder: idx,
+          }))
+        )
+        .returning({ id: cmsMenuItemsTable.id, sortOrder: cmsMenuItemsTable.sortOrder });
+
+      // Sort by sortOrder to align with the submitted items array
+      inserted.sort((a, b) => a.sortOrder - b.sortOrder);
+
+      // Phase 2: update parentId for items that reference a parent by index
+      for (let i = 0; i < items.length; i++) {
+        const pi = items[i]!.parentIndex;
+        if (pi != null && inserted[pi] != null) {
+          await db
+            .update(cmsMenuItemsTable)
+            .set({ parentId: inserted[pi]!.id })
+            .where(eq(cmsMenuItemsTable.id, inserted[i]!.id));
+        }
+      }
     }
 
     await db

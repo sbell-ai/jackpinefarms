@@ -9,6 +9,7 @@
 export interface CmsMenuItem {
   id: number;
   menuId: number;
+  parentId: number | null;
   label: string;
   url: string;
   sortOrder: number;

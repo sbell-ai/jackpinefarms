@@ -11,7 +11,8 @@ const MenuItemInput = z.object({
   label: z.string().min(1).max(200),
   url: z.string().min(1).max(500),
   isHidden: z.boolean().default(false),
-  parentId: z.number().nullable().default(null),
+  /** Zero-based index of the parent in the submitted array, or null for top-level */
+  parentIndex: z.number().int().nullable().default(null),
 });
 
 const PutMenuItemsBody = z.object({
@@ -83,16 +84,34 @@ router.put("/admin/cms/menus/:name/items", requirePlatformAdmin, async (req, res
 
   const { items } = parsed.data;
   if (items.length > 0) {
-    await db.insert(cmsMenuItemsTable).values(
-      items.map((item, idx) => ({
-        menuId: menu.id,
-        label: item.label,
-        url: item.url,
-        isHidden: item.isHidden,
-        parentId: item.parentId ?? null,
-        sortOrder: idx,
-      })),
-    );
+    // Phase 1: insert all items without parentId, capture new DB IDs in order
+    const inserted = await db
+      .insert(cmsMenuItemsTable)
+      .values(
+        items.map((item, idx) => ({
+          menuId: menu.id,
+          label: item.label,
+          url: item.url,
+          isHidden: item.isHidden,
+          parentId: null,
+          sortOrder: idx,
+        })),
+      )
+      .returning({ id: cmsMenuItemsTable.id, sortOrder: cmsMenuItemsTable.sortOrder });
+
+    // Sort by sortOrder to align with the submitted items array
+    inserted.sort((a, b) => a.sortOrder - b.sortOrder);
+
+    // Phase 2: update parentId for items that have a parentIndex
+    for (let i = 0; i < items.length; i++) {
+      const pi = items[i]!.parentIndex;
+      if (pi != null && inserted[pi] != null) {
+        await db
+          .update(cmsMenuItemsTable)
+          .set({ parentId: inserted[pi]!.id })
+          .where(eq(cmsMenuItemsTable.id, inserted[i]!.id));
+      }
+    }
   }
 
   await db

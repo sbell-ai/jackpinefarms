@@ -10,10 +10,10 @@ const btnPrimary =
   "px-4 py-2 rounded-lg bg-emerald-700 text-white text-sm font-semibold hover:bg-emerald-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed";
 
 interface MenuItem {
-  id?: number;
   label: string;
   url: string;
-  parentId: number | null;
+  /** Index in this array of the parent item, or null for top-level */
+  parentIndex: number | null;
 }
 
 export default function FarmOpsCmsMenus() {
@@ -39,13 +39,31 @@ export default function FarmOpsCmsMenus() {
         const res = await fetch("/api/farmops/cms/menus/header", { credentials: "include" });
         if (res.ok) {
           const data = await res.json();
+          // API returns flat items with parentId (DB ID).
+          // We build a flat array ordered parents-first and compute parentIndex.
+          const rawItems: { id: number; label: string; url: string; parentId: number | null }[] =
+            data.items ?? [];
+
+          // Separate top-level and children, preserving sort order within each group.
+          const topLevel = rawItems.filter((i) => i.parentId === null);
+          const children = rawItems.filter((i) => i.parentId !== null);
+
+          // Build flat array: for each top-level item, append its children immediately after.
           const flat: MenuItem[] = [];
-          for (const item of data.items ?? []) {
-            flat.push({ id: item.id, label: item.label, url: item.url, parentId: null });
-            for (const child of item.children ?? []) {
-              flat.push({ id: child.id, label: child.label, url: child.url, parentId: item.id });
+          for (const parent of topLevel) {
+            const parentIndex = flat.length;
+            flat.push({ label: parent.label, url: parent.url, parentIndex: null });
+            for (const child of children.filter((c) => c.parentId === parent.id)) {
+              flat.push({ label: child.label, url: child.url, parentIndex });
             }
           }
+          // Any orphaned children (parent deleted) fall back to top-level.
+          for (const orphan of children.filter(
+            (c) => !topLevel.some((p) => p.id === c.parentId),
+          )) {
+            flat.push({ label: orphan.label, url: orphan.url, parentIndex: null });
+          }
+
           setItems(flat);
         }
       } finally {
@@ -61,26 +79,41 @@ export default function FarmOpsCmsMenus() {
   };
 
   const addItem = () => {
-    setItems((prev) => [...prev, { label: "", url: "/", parentId: null }]);
+    setItems((prev) => [...prev, { label: "", url: "/", parentIndex: null }]);
     setDirty(true);
   };
 
   const removeItem = (idx: number) => {
-    setItems((prev) => prev.filter((_, i) => i !== idx));
+    setItems((prev) => {
+      const next = prev.filter((_, i) => i !== idx);
+      // Fix up any parentIndex values that now point to wrong indices.
+      return next.map((item) => {
+        if (item.parentIndex === null) return item;
+        if (item.parentIndex === idx) return { ...item, parentIndex: null }; // parent removed
+        if (item.parentIndex > idx) return { ...item, parentIndex: item.parentIndex - 1 };
+        return item;
+      });
+    });
     setDirty(true);
   };
 
   const moveItem = (idx: number, dir: -1 | 1) => {
     const next = idx + dir;
     if (next < 0 || next >= items.length) return;
-    const updated = [...items];
-    [updated[idx], updated[next]] = [updated[next]!, updated[idx]!];
-    setItems(updated);
+    setItems((prev) => {
+      const updated = [...prev];
+      [updated[idx], updated[next]] = [updated[next]!, updated[idx]!];
+      // Fix up parentIndex references after the swap.
+      return updated.map((item) => {
+        if (item.parentIndex === idx) return { ...item, parentIndex: next };
+        if (item.parentIndex === next) return { ...item, parentIndex: idx };
+        return item;
+      });
+    });
     setDirty(true);
   };
 
   const saveMenu = async () => {
-    // Validate: all items must have label and url
     const invalid = items.some((i) => !i.label.trim() || !i.url.trim());
     if (invalid) {
       toast({ title: "All items must have a label and URL", variant: "destructive" });
@@ -92,7 +125,13 @@ export default function FarmOpsCmsMenus() {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify({ items: items.map((i) => ({ label: i.label.trim(), url: i.url.trim(), parentId: i.parentId ?? null })) }),
+        body: JSON.stringify({
+          items: items.map((i) => ({
+            label: i.label.trim(),
+            url: i.url.trim(),
+            parentIndex: i.parentIndex ?? null,
+          })),
+        }),
       });
       if (!res.ok) {
         const data = await res.json();
@@ -107,6 +146,12 @@ export default function FarmOpsCmsMenus() {
     }
   };
 
+  // Top-level items that can be used as parents (excluding the item itself and existing children)
+  const topLevelItems = (excludeIdx: number) =>
+    items
+      .map((item, i) => ({ item, i }))
+      .filter(({ item, i }) => i !== excludeIdx && item.parentIndex === null);
+
   if (sessionLoading) {
     return (
       <div className="flex items-center justify-center min-h-64">
@@ -117,7 +162,6 @@ export default function FarmOpsCmsMenus() {
 
   return (
     <div className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
-      {/* Header */}
       <div>
         <h1 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
           <Navigation className="w-6 h-6 text-emerald-600" />
@@ -143,7 +187,10 @@ export default function FarmOpsCmsMenus() {
 
             <div className="space-y-2">
               {items.map((item, idx) => (
-                <div key={idx} className="flex items-center gap-2">
+                <div
+                  key={idx}
+                  className={`flex items-center gap-2 ${item.parentIndex !== null ? "pl-6" : ""}`}
+                >
                   <div className="flex flex-col gap-0.5">
                     <button
                       type="button"
@@ -177,22 +224,21 @@ export default function FarmOpsCmsMenus() {
                     className={inputCls}
                   />
                   <select
-                    value={item.parentId ?? ""}
+                    value={item.parentIndex ?? ""}
                     onChange={(e) => {
                       const val = e.target.value;
-                      updateItem(idx, "parentId", val === "" ? null : Number(val));
+                      updateItem(idx, "parentIndex", val === "" ? null : Number(val));
                     }}
                     disabled={!isAdmin}
                     className={inputCls}
+                    title="Parent item"
                   >
                     <option value="">Top level</option>
-                    {items
-                      .filter((other, otherIdx) => otherIdx !== idx && other.parentId === null)
-                      .map((other, i) => (
-                        <option key={i} value={other.id ?? ""}>
-                          ↳ {other.label}
-                        </option>
-                      ))}
+                    {topLevelItems(idx).map(({ item: parent, i }) => (
+                      <option key={i} value={i}>
+                        ↳ {parent.label || `Item ${i + 1}`}
+                      </option>
+                    ))}
                   </select>
                   {isAdmin && (
                     <button

@@ -26,31 +26,49 @@ import {
 import { CSS } from "@dnd-kit/utilities";
 
 interface DraftItem {
-  id: string;
+  /** Stable client-side ID for DnD (string so new items can use a temp value) */
+  dndId: string;
   label: string;
   url: string;
   isHidden: boolean;
+  /** Index of the parent in the current items array, or null for top-level */
+  parentIndex: number | null;
 }
 
 function toDraft(items: CmsMenuItem[]): DraftItem[] {
-  return items.map((i) => ({
-    id: String(i.id),
-    label: i.label,
-    url: i.url,
-    isHidden: i.isHidden,
-  }));
+  // Build a flat ordered array: for each top-level item, immediately followed by its children.
+  const topLevel = items.filter((i) => i.parentId === null || i.parentId === undefined);
+  const children = items.filter((i) => i.parentId !== null && i.parentId !== undefined);
+
+  const flat: DraftItem[] = [];
+  for (const parent of topLevel) {
+    const parentIndex = flat.length;
+    flat.push({ dndId: String(parent.id), label: parent.label, url: parent.url, isHidden: parent.isHidden, parentIndex: null });
+    for (const child of children.filter((c) => c.parentId === parent.id)) {
+      flat.push({ dndId: String(child.id), label: child.label, url: child.url, isHidden: child.isHidden, parentIndex });
+    }
+  }
+  // Orphaned children (parent not found) fall back to top-level.
+  for (const orphan of children.filter((c) => !topLevel.some((p) => p.id === c.parentId))) {
+    flat.push({ dndId: String(orphan.id), label: orphan.label, url: orphan.url, isHidden: orphan.isHidden, parentIndex: null });
+  }
+  return flat;
 }
 
 function SortableItem({
   item,
+  itemIndex,
+  allItems,
   onChange,
   onDelete,
 }: {
   item: DraftItem;
-  onChange: (id: string, field: keyof DraftItem, value: string | boolean) => void;
-  onDelete: (id: string) => void;
+  itemIndex: number;
+  allItems: DraftItem[];
+  onChange: (dndId: string, field: keyof DraftItem, value: string | boolean | number | null) => void;
+  onDelete: (dndId: string) => void;
 }) {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: item.id });
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: item.dndId });
 
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -58,11 +76,15 @@ function SortableItem({
     opacity: isDragging ? 0.5 : 1,
   };
 
+  const topLevelOptions = allItems
+    .map((other, i) => ({ other, i }))
+    .filter(({ other, i }) => i !== itemIndex && other.parentIndex === null);
+
   return (
     <div
       ref={setNodeRef}
       style={style}
-      className="flex items-center gap-2 p-2 bg-background border border-border rounded-lg"
+      className={`flex items-center gap-2 p-2 bg-background border border-border rounded-lg ${item.parentIndex !== null ? "ml-6" : ""}`}
     >
       <button
         type="button"
@@ -75,20 +97,36 @@ function SortableItem({
       <input
         type="text"
         value={item.label}
-        onChange={(e) => onChange(item.id, "label", e.target.value)}
+        onChange={(e) => onChange(item.dndId, "label", e.target.value)}
         placeholder="Label"
         className="flex-1 min-w-0 px-2 py-1.5 text-sm border border-border rounded bg-muted/30 focus:outline-none focus:ring-1 focus:ring-primary/30"
       />
       <input
         type="text"
         value={item.url}
-        onChange={(e) => onChange(item.id, "url", e.target.value)}
+        onChange={(e) => onChange(item.dndId, "url", e.target.value)}
         placeholder="URL or /path"
         className="flex-1 min-w-0 px-2 py-1.5 text-sm border border-border rounded bg-muted/30 focus:outline-none focus:ring-1 focus:ring-primary/30"
       />
+      <select
+        value={item.parentIndex ?? ""}
+        onChange={(e) => {
+          const val = e.target.value;
+          onChange(item.dndId, "parentIndex", val === "" ? null : Number(val));
+        }}
+        className="min-w-[110px] px-2 py-1.5 text-sm border border-border rounded bg-muted/30 focus:outline-none focus:ring-1 focus:ring-primary/30"
+        title="Parent item"
+      >
+        <option value="">Top level</option>
+        {topLevelOptions.map(({ other, i }) => (
+          <option key={i} value={i}>
+            ↳ {other.label || `Item ${i + 1}`}
+          </option>
+        ))}
+      </select>
       <button
         type="button"
-        onClick={() => onChange(item.id, "isHidden", !item.isHidden)}
+        onClick={() => onChange(item.dndId, "isHidden", !item.isHidden)}
         title={item.isHidden ? "Show item" : "Hide item"}
         className={`p-1.5 rounded transition-colors shrink-0 ${item.isHidden ? "text-muted-foreground/40 hover:text-foreground" : "text-foreground hover:text-muted-foreground"}`}
       >
@@ -96,7 +134,7 @@ function SortableItem({
       </button>
       <button
         type="button"
-        onClick={() => onDelete(item.id)}
+        onClick={() => onDelete(item.dndId)}
         className="p-1.5 rounded text-muted-foreground/40 hover:text-destructive transition-colors shrink-0"
       >
         <Trash2 className="w-4 h-4" />
@@ -137,26 +175,45 @@ function MenuEditor({ name, label, initialItems }: MenuEditorProps) {
     const { active, over } = event;
     if (over && active.id !== over.id) {
       setItems((prev) => {
-        const oldIdx = prev.findIndex((i) => i.id === active.id);
-        const newIdx = prev.findIndex((i) => i.id === over.id);
-        return arrayMove(prev, oldIdx, newIdx);
+        const oldIdx = prev.findIndex((i) => i.dndId === active.id);
+        const newIdx = prev.findIndex((i) => i.dndId === over.id);
+        const moved = arrayMove(prev, oldIdx, newIdx);
+        // Fix up parentIndex references after the reorder.
+        return moved.map((item) => {
+          if (item.parentIndex === null) return item;
+          // Find what dndId the parent had before and remap to new index.
+          const parentDndId = prev[item.parentIndex]?.dndId;
+          if (!parentDndId) return { ...item, parentIndex: null };
+          const newParentIndex = moved.findIndex((i) => i.dndId === parentDndId);
+          return { ...item, parentIndex: newParentIndex === -1 ? null : newParentIndex };
+        });
       });
     }
   };
 
-  const handleChange = (id: string, field: keyof DraftItem, value: string | boolean) => {
-    setItems((prev) => prev.map((i) => (i.id === id ? { ...i, [field]: value } : i)));
+  const handleChange = (dndId: string, field: keyof DraftItem, value: string | boolean | number | null) => {
+    setItems((prev) => prev.map((i) => (i.dndId === dndId ? { ...i, [field]: value } : i)));
   };
 
-  const handleDelete = (id: string) => {
-    setItems((prev) => prev.filter((i) => i.id !== id));
+  const handleDelete = (dndId: string) => {
+    setItems((prev) => {
+      const idx = prev.findIndex((i) => i.dndId === dndId);
+      const next = prev.filter((_, i) => i !== idx);
+      // Fix parentIndex references.
+      return next.map((item) => {
+        if (item.parentIndex === null) return item;
+        if (item.parentIndex === idx) return { ...item, parentIndex: null };
+        if (item.parentIndex > idx) return { ...item, parentIndex: item.parentIndex - 1 };
+        return item;
+      });
+    });
   };
 
   const handleAdd = () => {
     if (!newLabel.trim() || !newUrl.trim()) return;
     setItems((prev) => [
       ...prev,
-      { id: `new-${Date.now()}`, label: newLabel.trim(), url: newUrl.trim(), isHidden: false },
+      { dndId: `new-${Date.now()}`, label: newLabel.trim(), url: newUrl.trim(), isHidden: false, parentIndex: null },
     ]);
     setNewLabel("");
     setNewUrl("");
@@ -164,10 +221,25 @@ function MenuEditor({ name, label, initialItems }: MenuEditorProps) {
 
   const handleSave = () => {
     const valid = items.filter((i) => i.label.trim() && i.url.trim());
+    // parentIndex values may have changed if items were filtered; remap.
+    const validDndIds = new Set(valid.map((i) => i.dndId));
+    const remapped = valid.map((item) => {
+      if (item.parentIndex === null) return item;
+      const parentDndId = items[item.parentIndex]?.dndId;
+      if (!parentDndId || !validDndIds.has(parentDndId)) return { ...item, parentIndex: null };
+      const newIdx = valid.findIndex((i) => i.dndId === parentDndId);
+      return { ...item, parentIndex: newIdx === -1 ? null : newIdx };
+    });
+
     putItems.mutate({
       name,
       data: {
-        items: valid.map((i) => ({ label: i.label, url: i.url, isHidden: i.isHidden })),
+        items: remapped.map((i) => ({
+          label: i.label,
+          url: i.url,
+          isHidden: i.isHidden,
+          parentIndex: i.parentIndex ?? null,
+        })),
       },
     });
   };
@@ -177,13 +249,20 @@ function MenuEditor({ name, label, initialItems }: MenuEditorProps) {
       <h2 className="text-base font-semibold mb-4">{label} Navigation</h2>
 
       <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-        <SortableContext items={items.map((i) => i.id)} strategy={verticalListSortingStrategy}>
+        <SortableContext items={items.map((i) => i.dndId)} strategy={verticalListSortingStrategy}>
           <div className="space-y-2 mb-4">
             {items.length === 0 && (
               <p className="text-sm text-muted-foreground text-center py-4">No items yet. Add one below.</p>
             )}
-            {items.map((item) => (
-              <SortableItem key={item.id} item={item} onChange={handleChange} onDelete={handleDelete} />
+            {items.map((item, idx) => (
+              <SortableItem
+                key={item.dndId}
+                item={item}
+                itemIndex={idx}
+                allItems={items}
+                onChange={handleChange}
+                onDelete={handleDelete}
+              />
             ))}
           </div>
         </SortableContext>
@@ -260,7 +339,7 @@ export default function CmsMenus() {
     <div>
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-foreground">Navigation Menus</h1>
-        <p className="text-sm text-muted-foreground mt-1">Manage the header and footer navigation links</p>
+        <p className="text-sm text-muted-foreground mt-1">Manage the header and footer navigation links. Use the "↳ Parent" dropdown to nest items under a top-level link.</p>
       </div>
       <div className="space-y-6">
         {header && (

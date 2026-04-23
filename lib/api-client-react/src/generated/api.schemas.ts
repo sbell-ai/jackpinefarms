@@ -1069,6 +1069,7 @@ export interface UpdateCmsPageSeoBody {
 export interface CmsMenuItem {
   id: number;
   menuId: number;
+  parentId: number | null;
   label: string;
   url: string;
   sortOrder: number;
@@ -1097,6 +1098,8 @@ export interface CmsMenuItemInput {
    */
   url: string;
   isHidden?: boolean;
+  /** Zero-based index of the parent item in the submitted array, or null for top-level */
+  parentIndex?: number | null;
 }
 
 export interface PutCmsMenuItemsBody {
