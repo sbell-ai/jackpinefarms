@@ -10,8 +10,10 @@ const btnPrimary =
   "px-4 py-2 rounded-lg bg-emerald-700 text-white text-sm font-semibold hover:bg-emerald-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed";
 
 interface MenuItem {
+  id?: number;
   label: string;
   url: string;
+  parentId: number | null;
 }
 
 export default function FarmOpsCmsMenus() {
@@ -37,7 +39,14 @@ export default function FarmOpsCmsMenus() {
         const res = await fetch("/api/farmops/cms/menus/header", { credentials: "include" });
         if (res.ok) {
           const data = await res.json();
-          setItems((data.items ?? []).map((i: { label: string; url: string }) => ({ label: i.label, url: i.url })));
+          const flat: MenuItem[] = [];
+          for (const item of data.items ?? []) {
+            flat.push({ id: item.id, label: item.label, url: item.url, parentId: null });
+            for (const child of item.children ?? []) {
+              flat.push({ id: child.id, label: child.label, url: child.url, parentId: item.id });
+            }
+          }
+          setItems(flat);
         }
       } finally {
         setLoading(false);
@@ -46,13 +55,13 @@ export default function FarmOpsCmsMenus() {
     load();
   }, []);
 
-  const updateItem = (idx: number, field: keyof MenuItem, value: string) => {
+  const updateItem = (idx: number, field: keyof MenuItem, value: string | number | null) => {
     setItems((prev) => prev.map((item, i) => (i === idx ? { ...item, [field]: value } : item)));
     setDirty(true);
   };
 
   const addItem = () => {
-    setItems((prev) => [...prev, { label: "", url: "/" }]);
+    setItems((prev) => [...prev, { label: "", url: "/", parentId: null }]);
     setDirty(true);
   };
 
@@ -83,7 +92,7 @@ export default function FarmOpsCmsMenus() {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify({ items: items.map((i) => ({ label: i.label.trim(), url: i.url.trim() })) }),
+        body: JSON.stringify({ items: items.map((i) => ({ label: i.label.trim(), url: i.url.trim(), parentId: i.parentId ?? null })) }),
       });
       if (!res.ok) {
         const data = await res.json();
@@ -167,6 +176,24 @@ export default function FarmOpsCmsMenus() {
                     disabled={!isAdmin}
                     className={inputCls}
                   />
+                  <select
+                    value={item.parentId ?? ""}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      updateItem(idx, "parentId", val === "" ? null : Number(val));
+                    }}
+                    disabled={!isAdmin}
+                    className={inputCls}
+                  >
+                    <option value="">Top level</option>
+                    {items
+                      .filter((other, otherIdx) => otherIdx !== idx && other.parentId === null)
+                      .map((other, i) => (
+                        <option key={i} value={other.id ?? ""}>
+                          ↳ {other.label}
+                        </option>
+                      ))}
+                  </select>
                   {isAdmin && (
                     <button
                       type="button"

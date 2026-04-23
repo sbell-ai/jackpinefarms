@@ -17,7 +17,15 @@ function NavLink({ href, label, className }: { href: string; label: string; clas
   }
   return <Link href={resolved} className={className}>{label}</Link>;
 }
-import { Menu, X, ShoppingCart, Leaf, User } from "lucide-react";
+import { Menu, X, ShoppingCart, Leaf, User, ChevronDown } from "lucide-react";
+import {
+  NavigationMenu,
+  NavigationMenuList,
+  NavigationMenuItem,
+  NavigationMenuTrigger,
+  NavigationMenuContent,
+  NavigationMenuLink,
+} from "@/components/ui/navigation-menu";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { useQuery } from "@tanstack/react-query";
@@ -28,6 +36,7 @@ import { useTenantSiteImage } from "@/lib/useTenantSiteImage";
 export function PublicLayout({ children }: { children: ReactNode }) {
   const [isScrolled, setIsScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [openDropdowns, setOpenDropdowns] = useState<string[]>([]);
   const logoUrl = useTenantSiteImage("image.logo", `${import.meta.env.BASE_URL}images/logo.png`);
   const [location] = useLocation();
   const { tenant, slug } = useStoreTenant();
@@ -64,7 +73,7 @@ export function PublicLayout({ children }: { children: ReactNode }) {
     { href: "/contact", label: "Contact" },
   ];
 
-  const { data: headerMenu } = useQuery<{ items: { url: string; label: string }[] } | null>({
+  const { data: headerMenu } = useQuery<{ items: { url: string; label: string; children?: { url: string; label: string }[] }[] } | null>({
     queryKey: ["cms-menu-header", slug ?? ""],
     queryFn: async () => {
       const res = await fetch("/api/cms/menus/header", { headers: storeHeaders });
@@ -74,10 +83,20 @@ export function PublicLayout({ children }: { children: ReactNode }) {
     retry: false,
   });
 
-  const navLinks =
+  interface NavItem {
+    href: string;
+    label: string;
+    children: { href: string; label: string }[];
+  }
+
+  const navLinks: NavItem[] =
     headerMenu && headerMenu.items.length > 0
-      ? headerMenu.items.map((item) => ({ href: item.url, label: item.label }))
-      : fallbackNavLinks;
+      ? headerMenu.items.map((item) => ({
+          href: item.url,
+          label: item.label,
+          children: (item.children ?? []).map((c) => ({ href: c.url, label: c.label })),
+        }))
+      : fallbackNavLinks.map((l) => ({ ...l, children: [] }));
 
   return (
     <div className="min-h-screen flex flex-col relative selection:bg-primary/20 selection:text-primary">
@@ -107,19 +126,45 @@ export function PublicLayout({ children }: { children: ReactNode }) {
             </Link>
 
             {/* Desktop Nav */}
-            <nav className="hidden lg:flex items-center gap-8">
-              {navLinks.map((link) => (
-                <NavLink
-                  key={link.href}
-                  href={link.href}
-                  label={link.label}
-                  className={cn(
-                    "text-sm font-medium transition-colors hover:text-accent",
-                    location === link.href ? "text-accent" : "text-foreground/80"
-                  )}
-                />
-              ))}
-            </nav>
+            <NavigationMenu>
+              <NavigationMenuList className="hidden lg:flex items-center gap-8">
+                {navLinks.map((link) =>
+                  link.children.length === 0 ? (
+                    <NavigationMenuItem key={link.href}>
+                      <NavLink
+                        href={link.href}
+                        label={link.label}
+                        className={cn(
+                          "text-sm font-medium transition-colors hover:text-accent",
+                          location === link.href ? "text-accent" : "text-foreground/80"
+                        )}
+                      />
+                    </NavigationMenuItem>
+                  ) : (
+                    <NavigationMenuItem key={link.href}>
+                      <NavigationMenuTrigger className="text-sm font-medium bg-transparent hover:bg-transparent hover:text-accent focus:bg-transparent data-[state=open]:bg-transparent data-[state=open]:text-accent px-0">
+                        {link.label}
+                      </NavigationMenuTrigger>
+                      <NavigationMenuContent>
+                        <ul className="flex flex-col p-2 w-48">
+                          {link.children.map((child) => (
+                            <li key={child.href}>
+                              <NavigationMenuLink asChild>
+                                <NavLink
+                                  href={child.href}
+                                  label={child.label}
+                                  className="block px-3 py-2 text-sm rounded-md hover:bg-accent/10 hover:text-accent transition-colors"
+                                />
+                              </NavigationMenuLink>
+                            </li>
+                          ))}
+                        </ul>
+                      </NavigationMenuContent>
+                    </NavigationMenuItem>
+                  )
+                )}
+              </NavigationMenuList>
+            </NavigationMenu>
 
             {/* Actions */}
             <div className="hidden md:flex items-center gap-4">
@@ -180,17 +225,53 @@ export function PublicLayout({ children }: { children: ReactNode }) {
             className="fixed inset-0 z-40 bg-background pt-24 px-6 lg:hidden overflow-y-auto"
           >
             <nav className="flex flex-col gap-6 text-center">
-              {navLinks.map((link) => (
-                <NavLink
-                  key={link.href}
-                  href={link.href}
-                  label={link.label}
-                  className={cn(
-                    "text-2xl font-serif font-medium transition-colors",
-                    location === link.href ? "text-accent" : "text-primary"
-                  )}
-                />
-              ))}
+              {navLinks.map((link) =>
+                link.children.length === 0 ? (
+                  <NavLink
+                    key={link.href}
+                    href={link.href}
+                    label={link.label}
+                    className={cn(
+                      "text-2xl font-serif font-medium transition-colors",
+                      location === link.href ? "text-accent" : "text-primary"
+                    )}
+                  />
+                ) : (
+                  <div key={link.href} className="flex flex-col items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setOpenDropdowns((prev) =>
+                          prev.includes(link.href)
+                            ? prev.filter((h) => h !== link.href)
+                            : [...prev, link.href]
+                        )
+                      }
+                      className="text-2xl font-serif font-medium text-primary flex items-center gap-2"
+                    >
+                      {link.label}
+                      <ChevronDown
+                        className={cn(
+                          "w-5 h-5 transition-transform",
+                          openDropdowns.includes(link.href) && "rotate-180"
+                        )}
+                      />
+                    </button>
+                    {openDropdowns.includes(link.href) && (
+                      <div className="flex flex-col items-center gap-3">
+                        {link.children.map((child) => (
+                          <NavLink
+                            key={child.href}
+                            href={child.href}
+                            label={child.label}
+                            className="text-xl font-serif text-foreground/70 hover:text-accent transition-colors"
+                          />
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )
+              )}
               <div className="w-12 h-px bg-border mx-auto my-4" />
               
               {session?.id ? (
