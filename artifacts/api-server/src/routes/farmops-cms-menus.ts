@@ -13,6 +13,7 @@ const PutMenuItemsBody = z.object({
       z.object({
         label: z.string().min(1).max(200),
         url: z.string().min(1).max(500),
+        parentId: z.number().nullable().default(null),
       })
     )
     .max(20),
@@ -44,7 +45,14 @@ router.get(
       .where(eq(cmsMenuItemsTable.menuId, menu.id))
       .orderBy(asc(cmsMenuItemsTable.sortOrder));
 
-    res.json({ ...menu, items });
+    const topLevel = items.filter((i) => i.parentId === null);
+    const children = items.filter((i) => i.parentId !== null);
+    const nested = topLevel.map((parent) => ({
+      ...parent,
+      children: children.filter((c) => c.parentId === parent.id),
+    }));
+
+    res.json({ ...menu, items: nested });
   }
 );
 
@@ -87,6 +95,7 @@ router.put(
           menuId: menu.id,
           label: item.label,
           url: item.url,
+          parentId: item.parentId ?? null,
           sortOrder: idx,
         }))
       );
