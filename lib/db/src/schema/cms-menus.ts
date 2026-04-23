@@ -1,4 +1,4 @@
-import { pgTable, serial, integer, text, boolean, timestamp } from "drizzle-orm/pg-core";
+import { pgTable, serial, integer, text, boolean, timestamp, AnyPgColumn } from "drizzle-orm/pg-core";
 import { farmopsTenantsTable } from "./farmops-tenants";
 
 export const cmsMenusTable = pgTable("cms_menus", {
@@ -17,6 +17,7 @@ export const cmsMenuItemsTable = pgTable("cms_menu_items", {
   menuId: integer("menu_id")
     .notNull()
     .references(() => cmsMenusTable.id, { onDelete: "cascade" }),
+  parentId: integer("parent_id").references((): AnyPgColumn => cmsMenuItemsTable.id, { onDelete: "cascade" }),
   label: text("label").notNull(),
   url: text("url").notNull(),
   sortOrder: integer("sort_order").notNull().default(0),

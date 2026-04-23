@@ -11,6 +11,7 @@ const MenuItemInput = z.object({
   label: z.string().min(1).max(200),
   url: z.string().min(1).max(500),
   isHidden: z.boolean().default(false),
+  parentId: z.number().nullable().default(null),
 });
 
 const PutMenuItemsBody = z.object({
@@ -88,6 +89,7 @@ router.put("/admin/cms/menus/:name/items", requirePlatformAdmin, async (req, res
         label: item.label,
         url: item.url,
         isHidden: item.isHidden,
+        parentId: item.parentId ?? null,
         sortOrder: idx,
       })),
     );
@@ -136,7 +138,15 @@ router.get("/cms/menus/:name", resolveStoreTenant, async (req, res) => {
     .where(eq(cmsMenuItemsTable.menuId, menu.id))
     .orderBy(asc(cmsMenuItemsTable.sortOrder));
 
-  res.json({ ...menu, items: items.filter((i) => !i.isHidden) });
+  const topLevel = items.filter(i => !i.isHidden && i.parentId === null);
+  const children = items.filter(i => !i.isHidden && i.parentId !== null);
+
+  const nested = topLevel.map(parent => ({
+    ...parent,
+    children: children.filter(child => child.parentId === parent.id),
+  }));
+
+  res.json({ ...menu, items: nested });
 });
 
 export default router;
