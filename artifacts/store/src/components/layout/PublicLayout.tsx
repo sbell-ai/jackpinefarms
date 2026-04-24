@@ -251,26 +251,35 @@ export function PublicLayout({ children }: { children: ReactNode }) {
                   />
                 ) : (
                   <div key={link.href} className="flex flex-col items-center gap-2">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        handleParentNav(link.href);
-                        setOpenDropdowns((prev) =>
-                          prev.includes(link.href)
-                            ? prev.filter((h) => h !== link.href)
-                            : [...prev, link.href]
-                        );
-                      }}
-                      className="text-2xl font-serif font-medium text-primary flex items-center gap-2"
-                    >
-                      {link.label}
-                      <ChevronDown
+                    <div className="flex items-center gap-2">
+                      <NavLink
+                        href={link.href}
+                        label={link.label}
                         className={cn(
-                          "w-5 h-5 transition-transform",
-                          openDropdowns.includes(link.href) && "rotate-180"
+                          "text-2xl font-serif font-medium transition-colors",
+                          location === link.href ? "text-accent" : "text-primary"
                         )}
                       />
-                    </button>
+                      <button
+                        type="button"
+                        aria-label={`${openDropdowns.includes(link.href) ? "Collapse" : "Expand"} ${link.label}`}
+                        onClick={() =>
+                          setOpenDropdowns((prev) =>
+                            prev.includes(link.href)
+                              ? prev.filter((h) => h !== link.href)
+                              : [...prev, link.href]
+                          )
+                        }
+                        className="text-primary p-1"
+                      >
+                        <ChevronDown
+                          className={cn(
+                            "w-5 h-5 transition-transform",
+                            openDropdowns.includes(link.href) && "rotate-180"
+                          )}
+                        />
+                      </button>
+                    </div>
                     {openDropdowns.includes(link.href) && (
                       <div className="flex flex-col items-center gap-3">
                         {link.children.map((child) => (
