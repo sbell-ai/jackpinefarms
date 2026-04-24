@@ -382,7 +382,7 @@ async function updateTenantFromSubscription(
 
   const currentPeriodEndsAt = subscription.current_period_end
     ? new Date(subscription.current_period_end * 1000)
-    : undefined;
+    : null;
 
   const update: Partial<typeof farmopsTenantsTable.$inferInsert> = {
     stripeSubscriptionId:      subscription.id,
@@ -391,7 +391,7 @@ async function updateTenantFromSubscription(
     updatedAt:                 new Date(),
   };
   if (ourPlan) update.plan = ourPlan as any;
-  if (currentPeriodEndsAt) update.currentPeriodEndsAt = currentPeriodEndsAt;
+  update.currentPeriodEndsAt = currentPeriodEndsAt;
   update.trialEndsAt = subscription.trial_end ? new Date(subscription.trial_end * 1000) : null;
 
   await db
