@@ -1,4 +1,4 @@
-import { Switch, Route, Router as WouterRouter } from "wouter";
+import { Switch, Route, Router as WouterRouter, useLocation } from "wouter";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -83,6 +83,14 @@ import CmsPageForm from "./pages/admin/CmsPageForm";
 import CmsMenus from "./pages/admin/CmsMenus";
 import AdminPopupMarketMessages from "./pages/admin/PopupMarketMessages";
 
+
+import { useEffect } from "react";
+
+function RedirectTo({ to }: { to: string }) {
+  const [, setLoc] = useLocation();
+  useEffect(() => { setLoc(to, { replace: true }); }, [to]);
+  return null;
+}
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -352,6 +360,9 @@ function Router() {
       <Route path="/shop">
         <PublicLayout><Shop /></PublicLayout>
       </Route>
+      {/* Redirect common alternate spellings to the canonical URL */}
+      <Route path="/HowWeRaiseThem"><RedirectTo to="/how-we-raise-them" /></Route>
+      <Route path="/how-we-raise-them/"><RedirectTo to="/how-we-raise-them" /></Route>
       <Route path="/how-we-raise-them">
         <PublicLayout><HowWeRaiseThem /></PublicLayout>
       </Route>

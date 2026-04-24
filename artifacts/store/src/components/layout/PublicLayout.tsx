@@ -38,7 +38,7 @@ export function PublicLayout({ children }: { children: ReactNode }) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [openDropdowns, setOpenDropdowns] = useState<string[]>([]);
   const logoUrl = useTenantSiteImage("image.logo", `${import.meta.env.BASE_URL}images/logo.png`);
-  const [location] = useLocation();
+  const [location, navigate] = useLocation();
   const { tenant, slug } = useStoreTenant();
   const storeHeaders = useStoreHeaders();
   const farmName = tenant?.name ?? "Jack Pine Farm";
@@ -142,7 +142,10 @@ export function PublicLayout({ children }: { children: ReactNode }) {
                     </NavigationMenuItem>
                   ) : (
                     <NavigationMenuItem key={link.href}>
-                      <NavigationMenuTrigger className="text-sm font-medium bg-transparent hover:bg-transparent hover:text-accent focus:bg-transparent data-[state=open]:bg-transparent data-[state=open]:text-accent px-0">
+                      <NavigationMenuTrigger
+                        className="text-sm font-medium bg-transparent hover:bg-transparent hover:text-accent focus:bg-transparent data-[state=open]:bg-transparent data-[state=open]:text-accent px-0"
+                        onClick={() => navigate(link.href)}
+                      >
                         {link.label}
                       </NavigationMenuTrigger>
                       <NavigationMenuContent>
@@ -240,13 +243,14 @@ export function PublicLayout({ children }: { children: ReactNode }) {
                   <div key={link.href} className="flex flex-col items-center gap-2">
                     <button
                       type="button"
-                      onClick={() =>
+                      onClick={() => {
+                        navigate(link.href);
                         setOpenDropdowns((prev) =>
                           prev.includes(link.href)
                             ? prev.filter((h) => h !== link.href)
                             : [...prev, link.href]
-                        )
-                      }
+                        );
+                      }}
                       className="text-2xl font-serif font-medium text-primary flex items-center gap-2"
                     >
                       {link.label}
