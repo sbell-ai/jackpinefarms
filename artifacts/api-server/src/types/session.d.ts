@@ -30,7 +30,6 @@ declare global {
 declare module "express-session" {
   interface SessionData {
     // Jack Pine Farm storefront
-    admin?: boolean;
     platformAdminId?: number;
     customerId?: number;
     cart?: SessionCartItem[];
