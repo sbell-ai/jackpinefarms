@@ -9,12 +9,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ShieldAlert } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export default function ChangePassword() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [, navigate] = useLocation();
-  const { data: me } = useMe();
+  const { data: me, isLoading: meLoading } = useMe();
   const isForced = me?.mustChangePassword === true;
 
   const [form, setForm] = useState({ currentPassword: "", newPassword: "", confirmPassword: "" });
@@ -40,6 +41,25 @@ export default function ChangePassword() {
       return;
     }
     changePw.mutate();
+  }
+
+  if (meLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background p-4">
+        <Card className="w-full max-w-md shadow-md">
+          <CardHeader>
+            <Skeleton className="h-6 w-40" />
+            <Skeleton className="h-4 w-64 mt-2" />
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <Skeleton className="h-10 w-full" />
+            <Skeleton className="h-10 w-full" />
+            <Skeleton className="h-10 w-full" />
+            <Skeleton className="h-10 w-full" />
+          </CardContent>
+        </Card>
+      </div>
+    );
   }
 
   return (
@@ -101,7 +121,7 @@ export default function ChangePassword() {
               />
             </div>
             <Button type="submit" className="w-full" disabled={changePw.isPending}>
-              {changePw.isPending ? "Updating..." : "Set New Password"}
+              {changePw.isPending ? "Updating..." : isForced ? "Set New Password" : "Update Password"}
             </Button>
             {!isForced && (
               <Button
