@@ -108,6 +108,27 @@ export function PublicLayout({ children }: { children: ReactNode }) {
         }))
       : fallbackNavLinks.map((l) => ({ ...l, children: [] }));
 
+  useEffect(() => {
+    if (mobileMenuOpen) {
+      const activeParents = navLinks
+        .filter(
+          (link) =>
+            link.children.length > 0 &&
+            location.startsWith(resolveHref(link.href))
+        )
+        .map((link) => link.href);
+      if (activeParents.length > 0) {
+        setOpenDropdowns((prev) => {
+          const merged = [...prev];
+          for (const href of activeParents) {
+            if (!merged.includes(href)) merged.push(href);
+          }
+          return merged;
+        });
+      }
+    }
+  }, [mobileMenuOpen, location, navLinks]);
+
   return (
     <div className="min-h-screen flex flex-col relative selection:bg-primary/20 selection:text-primary">
       {/* Header */}
