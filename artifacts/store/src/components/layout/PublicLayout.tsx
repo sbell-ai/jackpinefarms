@@ -249,8 +249,9 @@ export function PublicLayout({ children }: { children: ReactNode }) {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -20 }}
             className="fixed inset-0 z-40 bg-background pt-24 px-6 lg:hidden overflow-y-auto"
+            onClick={() => setMobileMenuOpen(false)}
           >
-            <nav className="flex flex-col gap-6 text-center">
+            <nav className="flex flex-col gap-6 text-center" onClick={(e) => e.stopPropagation()}>
               {navLinks.map((link) =>
                 link.children.length === 0 ? (
                   <NavLink
