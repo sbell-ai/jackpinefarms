@@ -47,6 +47,7 @@ export interface Tenant {
   stripeCustomerId: string | null;
   stripeSubscriptionId: string | null;
   createdAt: string;
+  createdByAdminId: number | null;
   userCount?: number;
 }
 

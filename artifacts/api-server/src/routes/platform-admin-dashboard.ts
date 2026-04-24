@@ -229,7 +229,14 @@ const CreateTenantBody = z.object({
   ownerEmail:  z.string().email(),
   plan:        z.enum(["starter", "growth", "pro"]).default("starter"),
   status:      z.enum(["trialing", "active", "past_due", "canceled", "paused"]).default("trialing"),
-  trialEndsAt: z.string().datetime({ offset: true }).or(z.string().date()).optional(),
+  trialEndsAt: z.string().datetime({ offset: true }).or(z.string().date()).optional()
+    .refine(
+      (val) => {
+        if (!val) return true;
+        return new Date(val) > new Date();
+      },
+      { message: "trialEndsAt must be a future date" }
+    ),
 });
 
 router.post("/tenants", requirePlatformAdminRole("owner"), async (req, res): Promise<void> => {
@@ -272,6 +279,29 @@ router.post("/tenants", requirePlatformAdminRole("owner"), async (req, res): Pro
 
   req.log.info({ adminId: req.session.platformAdminId, tenantId: tenant.id, slug }, "Tenant created manually");
   void logAuditEvent(req.session.platformAdminId!, "tenant.create", "tenant", tenant.id, { slug, plan, status });
+
+  const trialLine = trialDate
+    ? `Your trial runs until ${trialDate.toLocaleDateString("en-CA", { year: "numeric", month: "long", day: "numeric", timeZone: "UTC" })}.`
+    : "";
+
+  sendEmail({
+    to:      ownerEmail.toLowerCase(),
+    subject: `Welcome to JP FarmOps — your account for ${name} is ready`,
+    text:    [
+      `Hi,`,
+      ``,
+      `Your JP FarmOps account for ${name} has been created by a platform administrator.`,
+      trialLine,
+      ``,
+      `If you have any questions about your account, please contact support.`,
+      ``,
+      `— The JP FarmOps Team`,
+    ].filter((line) => line !== undefined).join("\n"),
+    html:    `<p>Hi,</p><p>Your JP FarmOps account for <strong>${name}</strong> has been created by a platform administrator.${trialLine ? ` ${trialLine}` : ""}</p><p>If you have any questions, please contact support.</p><p>The JP FarmOps Team</p>`,
+  })
+    .then((r) => { if (!r.sent) req.log.warn({ provider: r.provider, error: r.error }, "Welcome email failed"); })
+    .catch((err: unknown) => req.log.warn({ err }, "Welcome email failed"));
+
   res.status(201).json(tenant);
 });
 
@@ -324,6 +354,7 @@ router.get("/tenants", requirePlatformAdmin, async (req, res): Promise<void> => 
         currentPeriodEndsAt:      farmopsTenantsTable.currentPeriodEndsAt,
         stripeSubscriptionStatus: farmopsTenantsTable.stripeSubscriptionStatus,
         createdAt:                farmopsTenantsTable.createdAt,
+        createdByAdminId:         farmopsTenantsTable.createdByAdminId,
         userCount: sql<number>`(
           SELECT COUNT(*) FROM farmops_users WHERE tenant_id = ${farmopsTenantsTable.id}
         )::int`,
@@ -911,6 +942,37 @@ router.delete("/tenants/:id/addons/:addonType", requirePlatformAdminRole("owner"
   req.log.info({ adminId: req.session.platformAdminId, tenantId: params.data.id, addonType: addonParam.data.addonType }, "Tenant add-on removed");
   void logAuditEvent(req.session.platformAdminId!, "tenant.addon_remove", "tenant", params.data.id, { addonType: addonParam.data.addonType });
   res.json({ message: "Add-on removed" });
+});
+
+// ── GET /superadmin/health ────────────────────────────────────────────────────
+// Returns presence (not values) of all required secrets and env vars.
+// Useful for verifying a fresh deployment has been configured correctly.
+
+router.get("/health", requirePlatformAdmin, (_req, res): void => {
+  const check = (key: string) => !!process.env[key];
+
+  const secrets = {
+    STRIPE_SECRET_KEY:             check("STRIPE_SECRET_KEY"),
+    STRIPE_WEBHOOK_SECRET:         check("STRIPE_WEBHOOK_SECRET"),
+    FARMOPS_STRIPE_WEBHOOK_SECRET: check("FARMOPS_STRIPE_WEBHOOK_SECRET"),
+    FARMOPS_PRICE_STARTER:         check("FARMOPS_PRICE_STARTER"),
+    FARMOPS_PRICE_GROWTH:          check("FARMOPS_PRICE_GROWTH"),
+    FARMOPS_PRICE_PRO:             check("FARMOPS_PRICE_PRO"),
+    SESSION_SECRET:                check("SESSION_SECRET"),
+    EMAIL_FROM:                    check("EMAIL_FROM"),
+    SMTP_HOST:                     check("SMTP_HOST"),
+    SMTP_USER:                     check("SMTP_USER"),
+    SMTP_PASS:                     check("SMTP_PASS"),
+    SUPABASE_DB_URL:               check("SUPABASE_DB_URL"),
+  };
+
+  const allOk = Object.values(secrets).every(Boolean);
+
+  res.status(allOk ? 200 : 207).json({
+    ok: allOk,
+    secrets,
+    note: "Values are not shown — only whether each variable is set.",
+  });
 });
 
 export default router;

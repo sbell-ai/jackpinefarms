@@ -51,6 +51,7 @@ export const farmopsTenantsTable = pgTable("farmops_tenants", {
   logoObjectKey:             text("logo_object_key"),
   createdByAdminId:          integer("created_by_admin_id")
                                .references(() => platformAdminsTable.id, { onDelete: "set null" }),
+  trialReminderSentAt:       timestamp("trial_reminder_sent_at", { withTimezone: true }),
   createdAt:                 timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt:                 timestamp("updated_at", { withTimezone: true })
                                .notNull()

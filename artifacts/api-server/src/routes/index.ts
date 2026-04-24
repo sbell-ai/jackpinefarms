@@ -38,6 +38,7 @@ import farmopsCmsMenusRouter from "./farmops-cms-menus.js";
 import platformAdminTenantsRouter from "./platform-admin-tenants.js";
 import platformAdminDashboardRouter from "./platform-admin-dashboard.js";
 import storefrontRouter from "./storefront.js";
+import { requireAllowedIp } from "../middlewares/require-allowed-ip.js";
 
 const router: IRouter = Router();
 
@@ -78,7 +79,7 @@ router.use(farmopsCouponsRouter);
 router.use(farmopsCmsPagesRouter);
 router.use(farmopsCmsMenusRouter);
 router.use(platformAdminTenantsRouter);
-router.use("/superadmin", platformAdminDashboardRouter);
+router.use("/superadmin", requireAllowedIp, platformAdminDashboardRouter);
 router.use(storefrontRouter);
 
 export default router;

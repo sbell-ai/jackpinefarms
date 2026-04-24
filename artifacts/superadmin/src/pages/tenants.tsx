@@ -204,7 +204,14 @@ export default function Tenants() {
                       onClick={() => setLocation(`/tenants/${t.id}`)}
                     >
                       <td className="px-6 py-4">
-                        <p className="font-medium text-foreground">{t.name}</p>
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <p className="font-medium text-foreground">{t.name}</p>
+                          {t.createdByAdminId != null && (
+                            <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-violet-100 text-violet-700 border border-violet-200 whitespace-nowrap">
+                              Admin created
+                            </span>
+                          )}
+                        </div>
                         <p className="text-xs text-muted-foreground">{t.ownerEmail}</p>
                       </td>
                       <td className="px-4 py-4">

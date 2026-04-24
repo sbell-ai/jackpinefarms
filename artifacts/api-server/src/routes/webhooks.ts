@@ -1,3 +1,25 @@
+/**
+ * Stripe webhook handlers.
+ *
+ * Two separate webhook endpoints are registered in the Stripe dashboard,
+ * each with its own signing secret and event filter:
+ *
+ * ── Endpoint 1: Jack Pine Store (/webhooks/stripe) ──────────────────────────
+ *   Secret env var : STRIPE_WEBHOOK_SECRET
+ *   Required events:
+ *     • checkout.session.completed
+ *
+ * ── Endpoint 2: FarmOps SaaS Billing (/webhooks/farmops-stripe) ─────────────
+ *   Secret env var : FARMOPS_STRIPE_WEBHOOK_SECRET
+ *   Required events:
+ *     • customer.subscription.created
+ *     • customer.subscription.updated
+ *     • customer.subscription.deleted
+ *     • invoice.payment_succeeded
+ *     • invoice.payment_failed
+ *     • checkout.session.completed   (for farmops_subscription and farmops_onboarding metadata)
+ */
+
 import { Router, type IRouter } from "express";
 import { eq, lt, sql } from "drizzle-orm";
 import { db, ordersTable, stripePendingCheckoutsTable, customerCartsTable, couponsTable, farmopsTenantsTable } from "@workspace/db";

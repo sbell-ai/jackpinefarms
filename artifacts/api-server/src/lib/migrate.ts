@@ -694,6 +694,12 @@ export async function runMigrations(): Promise<void> {
         ON farmops_sms_messages (tenant_id, created_at DESC)
     `);
 
+    // ── Trial reminder column (Task #66) ────────────────────────────────────
+    await db.execute(sql`
+      ALTER TABLE farmops_tenants
+        ADD COLUMN IF NOT EXISTS trial_reminder_sent_at TIMESTAMPTZ
+    `);
+
     logger.info("Startup migrations complete.");
   } catch (err) {
     logger.error({ err }, "Startup migration failed — server will still start");
