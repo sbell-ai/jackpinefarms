@@ -147,14 +147,17 @@ describe("requirePlatformAdmin", () => {
     expect(next).not.toHaveBeenCalled();
   });
 
-  it("6. calls next() via legacy admin=true flag (no DB lookup needed)", async () => {
+  it("6. returns 401 when session has only legacy admin=true (bypass removed in security fix)", async () => {
+    // The admin=true boolean was removed (security fix) — it no longer grants access.
+    // A session with only admin=true and no platformAdminId must be rejected.
     const req = makeReq({ admin: true });
     const res = makeRes();
 
     await requirePlatformAdmin(req, res, next);
 
-    expect(next).toHaveBeenCalledOnce();
-    // No DB query should have been issued
+    expect(res.status).toHaveBeenCalledWith(401);
+    expect(next).not.toHaveBeenCalled();
+    // No DB query should have been issued (short-circuit before lookup)
     expect(mockLimit).not.toHaveBeenCalled();
   });
 });
