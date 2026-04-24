@@ -420,7 +420,9 @@ router.post("/tenants/:id/suspend", requirePlatformAdminRole("owner"), async (re
     subject: "Your FarmOps account has been suspended",
     text:    `Hi,\n\nYour FarmOps account (${updated.name}) has been suspended by a platform administrator. If you believe this is an error, please contact support.\n\nThe FarmOps Team`,
     html:    `<p>Hi,</p><p>Your FarmOps account <strong>${updated.name}</strong> has been suspended by a platform administrator. If you believe this is an error, please contact support.</p><p>The FarmOps Team</p>`,
-  }).catch((err: unknown) => req.log.warn({ err }, "Tenant suspension email failed"));
+  })
+    .then((r) => { if (!r.sent) req.log.warn({ provider: r.provider, error: r.error }, "Email notification failed"); })
+    .catch((err: unknown) => req.log.warn({ err }, "Email notification failed"));
   res.json(updated);
 });
 
@@ -444,7 +446,9 @@ router.post("/tenants/:id/reactivate", requirePlatformAdminRole("owner"), async 
     subject: "Your FarmOps account has been reactivated",
     text:    `Hi,\n\nYour FarmOps account (${updated.name}) has been reactivated. You now have full access again.\n\nThe FarmOps Team`,
     html:    `<p>Hi,</p><p>Your FarmOps account <strong>${updated.name}</strong> has been reactivated. You now have full access again.</p><p>The FarmOps Team</p>`,
-  }).catch((err: unknown) => req.log.warn({ err }, "Tenant reactivation email failed"));
+  })
+    .then((r) => { if (!r.sent) req.log.warn({ provider: r.provider, error: r.error }, "Email notification failed"); })
+    .catch((err: unknown) => req.log.warn({ err }, "Email notification failed"));
   res.json(updated);
 });
 
@@ -475,7 +479,9 @@ router.post("/tenants/:id/change-plan", requirePlatformAdminRole("owner"), async
     subject: `Your FarmOps plan has been updated to ${body.data.plan}`,
     text:    `Hi,\n\nYour FarmOps account (${updated.name}) has been moved to the ${body.data.plan} plan.\n\nThe FarmOps Team`,
     html:    `<p>Hi,</p><p>Your FarmOps account <strong>${updated.name}</strong> has been moved to the <strong>${body.data.plan}</strong> plan.</p><p>The FarmOps Team</p>`,
-  }).catch((err: unknown) => req.log.warn({ err }, "Tenant plan-change email failed"));
+  })
+    .then((r) => { if (!r.sent) req.log.warn({ provider: r.provider, error: r.error }, "Email notification failed"); })
+    .catch((err: unknown) => req.log.warn({ err }, "Email notification failed"));
   res.json(updated);
 });
 
