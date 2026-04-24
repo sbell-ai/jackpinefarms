@@ -39,6 +39,16 @@ export function PublicLayout({ children }: { children: ReactNode }) {
   const [openDropdowns, setOpenDropdowns] = useState<string[]>([]);
   const logoUrl = useTenantSiteImage("image.logo", `${import.meta.env.BASE_URL}images/logo.png`);
   const [location, navigate] = useLocation();
+
+  const handleParentNav = (href: string) => {
+    const resolved = resolveHref(href);
+    if (resolved.startsWith("http://") || resolved.startsWith("https://")) {
+      window.open(resolved, "_blank", "noopener,noreferrer");
+    } else {
+      navigate(resolved);
+    }
+  };
+
   const { tenant, slug } = useStoreTenant();
   const storeHeaders = useStoreHeaders();
   const farmName = tenant?.name ?? "Jack Pine Farm";
@@ -144,7 +154,7 @@ export function PublicLayout({ children }: { children: ReactNode }) {
                     <NavigationMenuItem key={link.href}>
                       <NavigationMenuTrigger
                         className="text-sm font-medium bg-transparent hover:bg-transparent hover:text-accent focus:bg-transparent data-[state=open]:bg-transparent data-[state=open]:text-accent px-0"
-                        onClick={() => navigate(link.href)}
+                        onClick={() => handleParentNav(link.href)}
                       >
                         {link.label}
                       </NavigationMenuTrigger>
@@ -244,7 +254,7 @@ export function PublicLayout({ children }: { children: ReactNode }) {
                     <button
                       type="button"
                       onClick={() => {
-                        navigate(link.href);
+                        handleParentNav(link.href);
                         setOpenDropdowns((prev) =>
                           prev.includes(link.href)
                             ? prev.filter((h) => h !== link.href)
