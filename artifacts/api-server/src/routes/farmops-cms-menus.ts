@@ -80,10 +80,25 @@ router.put(
         .returning();
     }
 
+    const { items } = parsed.data;
+
+    // Validate parentIndex bounds BEFORE any DB writes to prevent partial mutations
+    for (let i = 0; i < items.length; i++) {
+      const pi = items[i]!.parentIndex;
+      if (pi == null) continue;
+      if (pi < 0 || pi >= items.length) {
+        res.status(400).json({ error: `Item ${i}: parentIndex ${pi} is out of bounds (0–${items.length - 1})` });
+        return;
+      }
+      if (pi === i) {
+        res.status(400).json({ error: `Item ${i}: parentIndex cannot reference itself` });
+        return;
+      }
+    }
+
     // Delete all existing items
     await db.delete(cmsMenuItemsTable).where(eq(cmsMenuItemsTable.menuId, menu.id));
 
-    const { items } = parsed.data;
     if (items.length > 0) {
       // Phase 1: insert all items without parentId, capture new DB IDs in order
       const inserted = await db
@@ -101,20 +116,6 @@ router.put(
 
       // Sort by sortOrder to align with the submitted items array
       inserted.sort((a, b) => a.sortOrder - b.sortOrder);
-
-      // Validate parentIndex bounds before Phase 2 to prevent silent data corruption
-      for (let i = 0; i < items.length; i++) {
-        const pi = items[i]!.parentIndex;
-        if (pi == null) continue;
-        if (pi < 0 || pi >= items.length) {
-          res.status(400).json({ error: `Item ${i}: parentIndex ${pi} is out of bounds (0–${items.length - 1})` });
-          return;
-        }
-        if (pi === i) {
-          res.status(400).json({ error: `Item ${i}: parentIndex cannot reference itself` });
-          return;
-        }
-      }
 
       // Phase 2: update parentId for items that reference a parent by index
       for (let i = 0; i < items.length; i++) {
