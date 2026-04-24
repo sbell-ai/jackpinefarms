@@ -21,24 +21,21 @@ router.post("/webhooks/stripe", async (req, res): Promise<void> => {
 
   const rawBody: Buffer = (req as any).rawBody ?? Buffer.from(JSON.stringify(req.body));
 
-  if (webhookSecret) {
-    const sig = req.headers["stripe-signature"] as string;
-    try {
-      const Stripe = require("stripe");
-      const stripe = new Stripe(stripeKey, { apiVersion: "2025-02-24.acacia" });
-      event = stripe.webhooks.constructEvent(rawBody, sig, webhookSecret);
-    } catch (err: any) {
-      console.error("Stripe webhook signature verification failed:", err.message);
-      res.status(400).json({ error: `Webhook error: ${err.message}` });
-      return;
-    }
-  } else {
-    try {
-      event = typeof req.body === "object" ? req.body : JSON.parse(rawBody.toString());
-    } catch {
-      res.status(400).json({ error: "Invalid payload" });
-      return;
-    }
+  if (!webhookSecret) {
+    console.error("STRIPE_WEBHOOK_SECRET is not configured — rejecting unsigned webhook");
+    res.status(400).json({ error: "Webhook secret not configured" });
+    return;
+  }
+
+  const sig = req.headers["stripe-signature"] as string;
+  try {
+    const Stripe = require("stripe");
+    const stripe = new Stripe(stripeKey, { apiVersion: "2025-02-24.acacia" });
+    event = stripe.webhooks.constructEvent(rawBody, sig, webhookSecret);
+  } catch (err: any) {
+    console.error("Stripe webhook signature verification failed:", err.message);
+    res.status(400).json({ error: `Webhook error: ${err.message}` });
+    return;
   }
 
   // Opportunistically purge pending checkouts older than 25 hours (sessions expire at 24h)
@@ -419,22 +416,19 @@ router.post("/webhooks/farmops-stripe", async (req, res): Promise<void> => {
   const rawBody: Buffer = (req as any).rawBody ?? Buffer.from(JSON.stringify(req.body));
   let event: any;
 
-  if (webhookSecret) {
-    const sig = req.headers["stripe-signature"] as string;
-    try {
-      event = stripe.webhooks.constructEvent(rawBody, sig, webhookSecret);
-    } catch (err: any) {
-      console.error("[FarmOps webhook] Signature verification failed:", err.message);
-      res.status(400).json({ error: `Webhook error: ${err.message}` });
-      return;
-    }
-  } else {
-    try {
-      event = typeof req.body === "object" ? req.body : JSON.parse(rawBody.toString());
-    } catch {
-      res.status(400).json({ error: "Invalid payload" });
-      return;
-    }
+  if (!webhookSecret) {
+    console.error("FARMOPS_STRIPE_WEBHOOK_SECRET is not configured — rejecting unsigned webhook");
+    res.status(400).json({ error: "Webhook secret not configured" });
+    return;
+  }
+
+  const sig = req.headers["stripe-signature"] as string;
+  try {
+    event = stripe.webhooks.constructEvent(rawBody, sig, webhookSecret);
+  } catch (err: any) {
+    console.error("[FarmOps webhook] Signature verification failed:", err.message);
+    res.status(400).json({ error: `Webhook error: ${err.message}` });
+    return;
   }
 
   const obj = event.data.object;

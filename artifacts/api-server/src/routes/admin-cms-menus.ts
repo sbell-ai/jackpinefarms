@@ -102,10 +102,24 @@ router.put("/admin/cms/menus/:name/items", requirePlatformAdmin, async (req, res
     // Sort by sortOrder to align with the submitted items array
     inserted.sort((a, b) => a.sortOrder - b.sortOrder);
 
+    // Validate parentIndex bounds before Phase 2 to prevent silent data corruption
+    for (let i = 0; i < items.length; i++) {
+      const pi = items[i]!.parentIndex;
+      if (pi == null) continue;
+      if (pi < 0 || pi >= items.length) {
+        res.status(400).json({ error: `Item ${i}: parentIndex ${pi} is out of bounds (0–${items.length - 1})` });
+        return;
+      }
+      if (pi === i) {
+        res.status(400).json({ error: `Item ${i}: parentIndex cannot reference itself` });
+        return;
+      }
+    }
+
     // Phase 2: update parentId for items that have a parentIndex
     for (let i = 0; i < items.length; i++) {
       const pi = items[i]!.parentIndex;
-      if (pi != null && inserted[pi] != null) {
+      if (pi != null) {
         await db
           .update(cmsMenuItemsTable)
           .set({ parentId: inserted[pi]!.id })

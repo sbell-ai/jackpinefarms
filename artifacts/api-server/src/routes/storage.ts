@@ -19,6 +19,11 @@ const MAX_UPLOAD_SIZE_BYTES = 10 * 1024 * 1024; // 10 MB
  * Request a presigned URL for file upload.
  * The client sends JSON metadata (name, size, contentType) — NOT the file.
  * Then uploads the file directly to the returned presigned URL.
+ *
+ * SECURITY NOTE: Files uploaded through this endpoint are served publicly via
+ * GET /storage/objects/*path using a UUID-as-capability model (see route below).
+ * Only upload content that is safe to be publicly accessible (e.g. product images).
+ * Do NOT store sensitive or private data through this route.
  */
 router.post("/storage/uploads/request-url", requirePlatformAdmin, async (req: Request, res: Response) => {
   const parsed = RequestUploadUrlBody.safeParse(req.body);
@@ -88,11 +93,21 @@ router.get("/storage/public-objects/*filePath", async (req: Request, res: Respon
 });
 
 /**
- * GET /storage/objects/*
+ * GET /storage/objects/*path
  *
  * Serve object entities from PRIVATE_OBJECT_DIR.
- * These are served from a separate path from /public-objects and can optionally
- * be protected with authentication or ACL checks based on the use case.
+ *
+ * SECURITY MODEL — UUID-as-capability (intentionally unauthenticated):
+ * Files are served without an authentication check. This is by design: all
+ * objects stored here are product images that must be publicly viewable on the
+ * customer-facing storefront. Access is controlled by path unguessability —
+ * each object path contains a random UUID generated at upload time, making
+ * enumeration infeasible. No sensitive or private content should ever be
+ * stored through this system (see the upload route note above).
+ *
+ * If truly private, auth-gated file storage is needed in the future, it must
+ * use a separate storage path and a new route protected by requirePlatformAdmin
+ * or equivalent middleware.
  */
 router.get("/storage/objects/*path", async (req: Request, res: Response) => {
   try {

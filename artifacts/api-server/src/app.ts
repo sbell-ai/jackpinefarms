@@ -86,6 +86,15 @@ if (!process.env.SESSION_SECRET) {
   throw new Error("SESSION_SECRET environment variable is required");
 }
 
+if (isProduction) {
+  if (!process.env.STRIPE_WEBHOOK_SECRET) {
+    throw new Error("STRIPE_WEBHOOK_SECRET must be set in production");
+  }
+  if (!process.env.FARMOPS_STRIPE_WEBHOOK_SECRET) {
+    throw new Error("FARMOPS_STRIPE_WEBHOOK_SECRET must be set in production");
+  }
+}
+
 app.use(
   session({
     store: new PgSession({
@@ -130,7 +139,7 @@ for (const blockedPath of farmopsBlockedPaths) {
 // auth endpoints (/login, /logout, /me) which must remain publicly accessible.
 const adminAuthExempt = new Set(["/login", "/logout", "/me"]);
 app.use("/api/admin", (req: express.Request, res: express.Response, next: express.NextFunction) => {
-  if (req.session.farmopsUserId && !req.session.platformAdminId && req.session.admin !== true && !adminAuthExempt.has(req.path)) {
+  if (req.session.farmopsUserId && !req.session.platformAdminId && !adminAuthExempt.has(req.path)) {
     res.status(403).json({ error: "Forbidden" });
     return;
   }

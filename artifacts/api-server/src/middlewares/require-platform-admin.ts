@@ -7,10 +7,9 @@ import { db, platformAdminsTable } from "@workspace/db";
  * requirePlatformAdmin
  *
  * Authenticates the request as a platform admin by looking up the full admin
- * record and attaching it to req.platformAdmin.  Accepts either the new
- * `platformAdminId` session key OR the legacy `admin: true` flag.
- *
- * Once the legacy flag path is no longer needed, remove the `admin === true` branch.
+ * record and attaching it to req.platformAdmin.  Requires a valid
+ * `platformAdminId` session key; the old `admin: true` boolean flag has been
+ * removed (security fix — it bypassed DB lookups and isActive checks).
  */
 export async function requirePlatformAdmin(
   req: Request,
@@ -18,45 +17,37 @@ export async function requirePlatformAdmin(
   next: NextFunction
 ): Promise<void> {
   // Block FarmOps users from ever accessing Jack Pine admin routes
-  if (req.session.farmopsUserId && !req.session.platformAdminId && req.session.admin !== true) {
+  if (req.session.farmopsUserId && !req.session.platformAdminId) {
     res.status(403).json({ error: "Forbidden" });
     return;
   }
 
-  // ── New path: session has a real admin identity ──────────────────────────
-  if (req.session.platformAdminId) {
-    const [admin] = await db
-      .select({
-        id:                 platformAdminsTable.id,
-        email:              platformAdminsTable.email,
-        name:               platformAdminsTable.name,
-        role:               platformAdminsTable.role,
-        isActive:           platformAdminsTable.isActive,
-        mustChangePassword: platformAdminsTable.mustChangePassword,
-      })
-      .from(platformAdminsTable)
-      .where(eq(platformAdminsTable.id, req.session.platformAdminId))
-      .limit(1);
-
-    if (!admin || !admin.isActive) {
-      delete req.session.platformAdminId;
-      delete req.session.admin;
-      res.status(401).json({ error: "Unauthorized" });
-      return;
-    }
-
-    req.platformAdmin = admin;
-    next();
+  if (!req.session.platformAdminId) {
+    res.status(401).json({ error: "Unauthorized" });
     return;
   }
 
-  // ── Legacy path: old boolean flag (kept during transition) ───────────────
-  if (req.session.admin === true) {
-    next();
+  const [admin] = await db
+    .select({
+      id:                 platformAdminsTable.id,
+      email:              platformAdminsTable.email,
+      name:               platformAdminsTable.name,
+      role:               platformAdminsTable.role,
+      isActive:           platformAdminsTable.isActive,
+      mustChangePassword: platformAdminsTable.mustChangePassword,
+    })
+    .from(platformAdminsTable)
+    .where(eq(platformAdminsTable.id, req.session.platformAdminId))
+    .limit(1);
+
+  if (!admin || !admin.isActive) {
+    delete req.session.platformAdminId;
+    res.status(401).json({ error: "Unauthorized" });
     return;
   }
 
-  res.status(401).json({ error: "Unauthorized" });
+  req.platformAdmin = admin;
+  next();
 }
 
 /**
@@ -72,7 +63,7 @@ export async function requirePlatformAdmin(
 export function requirePlatformAdminRole(role: string) {
   return async function (req: Request, res: Response, next: NextFunction): Promise<void> {
     // Block FarmOps users
-    if (req.session.farmopsUserId && !req.session.platformAdminId && req.session.admin !== true) {
+    if (req.session.farmopsUserId && !req.session.platformAdminId) {
       res.status(403).json({ error: "Forbidden" });
       return;
     }
