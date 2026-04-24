@@ -117,15 +117,7 @@ export function PublicLayout({ children }: { children: ReactNode }) {
             location.startsWith(resolveHref(link.href))
         )
         .map((link) => link.href);
-      if (activeParents.length > 0) {
-        setOpenDropdowns((prev) => {
-          const merged = [...prev];
-          for (const href of activeParents) {
-            if (!merged.includes(href)) merged.push(href);
-          }
-          return merged;
-        });
-      }
+      setOpenDropdowns(activeParents);
     }
   }, [mobileMenuOpen, location, navLinks]);
 
