@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "wouter";
-import { CheckCircle2, Package, MapPin, Calendar, Loader2 } from "lucide-react";
+import { CircleCheck, Package, MapPin, Calendar, Loader2 } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { getGetCartQueryKey } from "@workspace/api-client-react";
@@ -88,7 +88,7 @@ export default function OrderConfirmation() {
     <div className="flex-1 bg-muted/20 flex items-center justify-center py-16 px-4">
       <div className="max-w-2xl w-full bg-card border border-border rounded-3xl p-8 md:p-12 shadow-xl text-center">
         <div className="w-20 h-20 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-6">
-          <CheckCircle2 className="w-10 h-10 text-primary" />
+          <CircleCheck className="w-10 h-10 text-primary" />
         </div>
         
         <h1 className="text-4xl font-serif font-bold text-foreground mb-4">Order Confirmed!</h1>

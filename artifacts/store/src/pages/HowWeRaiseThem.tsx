@@ -1,4 +1,4 @@
-import { CheckCircle2 } from "lucide-react";
+import { CircleCheck } from "lucide-react";
 import { useSiteImage } from "@/lib/useSiteImage";
 
 export default function HowWeRaiseThem() {
@@ -32,7 +32,7 @@ export default function HowWeRaiseThem() {
                 "Regenerative impact on the soil"
               ].map((item, i) => (
                 <li key={i} className="flex items-start gap-3">
-                  <CheckCircle2 className="w-6 h-6 text-accent shrink-0" />
+                  <CircleCheck className="w-6 h-6 text-accent shrink-0" />
                   <span className="text-foreground font-medium">{item}</span>
                 </li>
               ))}

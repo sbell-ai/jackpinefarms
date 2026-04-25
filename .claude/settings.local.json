@@ -41,7 +41,8 @@
       "Read(//tmp/**)",
       "Bash(PORT=3333 node --enable-source-maps /home/runner/workspace/artifacts/api-server/dist/index.mjs)",
       "Bash(curl -s http://localhost:3333/api/health)",
-      "Bash(curl *)"
+      "Bash(curl *)",
+      "Bash(npm list *)"
     ]
   }
 }

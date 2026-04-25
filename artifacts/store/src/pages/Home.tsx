@@ -1,5 +1,5 @@
 import { Link } from "wouter";
-import { ArrowRight, CheckCircle2 } from "lucide-react";
+import { ArrowRight, CircleCheck } from "lucide-react";
 import { useListProducts } from "@workspace/api-client-react";
 import { formatMoney, stripHtml } from "@/lib/utils";
 import { useSiteImage } from "@/lib/useSiteImage";
@@ -128,7 +128,7 @@ export default function Home() {
                   "Local Community First — pickups are prearranged at local spots."
                 ].map((item, i) => (
                   <div key={i} className="flex items-start gap-4">
-                    <CheckCircle2 className="w-6 h-6 text-accent shrink-0 mt-1" />
+                    <CircleCheck className="w-6 h-6 text-accent shrink-0 mt-1" />
                     <p className="text-lg text-primary-foreground/90 font-medium">{item}</p>
                   </div>
                 ))}

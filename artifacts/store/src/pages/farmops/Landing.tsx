@@ -7,7 +7,7 @@ import {
   ShoppingBasket,
   Users,
   BarChart3,
-  CheckCircle2,
+  CircleCheck,
   ArrowRight,
   Sprout,
   Menu,
@@ -254,7 +254,7 @@ export default function FarmOpsLanding() {
             </div>
 
             <p className="text-sm text-white/40 flex items-center gap-1.5">
-              <CheckCircle2 className="w-4 h-4 text-[hsl(135,40%,65%)]" />
+              <CircleCheck className="w-4 h-4 text-[hsl(135,40%,65%)]" />
               Trusted by Jack Pine Farms. Built for farms like yours.
             </p>
           </div>
@@ -403,7 +403,7 @@ export default function FarmOpsLanding() {
                     <ul className="space-y-3 mb-8 flex-1">
                     {plan.features.map((f) => (
                       <li key={f} className="flex items-start gap-2.5 text-sm">
-                        <CheckCircle2
+                        <CircleCheck
                           className={`w-4 h-4 mt-0.5 flex-shrink-0 ${
                             plan.highlight ? "text-[hsl(135,40%,65%)]" : "text-[hsl(148,26%,40%)]"
                           }`}

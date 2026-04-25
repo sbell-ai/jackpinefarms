@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link } from "wouter";
-import { Loader2, Mail, Leaf, CheckCircle2 } from "lucide-react";
+import { Loader2, Mail, Leaf, CircleCheck } from "lucide-react";
 
 export default function ForgotPassword() {
   const [email, setEmail] = useState("");
@@ -48,7 +48,7 @@ export default function ForgotPassword() {
           {submitted ? (
             <div className="text-center space-y-4">
               <div className="flex items-center justify-center w-16 h-16 rounded-full bg-primary/10 text-primary mx-auto border border-primary/20">
-                <CheckCircle2 className="w-8 h-8" />
+                <CircleCheck className="w-8 h-8" />
               </div>
               <h2 className="text-xl font-bold text-foreground">Check your email</h2>
               <p className="text-muted-foreground text-sm">

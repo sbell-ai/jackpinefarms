@@ -9,7 +9,7 @@ import {
 import { useStoreHeaders, useStoreTenant } from "@/lib/StoreTenantContext";
 import { useQueryClient } from "@tanstack/react-query";
 import { formatMoney } from "@/lib/utils";
-import { Loader2, ArrowLeft, CheckCircle2, AlertCircle, ShoppingBag, Plus, Minus, ChevronLeft, ChevronRight } from "lucide-react";
+import { Loader2, ArrowLeft, CircleCheck, AlertCircle, ShoppingBag, Plus, Minus, ChevronLeft, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { useSiteImage } from "@/lib/useSiteImage";
@@ -345,7 +345,7 @@ export default function ProductDetail() {
                 
                 {notifySuccess ? (
                   <div className="flex items-center gap-3 text-primary bg-primary/5 p-4 rounded-xl border border-primary/20">
-                    <CheckCircle2 className="w-6 h-6" />
+                    <CircleCheck className="w-6 h-6" />
                     <span className="font-medium">We'll let you know when {product.name} is available again.</span>
                   </div>
                 ) : (
@@ -372,9 +372,9 @@ export default function ProductDetail() {
           </div>
           
           <div className="mt-8 flex flex-wrap gap-4 text-sm font-medium text-muted-foreground border-t border-border pt-6">
-            <span className="flex items-center gap-1.5 bg-muted px-3 py-1 rounded-full"><CheckCircle2 className="w-4 h-4 text-primary" /> Local pickup only</span>
-            <span className="flex items-center gap-1.5 bg-muted px-3 py-1 rounded-full"><CheckCircle2 className="w-4 h-4 text-primary" /> Pasture raised</span>
-            <span className="flex items-center gap-1.5 bg-muted px-3 py-1 rounded-full"><CheckCircle2 className="w-4 h-4 text-primary" /> Non-GMO feed</span>
+            <span className="flex items-center gap-1.5 bg-muted px-3 py-1 rounded-full"><CircleCheck className="w-4 h-4 text-primary" /> Local pickup only</span>
+            <span className="flex items-center gap-1.5 bg-muted px-3 py-1 rounded-full"><CircleCheck className="w-4 h-4 text-primary" /> Pasture raised</span>
+            <span className="flex items-center gap-1.5 bg-muted px-3 py-1 rounded-full"><CircleCheck className="w-4 h-4 text-primary" /> Non-GMO feed</span>
           </div>
         </div>
       </div>

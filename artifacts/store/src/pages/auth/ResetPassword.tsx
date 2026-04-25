@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link } from "wouter";
-import { Loader2, Lock as LockIcon, Leaf, CheckCircle2 } from "lucide-react";
+import { Loader2, Lock as LockIcon, Leaf, CircleCheck } from "lucide-react";
 import { PasswordInput } from "@/components/ui/PasswordInput";
 import { validatePassword } from "@/lib/passwordStrength";
 
@@ -87,7 +87,7 @@ export default function ResetPassword() {
           {success ? (
             <div className="text-center space-y-4">
               <div className="flex items-center justify-center w-16 h-16 rounded-full bg-primary/10 text-primary mx-auto border border-primary/20">
-                <CheckCircle2 className="w-8 h-8" />
+                <CircleCheck className="w-8 h-8" />
               </div>
               <h2 className="text-xl font-bold text-foreground">Password updated!</h2>
               <p className="text-muted-foreground text-sm">

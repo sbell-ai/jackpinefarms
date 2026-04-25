@@ -5,7 +5,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useEditor, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
-import { Loader2, ArrowLeft, CheckCircle2, Eye, EyeOff, Bold, Italic, List, ListOrdered, Heading2, Undo, Redo } from "lucide-react";
+import { Loader2, ArrowLeft, CircleCheck, Eye, EyeOff, Bold, Italic, List, ListOrdered, Heading2, Undo, Redo } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import {
   useAdminGetCmsPage, getAdminGetCmsPageQueryKey,
@@ -311,7 +311,7 @@ export default function CmsPageForm({ pageId }: Props) {
             disabled={isSaving}
             className="inline-flex items-center gap-2 px-5 py-2 rounded-lg bg-primary text-white text-sm font-medium hover:bg-primary/90 transition-colors disabled:opacity-50"
           >
-            {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
+            {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <CircleCheck className="w-4 h-4" />}
             {isEdit ? "Save Changes" : "Create Page"}
           </button>
         </div>
@@ -368,7 +368,7 @@ export default function CmsPageForm({ pageId }: Props) {
                       disabled={updateSeo.isPending}
                       className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-white text-sm font-medium hover:bg-primary/90 transition-colors disabled:opacity-50"
                     >
-                      {updateSeo.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
+                      {updateSeo.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <CircleCheck className="w-4 h-4" />}
                       Save SEO
                     </button>
                   </div>
