@@ -18,5 +18,6 @@ export function useTenantSiteImage(key: string, fallback: string): string {
     },
   });
 
-  return data?.[key] ?? fallback;
+  const value = data?.[key];
+  return value != null && value !== "" ? value : fallback;
 }

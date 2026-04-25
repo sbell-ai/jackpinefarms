@@ -83,7 +83,7 @@ export function PublicLayout({ children }: { children: ReactNode }) {
     { href: "/contact", label: "Contact" },
   ];
 
-  const { data: headerMenu } = useQuery<{ items: { url: string; label: string; children?: { url: string; label: string }[] }[] } | null>({
+  const { data: headerMenu, isPending: headerMenuPending } = useQuery<{ items: { url: string; label: string; children?: { url: string; label: string }[] }[] } | null>({
     queryKey: ["cms-menu-header", slug ?? ""],
     queryFn: async () => {
       const res = await fetch("/api/cms/menus/header", { headers: storeHeaders });
@@ -99,8 +99,9 @@ export function PublicLayout({ children }: { children: ReactNode }) {
     children: { href: string; label: string }[];
   }
 
-  const navLinks: NavItem[] =
-    headerMenu && headerMenu.items.length > 0
+  const navLinks: NavItem[] = headerMenuPending
+    ? []
+    : headerMenu && headerMenu.items.length > 0
       ? headerMenu.items.map((item) => ({
           href: item.url,
           label: item.label,
